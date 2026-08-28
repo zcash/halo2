@@ -8,9 +8,20 @@ use crate::{
     circuit::Value,
     plonk::{
         Advice, Any, Assigned, Assignment, Column, ConstraintSystem, Error, Fixed, Instance,
-        Selector,
+        Selector, SelectorAssignmentData,
     },
 };
+
+/// The Lean module environment used for generated fixture definitions.
+#[derive(Clone, Copy, Debug)]
+pub struct LeanEnvironment<'a> {
+    /// Module imported by the generated fixture.
+    pub fixture_import: &'a str,
+    /// Namespace containing the generated definition.
+    pub fixture_namespace: &'a str,
+    /// Namespace opened within `fixture_namespace`.
+    pub open_namespace: &'a str,
+}
 
 /// An [`Assignment`] that records the keygen-visible circuit layout without witnesses.
 #[derive(Debug)]
@@ -46,11 +57,7 @@ impl<F: Field> CircuitFixtureRecorder<F> {
         }
     }
 
-    fn selector_data(
-        &self,
-        meta: &ConstraintSystem<F>,
-        n: usize,
-    ) -> (usize, Vec<Vec<F>>, Vec<(usize, usize, usize)>) {
+    fn selector_data(&self, meta: &ConstraintSystem<F>, n: usize) -> SelectorAssignmentData<F> {
         let mut activations = vec![vec![false; n]; meta.lean_dump_num_selectors()];
         for &(selector, row) in &self.selectors {
             activations[selector][row] = true;
@@ -302,9 +309,7 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
         meta: &ConstraintSystem<F>,
         n: usize,
         header: &str,
-        fixture_import: &str,
-        fixture_namespace: &str,
-        open_namespace: &str,
+        environment: LeanEnvironment<'_>,
         fixture_name: &str,
         sort_assignments: bool,
     ) -> String {
@@ -333,7 +338,11 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
 
         let mut output = format!(
             "{}\nimport {}\n\nnamespace {}\n\nopen {}\n\ndef {} : SelCompressMap :=\n",
-            header, fixture_import, fixture_namespace, open_namespace, fixture_name
+            header,
+            environment.fixture_import,
+            environment.fixture_namespace,
+            environment.open_namespace,
+            fixture_name
         );
         writeln!(output, "  {{ newFixedCols := {},", packed.len()).unwrap();
         if entries.is_empty() {
@@ -341,7 +350,7 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
         } else {
             writeln!(output, "    entries := [{}] }}", entries.join(",\n      ")).unwrap();
         }
-        write!(output, "\nend {}\n", fixture_namespace).unwrap();
+        write!(output, "\nend {}\n", environment.fixture_namespace).unwrap();
         output
     }
 
@@ -351,9 +360,7 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
         meta: &ConstraintSystem<F>,
         n: usize,
         fixture_name: &str,
-        fixture_import: &str,
-        fixture_namespace: &str,
-        open_namespace: &str,
+        environment: LeanEnvironment<'_>,
         format_field: &dyn Fn(&F) -> String,
     ) -> String {
         let mut activations = vec![vec![false; n]; meta.lean_dump_num_selectors()];
@@ -363,9 +370,9 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
         meta.lean_dump_compressed(activations)
             .lean_dump_cs_fixture_in(
                 fixture_name,
-                fixture_import,
-                fixture_namespace,
-                open_namespace,
+                environment.fixture_import,
+                environment.fixture_namespace,
+                environment.open_namespace,
                 format_field,
             )
     }
@@ -377,8 +384,7 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
         k: u32,
         header: &str,
         fixture_name: &str,
-        fixture_namespace: &str,
-        open_namespace: &str,
+        environment: LeanEnvironment<'_>,
         long_data: bool,
     ) -> String {
         use std::fmt::Write as _;
@@ -477,7 +483,7 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
 
         let mut output = format!(
             "{}\nnamespace {}\n\nopen {}\n\n",
-            header, fixture_namespace, open_namespace
+            header, environment.fixture_namespace, environment.open_namespace
         );
         if long_data {
             output.push_str("-- `maxRecDepth` is raised only to elaborate the long flat data lists (the full lookup-table\n-- column contents can be thousands of rows). This is a data-literal elaboration depth, not a\n-- proof-search/heartbeat budget; the fixture is inert data.\nset_option maxRecDepth 100000 in\n");
@@ -506,7 +512,7 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
         )
         .unwrap();
         writeln!(output, "    fixed := {} }}", lean_list(&fixed)).unwrap();
-        write!(output, "\nend {}\n", fixture_namespace).unwrap();
+        write!(output, "\nend {}\n", environment.fixture_namespace).unwrap();
         output
     }
 }

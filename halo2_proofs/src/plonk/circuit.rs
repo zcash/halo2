@@ -1009,6 +1009,16 @@ impl<F: Field> Default for ConstraintSystem<F> {
     }
 }
 
+/// One selector's compressed-column assignment: selector index, combination index,
+/// and assigned root.
+#[cfg(feature = "unstable-circuit-fixtures")]
+pub type SelectorAssignment = (usize, usize, usize);
+
+/// Selector-compression fixture data: the original fixed-column count, packed columns,
+/// and selector assignments.
+#[cfg(feature = "unstable-circuit-fixtures")]
+pub type SelectorAssignmentData<F> = (usize, Vec<Vec<F>>, Vec<SelectorAssignment>);
+
 impl<F: Field> ConstraintSystem<F> {
     /// Lean-dump helper (Halo2-Clean VK matching): run selector
     /// compression on a copy, returning the pre-compression fixed-column count and the
@@ -1281,7 +1291,7 @@ end {}
     pub fn lean_dump_selector_assignments(
         &self,
         selectors: Vec<Vec<bool>>,
-    ) -> (usize, Vec<Vec<F>>, Vec<(usize, usize, usize)>) {
+    ) -> SelectorAssignmentData<F> {
         let mut cs = self.clone();
         let before = cs.num_fixed_columns;
         let mut degrees = vec![0; selectors.len()];

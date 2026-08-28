@@ -4,7 +4,7 @@ use super::{add, mul, CircuitVersion, EccPoint, NonIdentityEccPoint};
 use crate::utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheckConfig};
 use halo2_proofs::{
     circuit::{Layouter, SimpleFloorPlanner, Value},
-    dev::circuit_fixture::CircuitFixtureRecorder,
+    dev::circuit_fixture::{CircuitFixtureRecorder, LeanEnvironment},
     plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, Error, FloorPlanner},
 };
 use pasta_curves::pallas;
@@ -13,6 +13,11 @@ const K: u32 = 11;
 const FIXTURE_IMPORT: &str = "Zcash.Circuits.Fixtures.FixtureTypes";
 const FIXTURE_NAMESPACE: &str = "Zcash.Circuits.Fixtures";
 const OPEN_NAMESPACE: &str = "Fixtures";
+const LEAN_ENVIRONMENT: LeanEnvironment<'static> = LeanEnvironment {
+    fixture_import: FIXTURE_IMPORT,
+    fixture_namespace: FIXTURE_NAMESPACE,
+    open_namespace: OPEN_NAMESPACE,
+};
 
 struct MulDumpCircuit;
 
@@ -73,13 +78,13 @@ impl Circuit<pallas::Base> for MulDumpCircuit {
                     || "base_x",
                     config.advices[0],
                     0,
-                    || Value::<Assigned<pallas::Base>>::unknown(),
+                    Value::<Assigned<pallas::Base>>::unknown,
                 )?;
                 let y = region.assign_advice(
                     || "base_y",
                     config.advices[1],
                     0,
-                    || Value::<Assigned<pallas::Base>>::unknown(),
+                    Value::<Assigned<pallas::Base>>::unknown,
                 )?;
                 Ok((x, y))
             },
@@ -91,7 +96,7 @@ impl Circuit<pallas::Base> for MulDumpCircuit {
                     || "alpha",
                     config.advices[0],
                     0,
-                    || Value::<pallas::Base>::unknown(),
+                    Value::<pallas::Base>::unknown,
                 )
             },
         )?;
@@ -153,25 +158,25 @@ impl Circuit<pallas::Base> for AddDumpCircuit {
                     || "p_x",
                     config.advices[0],
                     0,
-                    || Value::<Assigned<pallas::Base>>::unknown(),
+                    Value::<Assigned<pallas::Base>>::unknown,
                 )?;
                 let py = region.assign_advice(
                     || "p_y",
                     config.advices[1],
                     0,
-                    || Value::<Assigned<pallas::Base>>::unknown(),
+                    Value::<Assigned<pallas::Base>>::unknown,
                 )?;
                 let qx = region.assign_advice(
                     || "q_x",
                     config.advices[2],
                     0,
-                    || Value::<Assigned<pallas::Base>>::unknown(),
+                    Value::<Assigned<pallas::Base>>::unknown,
                 )?;
                 let qy = region.assign_advice(
                     || "q_y",
                     config.advices[3],
                     0,
-                    || Value::<Assigned<pallas::Base>>::unknown(),
+                    Value::<Assigned<pallas::Base>>::unknown,
                 )?;
                 Ok((px, py, qx, qy))
             },
@@ -293,22 +298,13 @@ fn dump_ironwood_fixtures() {
                 K,
                 ADD_LAYOUT_HEADER,
                 "addLayout",
-                FIXTURE_NAMESPACE,
-                OPEN_NAMESPACE,
+                LEAN_ENVIRONMENT,
                 false,
             ),
         ),
         (
             "AddPost.lean",
-            add_recorder.render_cs_lean(
-                &add_meta,
-                n,
-                "addPost",
-                FIXTURE_IMPORT,
-                FIXTURE_NAMESPACE,
-                OPEN_NAMESPACE,
-                &field_as_mk_fp,
-            ),
+            add_recorder.render_cs_lean(&add_meta, n, "addPost", LEAN_ENVIRONMENT, &field_as_mk_fp),
         ),
         (
             "AddSelMap.lean",
@@ -316,9 +312,7 @@ fn dump_ironwood_fixtures() {
                 &add_meta,
                 n,
                 ADD_SELMAP_HEADER,
-                FIXTURE_IMPORT,
-                FIXTURE_NAMESPACE,
-                OPEN_NAMESPACE,
+                LEAN_ENVIRONMENT,
                 "addSelMap",
                 true,
             ),
@@ -330,22 +324,13 @@ fn dump_ironwood_fixtures() {
                 K,
                 MUL_LAYOUT_HEADER,
                 "mulLayout",
-                FIXTURE_NAMESPACE,
-                OPEN_NAMESPACE,
+                LEAN_ENVIRONMENT,
                 true,
             ),
         ),
         (
             "MulPost.lean",
-            mul_recorder.render_cs_lean(
-                &mul_meta,
-                n,
-                "mulPost",
-                FIXTURE_IMPORT,
-                FIXTURE_NAMESPACE,
-                OPEN_NAMESPACE,
-                &field_as_mk_fp,
-            ),
+            mul_recorder.render_cs_lean(&mul_meta, n, "mulPost", LEAN_ENVIRONMENT, &field_as_mk_fp),
         ),
         (
             "MulSelMap.lean",
@@ -353,9 +338,7 @@ fn dump_ironwood_fixtures() {
                 &mul_meta,
                 n,
                 MUL_SELMAP_HEADER,
-                FIXTURE_IMPORT,
-                FIXTURE_NAMESPACE,
-                OPEN_NAMESPACE,
+                LEAN_ENVIRONMENT,
                 "mulSelMap",
                 true,
             ),
