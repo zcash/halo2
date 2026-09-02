@@ -7,6 +7,14 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Changed
+- `halo2_proofs::plonk::verify_proof` now computes instance commitments
+  directly from their supplied Lagrange coefficients, without zero-padding to
+  the evaluation domain, and batch-normalizes them when verifying at least
+  four commitments.
+- `halo2_proofs::plonk::create_proof` now commits directly to the supplied
+  instance values instead of zero-padding them to the evaluation domain first.
+- `halo2_proofs::arithmetic::best_multiexp` now uses serial window
+  accumulation when only one worker is available.
 - The minimum supported Rust version is now 1.88.
 
 ## [0.3.5] - 2026-08-02
