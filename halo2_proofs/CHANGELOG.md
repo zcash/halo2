@@ -7,6 +7,11 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Changed
+- `halo2_proofs::arithmetic::best_multiexp` now uses signed Booth recoding to
+  reduce its Pippenger bucket count. It computes each scalar's canonical
+  representation once per MSM rather than once per window, and derives its
+  window schedule from that representation instead of assuming a 256-bit
+  scalar.
 - The minimum supported Rust version is now 1.88.
 
 ## [0.3.5] - 2026-08-02
