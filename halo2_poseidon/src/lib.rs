@@ -140,9 +140,18 @@ pub(crate) fn permute<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE:
     };
 
     iter::empty()
-        .chain(iter::repeat(&full_round as &dyn Fn(&mut State<F, T>, &[F; T])).take(r_f))
-        .chain(iter::repeat(&part_round as &dyn Fn(&mut State<F, T>, &[F; T])).take(r_p))
-        .chain(iter::repeat(&full_round as &dyn Fn(&mut State<F, T>, &[F; T])).take(r_f))
+        .chain(iter::repeat_n(
+            &full_round as &dyn Fn(&mut State<F, T>, &[F; T]),
+            r_f,
+        ))
+        .chain(iter::repeat_n(
+            &part_round as &dyn Fn(&mut State<F, T>, &[F; T]),
+            r_p,
+        ))
+        .chain(iter::repeat_n(
+            &full_round as &dyn Fn(&mut State<F, T>, &[F; T]),
+            r_f,
+        ))
         .zip(round_constants.iter())
         .fold(state, |state, (round, rcs)| {
             round(state, rcs);
@@ -392,7 +401,7 @@ impl<F: PrimeField, const RATE: usize, const L: usize> Domain<F, RATE> for Const
     type Padding = iter::Take<iter::Repeat<F>>;
 
     fn name() -> String {
-        format!("ConstantLength<{}>", L)
+        format!("ConstantLength<{L}>")
     }
 
     fn initial_capacity_element() -> F {
@@ -401,13 +410,16 @@ impl<F: PrimeField, const RATE: usize, const L: usize> Domain<F, RATE> for Const
         F::from_u128((L as u128) << 64)
     }
 
+    // `Self::Padding` is a public associated type, so it cannot be changed from
+    // `Take<Repeat<F>>` to `RepeatN<F>` without breaking the API of this crate.
+    #[allow(clippy::manual_repeat_n)]
     fn padding(input_len: usize) -> Self::Padding {
         assert_eq!(input_len, L);
         // For constant-input-length hashing, we pad the input with zeroes to a multiple
         // of RATE. On its own this would not be sponge-compliant padding, but the
         // Poseidon authors encode the constant length into the capacity element, ensuring
         // that inputs of different lengths do not share the same permutation.
-        let k = (L + RATE - 1) / RATE;
+        let k = L.div_ceil(RATE);
         iter::repeat(F::ZERO).take(k * RATE - L)
     }
 }

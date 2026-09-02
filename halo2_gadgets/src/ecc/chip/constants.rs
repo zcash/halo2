@@ -16,11 +16,11 @@ pub const H: usize = 1 << FIXED_BASE_WINDOW_SIZE;
 
 /// Number of windows for a full-width scalar
 pub const NUM_WINDOWS: usize =
-    (pallas::Scalar::NUM_BITS as usize + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
+    (pallas::Scalar::NUM_BITS as usize).div_ceil(FIXED_BASE_WINDOW_SIZE);
 
 /// Number of windows for a short signed scalar
 pub const NUM_WINDOWS_SHORT: usize =
-    (L_SCALAR_SHORT + FIXED_BASE_WINDOW_SIZE - 1) / FIXED_BASE_WINDOW_SIZE;
+    L_SCALAR_SHORT.div_ceil(FIXED_BASE_WINDOW_SIZE);
 
 /// $\ell_\mathsf{value}$
 /// Number of bits in an unsigned short scalar.

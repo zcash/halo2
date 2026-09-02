@@ -9,7 +9,7 @@ pub(crate) trait CurveRead: CurveAffine {
         let mut compressed = Self::Repr::default();
         reader.read_exact(compressed.as_mut())?;
         Option::from(Self::from_bytes(&compressed))
-            .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "invalid point encoding in proof"))
+            .ok_or_else(|| io::Error::other("invalid point encoding in proof"))
     }
 }
 

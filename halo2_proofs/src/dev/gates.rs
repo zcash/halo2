@@ -124,23 +124,23 @@ impl CircuitGates {
                             &|query| format!("I{}@{}", query.column_index, query.rotation.0),
                             &|a| {
                                 if a.contains(' ') {
-                                    format!("-({})", a)
+                                    format!("-({a})")
                                 } else {
-                                    format!("-{}", a)
+                                    format!("-{a}")
                                 }
                             },
                             &|a, b| {
                                 if let Some(b) = b.strip_prefix('-') {
-                                    format!("{} - {}", a, b)
+                                    format!("{a} - {b}")
                                 } else {
-                                    format!("{} + {}", a, b)
+                                    format!("{a} + {b}")
                                 }
                             },
                             &|a, b| match (a.contains(' '), b.contains(' ')) {
-                                (false, false) => format!("{} * {}", a, b),
-                                (false, true) => format!("{} * ({})", a, b),
-                                (true, false) => format!("({}) * {}", a, b),
-                                (true, true) => format!("({}) * ({})", a, b),
+                                (false, false) => format!("{a} * {b}"),
+                                (false, true) => format!("{a} * ({b})"),
+                                (true, false) => format!("({a}) * {b}"),
+                                (true, true) => format!("({a}) * ({b})"),
                             },
                             &|a, s| {
                                 if a.contains(' ') {
@@ -228,7 +228,7 @@ impl CircuitGates {
         let mut ret = String::new();
         let w = &mut ret;
         for query in &queries {
-            write!(w, "{},", query).unwrap();
+            write!(w, "{query},").unwrap();
         }
         writeln!(w, "Name").unwrap();
 

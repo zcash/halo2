@@ -194,7 +194,7 @@ pub fn decompose_word<F: PrimeFieldBits>(
         .to_le_bits()
         .into_iter()
         .take(word_num_bits)
-        .chain(std::iter::repeat(false).take(padding))
+        .chain(std::iter::repeat_n(false, padding))
         .collect();
     assert_eq!(bits.len(), word_num_bits + padding);
 
@@ -337,6 +337,7 @@ mod tests {
 
     #[allow(clippy::assign_op_pattern)]
     #[allow(clippy::ptr_offset_with_cast)]
+    #[allow(clippy::manual_div_ceil)]
     #[test]
     fn test_bitrange_subset() {
         let rng = OsRng;

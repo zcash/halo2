@@ -147,7 +147,7 @@ where
                 |(i, piece)| -> Result<MessagePiece<C, SinsemillaChip, K, MAX_WORDS>, Error> {
                     MessagePiece::from_bitstring(
                         chip.clone(),
-                        layouter.namespace(|| format!("message piece {}", i)),
+                        layouter.namespace(|| format!("message piece {i}")),
                         piece,
                     )
                 },

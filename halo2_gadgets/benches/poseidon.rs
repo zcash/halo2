@@ -89,7 +89,7 @@ where
                 let message_word = |i: usize| {
                     let value = self.message.map(|message_vals| message_vals[i]);
                     region.assign_advice(
-                        || format!("load message_{}", i),
+                        || format!("load message_{i}"),
                         config.input[i],
                         0,
                         || value,

@@ -435,7 +435,7 @@ fn plonk_api() {
     // Check this circuit is satisfied.
     let prover = match MockProver::run(K, &circuit, vec![pubinputs.clone()]) {
         Ok(prover) => prover,
-        Err(e) => panic!("{:?}", e),
+        Err(e) => panic!("{e:?}"),
     };
     assert_eq!(prover.verify(), Ok(()));
 
@@ -626,7 +626,7 @@ fn plonk_api() {
             // A rejecting capture is checked only in Rust (it is never exported to Lean): verify the
             // same proof bytes against the wrong public inputs. Every read still parses (the proof is
             // unchanged), so capture succeeds, but the assembled MSM is non-identity.
-            let wrong_pubinputs = vec![instance + Fp::ONE];
+            let wrong_pubinputs = [instance + Fp::ONE];
             let mut reject_transcript =
                 ChallengeRecorder::<_, _, Challenge255<_>>::init(&proof[..]);
             let reject_msm = capture_proof_fingerprint(

@@ -129,7 +129,7 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize>: Eq + Copy + Debug
         strict: bool,
     ) -> Result<RunningSum<F>, Error> {
         layouter.assign_region(
-            || format!("{:?} words range check", num_words),
+            || format!("{num_words:?} words range check"),
             |mut region| {
                 // Copy `element` and initialize running sum `z_0 = element` to decompose it.
                 let z_0 =
@@ -253,7 +253,7 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize>: Eq + Copy + Debug
     ) -> Result<(), Error> {
         assert!(num_bits < K);
         layouter.assign_region(
-            || format!("Range check {:?} bits", num_bits),
+            || format!("Range check {num_bits:?} bits"),
             |mut region| {
                 // Copy `element` to use in the k-bit lookup.
                 let element =
@@ -276,7 +276,7 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize>: Eq + Copy + Debug
     ) -> Result<AssignedCell<F, F>, Error> {
         assert!(num_bits <= K);
         layouter.assign_region(
-            || format!("Range check {:?} bits", num_bits),
+            || format!("Range check {num_bits:?} bits"),
             |mut region| {
                 // Witness `element` to use in the k-bit lookup.
                 let element = region.assign_advice(
@@ -471,7 +471,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
         let shifted = element.value().into_field() * F::from(1 << (K - num_bits));
 
         region.assign_advice(
-            || format!("element * 2^({}-{})", K, num_bits),
+            || format!("element * 2^({K}-{num_bits})"),
             self.running_sum,
             1,
             || shifted,
@@ -480,7 +480,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
         // Assign 2^{-num_bits} from a fixed column.
         let inv_two_pow_s = F::from(1 << num_bits).invert().unwrap();
         region.assign_advice_from_constant(
-            || format!("2^(-{})", num_bits),
+            || format!("2^(-{num_bits})"),
             self.running_sum,
             2,
             inv_two_pow_s,
