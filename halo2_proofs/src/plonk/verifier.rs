@@ -3,12 +3,12 @@ use group::Curve;
 use std::iter;
 
 use super::{
-    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
-    VerifyingKey,
+    commit_instance, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
+    ChallengeY, Error, VerifyingKey,
 };
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
-    commitment::{Blind, Guard, Params, MSM},
+    commitment::{Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
@@ -17,6 +17,9 @@ use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, Transcr
 mod batch;
 #[cfg(feature = "batch")]
 pub use batch::BatchVerifier;
+
+// Batch normalization costs more than individual normalization below this.
+const MIN_BATCH_NORMALIZE: usize = 4;
 
 /// Trait representing a strategy for verifying Halo 2 proofs.
 pub trait VerificationStrategy<'params, C: CurveAffine> {
@@ -84,24 +87,55 @@ pub fn verify_proof<
         }
     }
 
-    let instance_commitments = instances
+    let max_instance_len = params.n as usize - (vk.cs.blinding_factors() + 1);
+    if instances
         .iter()
-        .map(|instance| {
-            instance
-                .iter()
-                .map(|instance| {
-                    if instance.len() > params.n as usize - (vk.cs.blinding_factors() + 1) {
-                        return Err(Error::InstanceTooLarge);
-                    }
-                    let mut poly = instance.to_vec();
-                    poly.resize(params.n as usize, C::Scalar::ZERO);
-                    let poly = vk.domain.lagrange_from_vec(poly);
+        .flat_map(|instance| instance.iter())
+        .any(|instance| instance.len() > max_instance_len)
+    {
+        return Err(Error::InstanceTooLarge);
+    }
 
-                    Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
-                })
-                .collect::<Result<Vec<_>, _>>()
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let batch_normalize = instances
+        .iter()
+        .flat_map(|instance| instance.iter())
+        .take(MIN_BATCH_NORMALIZE)
+        .count()
+        == MIN_BATCH_NORMALIZE;
+    let instance_commitments = if !batch_normalize {
+        instances
+            .iter()
+            .map(|instance| {
+                instance
+                    .iter()
+                    .map(|instance| commit_instance(params, instance).to_affine())
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+    } else {
+        let instance_commitments_projective = instances
+            .iter()
+            .flat_map(|instance| instance.iter())
+            .map(|instance| commit_instance(params, instance))
+            .collect::<Vec<_>>();
+        let mut normalized_commitments = vec![C::identity(); instance_commitments_projective.len()];
+        C::Curve::batch_normalize(
+            &instance_commitments_projective,
+            &mut normalized_commitments,
+        );
+        let mut normalized_commitments = normalized_commitments.into_iter();
+        let instance_commitments = instances
+            .iter()
+            .map(|instance| {
+                normalized_commitments
+                    .by_ref()
+                    .take(instance.len())
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        assert!(normalized_commitments.next().is_none());
+        instance_commitments
+    };
 
     let num_proofs = instance_commitments.len();
 
@@ -335,4 +369,128 @@ pub fn verify_proof<
     strategy.process(|msm| {
         multiopen::verify_proof(params, transcript, queries, msm).map_err(|_| Error::Opening)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{commit_instance, verify_proof, SingleVerifier, MIN_BATCH_NORMALIZE};
+    use crate::{
+        circuit::{Layouter, SimpleFloorPlanner, Value},
+        pasta::{EqAffine, Fp},
+        plonk::{
+            create_proof, keygen_pk, keygen_vk, Advice, Circuit, Column, ConstraintSystem, Error,
+            Instance,
+        },
+        poly::{
+            commitment::{Blind, Params},
+            EvaluationDomain,
+        },
+        transcript::{Blake2bRead, Blake2bWrite, Challenge255},
+    };
+    use rand_core::OsRng;
+
+    #[derive(Clone, Debug)]
+    struct TestConfig {
+        advice: Column<Advice>,
+        instance: Column<Instance>,
+    }
+
+    #[derive(Clone)]
+    struct TestCircuit {
+        value: Value<Fp>,
+    }
+
+    impl Circuit<Fp> for TestCircuit {
+        type Config = TestConfig;
+        type FloorPlanner = SimpleFloorPlanner;
+
+        fn without_witnesses(&self) -> Self {
+            Self {
+                value: Value::unknown(),
+            }
+        }
+
+        fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+            let advice = meta.advice_column();
+            let instance = meta.instance_column();
+            meta.enable_equality(advice);
+            meta.enable_equality(instance);
+
+            TestConfig { advice, instance }
+        }
+
+        fn synthesize(
+            &self,
+            config: Self::Config,
+            mut layouter: impl Layouter<Fp>,
+        ) -> Result<(), Error> {
+            let cell = layouter.assign_region(
+                || "assign instance value",
+                |mut region| {
+                    region.assign_advice(|| "instance value", config.advice, 0, || self.value)
+                },
+            )?;
+            layouter.constrain_instance(cell.cell(), config.instance, 0)
+        }
+    }
+
+    #[test]
+    fn instance_commitment_matches_zero_padded_commitment() {
+        const K: u32 = 5;
+
+        let params = Params::<EqAffine>::new(K);
+        let domain = EvaluationDomain::new(1, K);
+
+        for len in [0, 1, 9, 1 << K] {
+            let instance = (0..len).map(|i| Fp::from(i as u64)).collect::<Vec<_>>();
+            let mut padded = domain.empty_lagrange();
+            for (coefficient, value) in padded.iter_mut().zip(instance.iter()) {
+                *coefficient = *value;
+            }
+
+            assert_eq!(
+                commit_instance(&params, &instance),
+                params.commit_lagrange(&padded, Blind::default()),
+            );
+        }
+    }
+
+    #[test]
+    fn batch_normalized_instance_commitments_verify() {
+        const K: u32 = 4;
+
+        let params = Params::<EqAffine>::new(K);
+        let empty_circuit = TestCircuit {
+            value: Value::unknown(),
+        };
+        let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
+        let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
+        let public_inputs = (0..MIN_BATCH_NORMALIZE)
+            .map(|i| vec![Fp::from(i as u64 + 1)])
+            .collect::<Vec<_>>();
+        let circuits = public_inputs
+            .iter()
+            .map(|values| TestCircuit {
+                value: Value::known(values[0]),
+            })
+            .collect::<Vec<_>>();
+        let instance_columns = public_inputs
+            .iter()
+            .map(|values| [values.as_slice()])
+            .collect::<Vec<_>>();
+        let instances = instance_columns
+            .iter()
+            .map(|columns| columns.as_slice())
+            .collect::<Vec<_>>();
+
+        let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(Vec::new());
+        create_proof(&params, &pk, &circuits, &instances, OsRng, &mut transcript)
+            .expect("proof generation should not fail");
+        let proof = transcript.finalize();
+
+        let strategy = SingleVerifier::new(&params);
+        let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+        verify_proof(&params, pk.get_vk(), strategy, &instances, &mut transcript)
+            .expect("proof verification should not fail");
+    }
 }

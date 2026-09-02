@@ -9,8 +9,8 @@ use super::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
         Selector,
     },
-    lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-    ChallengeY, Error, ProvingKey,
+    commit_instance, lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
+    ChallengeX, ChallengeY, Error, ProvingKey,
 };
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine},
@@ -90,9 +90,9 @@ pub fn create_proof<
                     Ok(poly)
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let instance_commitments_projective: Vec<_> = instance_values
+            let instance_commitments_projective: Vec<_> = instance
                 .iter()
-                .map(|poly| params.commit_lagrange(poly, Blind::default()))
+                .map(|values| commit_instance(params, values))
                 .collect();
             let mut instance_commitments =
                 vec![C::identity(); instance_commitments_projective.len()];
@@ -722,6 +722,27 @@ pub fn create_proof<
         .chain(vanishing.open(x));
 
     multiopen::create_proof(params, rng, transcript, instances).map_err(|_| Error::Opening)
+}
+
+#[test]
+fn test_commit_instance() {
+    use pasta_curves::{EqAffine, Fp};
+
+    let params: Params<EqAffine> = Params::new(3);
+    let domain = crate::poly::EvaluationDomain::new(1, 3);
+    let instance = [Fp::from(3), Fp::ZERO, Fp::from(5)];
+
+    for instance in [&[][..], &instance[..]] {
+        let mut poly = domain.empty_lagrange();
+        for (coefficient, value) in poly.iter_mut().zip(instance.iter()) {
+            *coefficient = *value;
+        }
+
+        assert_eq!(
+            commit_instance(&params, instance),
+            params.commit_lagrange(&poly, Blind::default())
+        );
+    }
 }
 
 #[test]
