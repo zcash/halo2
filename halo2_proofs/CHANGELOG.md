@@ -6,6 +6,12 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- `halo2_proofs::arithmetic::best_multiexp` now uses signed Booth recoding to
+  reduce its Pippenger bucket count. It computes each scalar's canonical
+  representation once per MSM rather than once per window, and derives its
+  window schedule from that representation instead of assuming a 256-bit
+  scalar.
 
 ## [0.4.0] - 2026-09-29
 ### Added
