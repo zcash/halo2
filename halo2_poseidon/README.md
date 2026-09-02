@@ -1,6 +1,6 @@
 # halo2_poseidon [![Crates.io](https://img.shields.io/crates/v/halo2_poseidon.svg)](https://crates.io/crates/halo2_poseidon) #
 
-Requires Rust 1.60+.
+Requires Rust 1.88+.
 
 ## Documentation
 
