@@ -380,12 +380,7 @@ impl<
                             // The capacity element is never altered by the input.
                             .unwrap_or_else(|| Value::known(F::ZERO));
                     region
-                        .assign_advice(
-                            || format!("load output_{i}"),
-                            config.state[i],
-                            2,
-                            || value,
-                        )
+                        .assign_advice(|| format!("load output_{i}"), config.state[i], 2, || value)
                         .map(StateWord)
                 };
 

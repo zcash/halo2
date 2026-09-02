@@ -1258,9 +1258,7 @@ impl VerifyingKey<EqAffine> {
         out.push_str(&format!(
             "  lookupProduct := fun p l => capturedLookupProducts.getD (p.val * {n_lookups} + l.val) 0,\n"
         ));
-        out.push_str(&format!(
-            "  vanishingRandom := {vanishing_random_point},\n"
-        ));
+        out.push_str(&format!("  vanishingRandom := {vanishing_random_point},\n"));
         out.push_str("  hPieces := fun i => capturedHPieces.getD i.val 0,\n");
         out.push_str(&format!(
             "  instanceEvals := fun p q => capturedInstanceEvals.getD (p.val * {n_inst_q} + q.val) 0,\n"

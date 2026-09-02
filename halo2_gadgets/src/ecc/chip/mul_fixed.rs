@@ -218,11 +218,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             // Assign x-coordinate Lagrange interpolation coefficients
             for k in 0..H {
                 region.assign_fixed(
-                    || {
-                        format!(
-                            "Lagrange interpolation coeff for window: {window:?}, k: {k:?}"
-                        )
-                    },
+                    || format!("Lagrange interpolation coeff for window: {window:?}, k: {k:?}"),
                     self.lagrange_coeffs[k],
                     window + offset,
                     || {
