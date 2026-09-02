@@ -277,7 +277,7 @@ impl<
             .enumerate()
         {
             self.sponge
-                .absorb(layouter.namespace(|| format!("absorb_{}", i)), value)?;
+                .absorb(layouter.namespace(|| format!("absorb_{i}")), value)?;
         }
         self.sponge
             .finish_absorbing(layouter.namespace(|| "finish absorbing"))?

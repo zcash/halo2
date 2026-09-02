@@ -194,9 +194,9 @@ fn expr_to_lean(e: &Expression<Fp>) -> String {
         &|q| format!("(.fixed {})", q.index),
         &|q| format!("(.advice {})", q.index),
         &|q| format!("(.instance {})", q.index),
-        &|a: String| format!("(.negated {})", a),
-        &|a: String, b: String| format!("(.sum {} {})", a, b),
-        &|a: String, b: String| format!("(.product {} {})", a, b),
+        &|a: String| format!("(.negated {a})"),
+        &|a: String, b: String| format!("(.sum {a} {b})"),
+        &|a: String, b: String| format!("(.product {a} {b})"),
         &|a: String, c| format!("(.scaled {} {})", a, fp(c)),
     )
 }
@@ -769,16 +769,14 @@ impl VerifyingKey<EqAffine> {
 
         // ---- Shape ----
         out.push_str(&format!(
-            "def shape : Shape := {{ k := {}, numProofs := {}, numAdviceColumns := {}, numLookups := {}, numPermutationSets := {}, numPermutationColumns := {}, numQuotientPieces := {}, numInstanceColumns := {}, numInstanceQueries := {}, numAdviceQueries := {}, numFixedQueries := {}, numPointSets := {} }}\n\n",
-            k, num_proofs, n_advice, n_lookups, n_perm_sets, n_perm_cols, n_quotient, n_inst_cols, n_inst_q, n_adv_q, n_fixed_q, n_point_sets,
+            "def shape : Shape := {{ k := {k}, numProofs := {num_proofs}, numAdviceColumns := {n_advice}, numLookups := {n_lookups}, numPermutationSets := {n_perm_sets}, numPermutationColumns := {n_perm_cols}, numQuotientPieces := {n_quotient}, numInstanceColumns := {n_inst_cols}, numInstanceQueries := {n_inst_q}, numAdviceQueries := {n_adv_q}, numFixedQueries := {n_fixed_q}, numPointSets := {n_point_sets} }}\n\n",
         ));
         out.push_str(&format!(
             "def capturedUrsG : List G := [{}]\n\n",
             urs_g.join(", ")
         ));
         out.push_str(&format!(
-            "def capturedURS : URS G := {{ k := {}, g := fun i => capturedUrsG.getD i.val 0, w := {}, u := {} }}\n\n",
-            k, urs_w, urs_u
+            "def capturedURS : URS G := {{ k := {k}, g := fun i => capturedUrsG.getD i.val 0, w := {urs_w}, u := {urs_u} }}\n\n"
         ));
         // `capturedURS.g` indexes `capturedUrsG` with `getD`, which silently yields the identity for
         // any index past the list's end; pin the length so a truncated URS cannot pass unnoticed.
@@ -825,11 +823,11 @@ impl VerifyingKey<EqAffine> {
             for col in chunk {
                 let qi = cs.get_any_query_index(*col);
                 let cref = match col.column_type() {
-                    Any::Advice => format!("(.advice {})", qi),
-                    Any::Fixed => format!("(.fixed {})", qi),
-                    Any::Instance => format!("(.instance {})", qi),
+                    Any::Advice => format!("(.advice {qi})"),
+                    Any::Fixed => format!("(.fixed {qi})"),
+                    Any::Instance => format!("(.instance {qi})"),
                 };
-                entries.push(format!("({}, {})", cref, gidx));
+                entries.push(format!("({cref}, {gidx})"));
                 gidx += 1;
             }
             chunks.push(format!("[{}]", entries.join(", ")));
@@ -963,10 +961,10 @@ impl VerifyingKey<EqAffine> {
         );
         out.push_str("def vk : VerifyingKey shape Fp G := {\n");
         out.push_str(&format!("  omega := {},\n", fp(self.domain.get_omega())));
-        out.push_str(&format!("  n := {},\n", n));
-        out.push_str(&format!("  blindingFactors := {},\n", blinding));
+        out.push_str(&format!("  n := {n},\n"));
+        out.push_str(&format!("  blindingFactors := {blinding},\n"));
         out.push_str(&format!("  delta := {},\n", fp(Fp::DELTA)));
-        out.push_str(&format!("  chunkLen := {},\n", chunk_len));
+        out.push_str(&format!("  chunkLen := {chunk_len},\n"));
         out.push_str(&format!("  gates := [{}],\n", gates.join(", ")));
         out.push_str(&format!(
             "  instanceQueryLayout := [{}],\n",
@@ -1109,26 +1107,22 @@ impl VerifyingKey<EqAffine> {
         ));
 
         out.push_str("def ps : ProofString shape Fp G := {\n");
-        out.push_str(&format!("  adviceCommitments := fun p c => capturedAdviceCommitments.getD (p.val * {} + c.val) 0,\n", n_advice));
-        out.push_str(&format!("  lookupPermutedInput := fun p l => capturedLookupPermutedInput.getD (p.val * {} + l.val) 0,\n", n_lookups));
-        out.push_str(&format!("  lookupPermutedTable := fun p l => capturedLookupPermutedTable.getD (p.val * {} + l.val) 0,\n", n_lookups));
-        out.push_str(&format!("  permutationProduct := fun p s => capturedPermutationProducts.getD (p.val * {} + s.val) 0,\n", n_perm_sets));
+        out.push_str(&format!("  adviceCommitments := fun p c => capturedAdviceCommitments.getD (p.val * {n_advice} + c.val) 0,\n"));
+        out.push_str(&format!("  lookupPermutedInput := fun p l => capturedLookupPermutedInput.getD (p.val * {n_lookups} + l.val) 0,\n"));
+        out.push_str(&format!("  lookupPermutedTable := fun p l => capturedLookupPermutedTable.getD (p.val * {n_lookups} + l.val) 0,\n"));
+        out.push_str(&format!("  permutationProduct := fun p s => capturedPermutationProducts.getD (p.val * {n_perm_sets} + s.val) 0,\n"));
         out.push_str(&format!(
-            "  lookupProduct := fun p l => capturedLookupProducts.getD (p.val * {} + l.val) 0,\n",
-            n_lookups
+            "  lookupProduct := fun p l => capturedLookupProducts.getD (p.val * {n_lookups} + l.val) 0,\n"
         ));
         out.push_str(&format!(
-            "  vanishingRandom := {},\n",
-            vanishing_random_point
+            "  vanishingRandom := {vanishing_random_point},\n"
         ));
         out.push_str("  hPieces := fun i => capturedHPieces.getD i.val 0,\n");
         out.push_str(&format!(
-            "  instanceEvals := fun p q => capturedInstanceEvals.getD (p.val * {} + q.val) 0,\n",
-            n_inst_q
+            "  instanceEvals := fun p q => capturedInstanceEvals.getD (p.val * {n_inst_q} + q.val) 0,\n"
         ));
         out.push_str(&format!(
-            "  adviceEvals := fun p q => capturedAdviceEvals.getD (p.val * {} + q.val) 0,\n",
-            n_adv_q
+            "  adviceEvals := fun p q => capturedAdviceEvals.getD (p.val * {n_adv_q} + q.val) 0,\n"
         ));
         out.push_str("  fixedEvals := fun q => capturedFixedEvals.getD q.val 0,\n");
         out.push_str(&format!(
@@ -1138,11 +1132,11 @@ impl VerifyingKey<EqAffine> {
         out.push_str(
             "  permutationCommonEvals := fun i => capturedPermutationCommonEvals.getD i.val 0,\n",
         );
-        out.push_str(&format!("  permutationSetEvals := fun p s => capturedPermutationSetEvals.getD (p.val * {} + s.val) {{ eval := 0, nextEval := 0, lastEval := none }},\n", n_perm_sets));
-        out.push_str(&format!("  lookupEvals := fun p l => capturedLookupEvals.getD (p.val * {} + l.val) {{ productEval := 0, productNextEval := 0, permutedInputEval := 0, permutedInputInvEval := 0, permutedTableEval := 0 }},\n", n_lookups));
-        out.push_str(&format!("  multiopenQPrime := {},\n", q_prime_point));
+        out.push_str(&format!("  permutationSetEvals := fun p s => capturedPermutationSetEvals.getD (p.val * {n_perm_sets} + s.val) {{ eval := 0, nextEval := 0, lastEval := none }},\n"));
+        out.push_str(&format!("  lookupEvals := fun p l => capturedLookupEvals.getD (p.val * {n_lookups} + l.val) {{ productEval := 0, productNextEval := 0, permutedInputEval := 0, permutedInputInvEval := 0, permutedTableEval := 0 }},\n"));
+        out.push_str(&format!("  multiopenQPrime := {q_prime_point},\n"));
         out.push_str("  multiopenU := fun s => capturedMultiopenU.getD s.val 0,\n");
-        out.push_str(&format!("  ipaS := {},\n", ipa_s_point));
+        out.push_str(&format!("  ipaS := {ipa_s_point},\n"));
         out.push_str("  ipaRounds := fun j => capturedIpaRounds.getD j.val (0, 0),\n");
         out.push_str(&format!("  ipaC := {},\n", fp(ipa_c)));
         out.push_str(&format!("  ipaF := {} }}\n\n", fp(ipa_f)));
@@ -1253,7 +1247,7 @@ impl VerifyingKey<EqAffine> {
                 out.push_str("theorem capturedMsm_evalNat_ne_zero : capturedMsm.evalNat capturedURS ≠ 0 := by native_decide\n\n");
             }
         }
-        out.push_str(&format!("end {}\n", lean_namespace));
+        out.push_str(&format!("end {lean_namespace}\n"));
 
         let body = out;
         let point_coordinates = points.coordinate_literals();
@@ -1281,8 +1275,7 @@ impl VerifyingKey<EqAffine> {
         // g-scalar arrays, point-coordinate validation, and gate Expr trees) that `native_decide`
         // compiles.
         out.push_str(&format!(
-            "import Zcash.Snark\n\nset_option maxRecDepth 1000000\n\nnamespace {}\n\nopen Zcash.Snark\nopen CompElliptic.CurveForms.ShortWeierstrass\nopen CompElliptic.Curves.Pasta\nopen CompElliptic.Fields.Pasta\n\n",
-            lean_namespace
+            "import Zcash.Snark\n\nset_option maxRecDepth 1000000\n\nnamespace {lean_namespace}\n\nopen Zcash.Snark\nopen CompElliptic.CurveForms.ShortWeierstrass\nopen CompElliptic.Curves.Pasta\nopen CompElliptic.Fields.Pasta\n\n"
         ));
         out.push_str("/-- Scalar field element from four little-endian u64 limbs. -/\n");
         out.push_str("def mkFp (a b c d : ℕ) : Fp := (a : Fp) + (b : Fp) * (2 : Fp) ^ 64 + (c : Fp) * (2 : Fp) ^ 128 + (d : Fp) * (2 : Fp) ^ 192\n\n");
@@ -1292,8 +1285,7 @@ impl VerifyingKey<EqAffine> {
         out.push_str("abbrev G := VestaG\n\n");
         out.push_str("instance : Inhabited G := ⟨0⟩\n\n");
         out.push_str(&format!(
-            "def capturedCircuitId : String := {:?}\n\n",
-            circuit_id
+            "def capturedCircuitId : String := {circuit_id:?}\n\n"
         ));
         out.push_str("/-- Canonical affine coordinates for every distinct Vesta point used by this fixture. -/\n");
         out.push_str(&format!(

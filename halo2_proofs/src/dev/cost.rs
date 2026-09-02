@@ -340,7 +340,7 @@ impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, Concrete
 
     fn permutation_chunks(&self) -> usize {
         let chunk_size = self.max_deg - 2;
-        (self.permutation_cols + chunk_size - 1) / chunk_size
+        self.permutation_cols.div_ceil(chunk_size)
     }
 
     /// Returns the marginal proof size per instance of this circuit.

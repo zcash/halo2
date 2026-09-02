@@ -170,7 +170,7 @@ fn prove() -> (
 #[test]
 fn exports_accepting_fixture() {
     let (params, pk, product, proof) = prove();
-    let pubinputs = vec![product];
+    let pubinputs = [product];
 
     // The proof verifies, so the captured fingerprint is the group identity.
     let strategy = SingleVerifier::new(&params);
@@ -273,7 +273,7 @@ fn exports_accepting_fixture() {
 #[test]
 fn rejects_non_identity_capture() {
     let (params, pk, product, proof) = prove();
-    let wrong_pubinputs = vec![product + Fp::ONE];
+    let wrong_pubinputs = [product + Fp::ONE];
 
     let mut transcript = ChallengeRecorder::<_, _, Challenge255<_>>::init(&proof[..]);
     let msm = capture_proof_fingerprint(
@@ -324,7 +324,7 @@ fn rejects_non_identity_capture() {
 #[test]
 fn exports_match_only_fixture_for_non_identity_capture() {
     let (params, pk, product, proof) = prove();
-    let wrong_pubinputs = vec![product + Fp::ONE];
+    let wrong_pubinputs = [product + Fp::ONE];
 
     let mut transcript = ChallengeRecorder::<_, _, Challenge255<_>>::init(&proof[..]);
     let msm = capture_proof_fingerprint(
@@ -401,7 +401,7 @@ fn exports_match_only_fixture_for_non_identity_capture() {
 #[test]
 fn match_only_export_rejects_identity_capture() {
     let (params, pk, product, proof) = prove();
-    let pubinputs = vec![product];
+    let pubinputs = [product];
 
     let mut transcript = ChallengeRecorder::<_, _, Challenge255<_>>::init(&proof[..]);
     let msm =

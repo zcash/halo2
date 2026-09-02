@@ -171,7 +171,7 @@ impl Permutation {
 
         iter::empty()
             .chain(Some(product))
-            .chain(iter::repeat(poly).take(self.columns))
+            .chain(std::iter::repeat_n(poly, self.columns))
     }
 }
 
@@ -212,7 +212,7 @@ impl From<CostOptions> for Circuit {
             .cloned()
             .chain(opts.lookup.iter().flat_map(|l| l.queries()))
             .chain(opts.permutation.iter().flat_map(|p| p.queries()))
-            .chain(iter::repeat("0".parse().unwrap()).take(max_deg - 1))
+            .chain(std::iter::repeat_n("0".parse().unwrap(), max_deg - 1))
             .collect();
 
         let column_queries = queries.len();
@@ -294,7 +294,7 @@ impl Circuit {
 fn main() {
     let opts = CostOptions::parse_args_default_or_exit();
     let c = Circuit::from(opts);
-    println!("{:#?}", c);
+    println!("{c:#?}");
     println!("Proof size: {} bytes", c.proof_size());
     println!(
         "Verification: at least {}ms",
