@@ -18,7 +18,11 @@
 //! `derivedInstanceCommitment`), feeds *that* to `assemble`, and checks it against the captured
 //! commitments (`instance_commitments_derived`), so instance commitments no longer enter as opaque
 //! points nor masquerade as VK data. It does not reproduce Halo2's Blake2b transcript or pinned-key
-//! serialization; those remain trusted from the Rust capture. Halo2's `MSM` also merges same-base
+//! serialization; those remain trusted from the Rust capture. Given the proof byte string the
+//! verifier consumed ([`VerifyingKey::dump_vesta_lean_fixture_honest_with_proof_bytes`]), it checks that
+//! re-serializing the recorded proof reads reproduces those bytes exactly and carries them in the
+//! fixture as `capturedProofHex`, so a consumer can check its own proof-string decoder against the
+//! bytes the deployed verifier read. Halo2's `MSM` also merges same-base
 //! terms and drops identity bases, where the Lean assembly deliberately does neither; such a capture
 //! is rejected at export (see [`VerifyingKey::dump_vesta_lean_fixture`]) rather than emitted.
 //!
@@ -38,7 +42,7 @@
 //! exporter surface for a cross-check that a trivially-accepting Lean `assemble` would already
 //! fail on the accepting fixtures.
 
-use ff::{Field, PrimeField};
+use ff::{Field, FromUniformBytes, PrimeField};
 use group::Curve;
 use std::collections::{BTreeSet, HashMap};
 use std::io::Read;
@@ -47,7 +51,7 @@ use super::{ChallengeRecorder, TranscriptEvent};
 use crate::arithmetic::{Coordinates, CurveAffine};
 use crate::pasta::{EqAffine, Fp, Fq};
 use crate::poly::commitment::{Blind, MSM};
-use crate::transcript::Challenge255;
+use crate::transcript::{Blake2bWrite, Challenge255, TranscriptWrite};
 
 use super::super::circuit::{Any, Expression};
 use super::super::VerifyingKey;
@@ -185,6 +189,37 @@ fn join_fps(xs: &[Fp]) -> String {
     xs.iter().map(|x| fp(*x)).collect::<Vec<_>>().join(", ")
 }
 
+/// Lowercase hex, two digits per byte, no separators.
+fn hex_lower(bytes: &[u8]) -> String {
+    use std::fmt::Write as _;
+    let mut out = String::with_capacity(2 * bytes.len());
+    for b in bytes {
+        write!(out, "{b:02x}").expect("writing to a String cannot fail");
+    }
+    out
+}
+
+/// Re-serialize the proof reads the recorder observed, as the prover writes them: `write_point`
+/// (the compressed encoding) for each `ReadPoint` and `write_scalar` for each `ReadScalar`, in
+/// read order. Common inputs and squeezes consume no proof bytes.
+fn reserialize_proof_reads(events: &[TranscriptEvent<EqAffine>]) -> Vec<u8> {
+    let mut transcript = Blake2bWrite::<Vec<u8>, EqAffine, Challenge255<EqAffine>>::init(vec![]);
+    for event in events {
+        match event {
+            TranscriptEvent::ReadPoint(point) => transcript
+                .write_point(*point)
+                .expect("writing to an in-memory transcript cannot fail"),
+            TranscriptEvent::ReadScalar(scalar) => transcript
+                .write_scalar(*scalar)
+                .expect("writing to an in-memory transcript cannot fail"),
+            TranscriptEvent::CommonPoint(_)
+            | TranscriptEvent::CommonScalar(_)
+            | TranscriptEvent::Squeeze(_) => {}
+        }
+    }
+    transcript.finalize()
+}
+
 /// Serialize one gate / lookup `Expression` to a Lean `Expr Fp` literal (mirrors the verifier's
 /// `Expression::evaluate`; virtual selectors are removed before verification).
 fn expr_to_lean(e: &Expression<Fp>) -> String {
@@ -307,6 +342,39 @@ impl VerifyingKey<EqAffine> {
             instances,
             recorder,
             captured_msm,
+            None,
+        )
+    }
+
+    /// As [`VerifyingKey::dump_vesta_lean_fixture`], additionally given `proof_bytes`, the proof
+    /// byte string the verifier consumed in this run, which the fixture then carries hex-encoded as
+    /// `capturedProofHex`.
+    ///
+    /// The exporter fails fast unless re-serializing the recorder's proof reads (`write_point` for
+    /// each point read, `write_scalar` for each scalar read, in read order) reproduces `proof_bytes`
+    /// exactly: the bytes must be precisely what the verifier's reads consumed, with no trailing
+    /// data, so the emitted typed proof `ps` is their canonical parse. A consumer can then check its
+    /// own proof-string decoder against the bytes the deployed verifier read.
+    #[allow(clippy::too_many_arguments)]
+    pub fn dump_vesta_lean_fixture_honest_with_proof_bytes<R: Read>(
+        &self,
+        lean_namespace: &str,
+        circuit_id: &str,
+        k: u32,
+        instances: &[&[&[Fp]]],
+        recorder: &ChallengeRecorder<R, EqAffine, Challenge255<EqAffine>>,
+        captured_msm: &MSM<'_, EqAffine>,
+        proof_bytes: &[u8],
+    ) -> String {
+        self.dump_vesta_lean_fixture_with_mode(
+            FixtureMode::Honest,
+            lean_namespace,
+            circuit_id,
+            k,
+            instances,
+            recorder,
+            captured_msm,
+            Some(proof_bytes),
         )
     }
 
@@ -341,12 +409,40 @@ impl VerifyingKey<EqAffine> {
             instances,
             recorder,
             captured_msm,
+            None,
         )
     }
 
-    // The two public wrappers each carry the exporter's six inputs; threading `mode` through to the
-    // shared core adds a seventh past `&self`. Bundling them into a struct would only move the same
-    // arity to a constructor, since every one is required.
+    /// As [`VerifyingKey::dump_vesta_lean_fixture_match_only`], additionally given `proof_bytes`,
+    /// which the fixture carries hex-encoded as `capturedProofHex` after the same
+    /// re-serialization check as
+    /// [`VerifyingKey::dump_vesta_lean_fixture_honest_with_proof_bytes`].
+    #[allow(clippy::too_many_arguments)]
+    pub fn dump_vesta_lean_fixture_match_only_with_proof_bytes<R: Read>(
+        &self,
+        lean_namespace: &str,
+        circuit_id: &str,
+        k: u32,
+        instances: &[&[&[Fp]]],
+        recorder: &ChallengeRecorder<R, EqAffine, Challenge255<EqAffine>>,
+        captured_msm: &MSM<'_, EqAffine>,
+        proof_bytes: &[u8],
+    ) -> String {
+        self.dump_vesta_lean_fixture_with_mode(
+            FixtureMode::MatchOnly,
+            lean_namespace,
+            circuit_id,
+            k,
+            instances,
+            recorder,
+            captured_msm,
+            Some(proof_bytes),
+        )
+    }
+
+    // The public wrappers each carry the exporter's six or seven inputs; threading `mode` and the
+    // optional proof bytes through to the shared core adds two more past `&self`. Bundling them
+    // into a struct would only move the same arity to a constructor, since every one is required.
     #[allow(clippy::too_many_arguments)]
     fn dump_vesta_lean_fixture_with_mode<R: Read>(
         &self,
@@ -357,6 +453,7 @@ impl VerifyingKey<EqAffine> {
         instances: &[&[&[Fp]]],
         recorder: &ChallengeRecorder<R, EqAffine, Challenge255<EqAffine>>,
         captured_msm: &MSM<'_, EqAffine>,
+        proof_bytes: Option<&[u8]>,
     ) -> String {
         // `lean_namespace` is spliced verbatim into `namespace`/`end`, and `circuit_id` is emitted
         // via `{:?}`, whose Rust string escapes (`\u{...}`, ...) are not Lean's. Validate both up
@@ -378,6 +475,19 @@ impl VerifyingKey<EqAffine> {
                     .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-'),
             "circuit_id must be a non-empty ASCII slug (alphanumeric, `_`, `-`): {circuit_id:?}"
         );
+        // The supplied proof bytes must be exactly what the verifier's reads consumed: re-serializing
+        // the recorded reads as the prover writes them reproduces them byte for byte, so the typed
+        // proof emitted below is their canonical parse and no trailing data went unread.
+        if let Some(bytes) = proof_bytes {
+            let reserialized = reserialize_proof_reads(&recorder.events);
+            assert!(
+                reserialized == bytes,
+                "proof_bytes must be exactly the bytes the verifier's proof reads consume: \
+                 re-serializing the recorded reads gives {} bytes, the supplied string has {}",
+                reserialized.len(),
+                bytes.len()
+            );
+        }
 
         // The public instances' outer dimension is the proof count, exactly as in `verify_proof`.
         let num_proofs = instances.len();
@@ -791,6 +901,41 @@ impl VerifyingKey<EqAffine> {
         out.push_str(&format!(
             "def capturedVkTranscriptRepr : Fp := {}\n\n",
             fp(self.transcript_repr)
+        ));
+        // The exact string `VerifyingKey::from_parts` hashed into `transcript_repr`: the compact
+        // `Debug` rendering of the pinned key. Emitting it lets a consumer recompute the digest
+        // and read the pinned fields, instead of trusting the scalar above. The exporter checks the
+        // string is printable ASCII (so `{:?}` adds only the `\"` and `\\` escapes Lean shares)
+        // and that hashing it reproduces `transcript_repr`, so the emitted text is the preimage.
+        let pinned = format!("{:?}", self.pinned());
+        assert!(
+            pinned
+                .chars()
+                .all(|c| c.is_ascii() && !c.is_ascii_control()),
+            "the pinned key description must be printable ASCII"
+        );
+        {
+            let mut hasher = blake2b_simd::Params::new()
+                .hash_length(64)
+                .personal(b"Halo2-Verify-Key")
+                .to_state();
+            hasher.update(&(pinned.len() as u64).to_le_bytes());
+            hasher.update(pinned.as_bytes());
+            let recomputed = Fp::from_uniform_bytes(hasher.finalize().as_array());
+            assert!(
+                recomputed == self.transcript_repr,
+                "hashing the pinned key description must reproduce transcript_repr"
+            );
+        }
+        out.push_str("/-- The exact text `VerifyingKey::from_parts` hashed into `capturedVkTranscriptRepr`:\n");
+        out.push_str("the compact `Debug` rendering of the pinned key (`Halo2-Verify-Key` BLAKE2b over its\n");
+        out.push_str(
+            "little-endian `u64` byte length then its bytes, reduced modulo `p`). The exporter\n",
+        );
+        out.push_str("re-hashed it and checked the scalar above before emitting. -/\n");
+        out.push_str(&format!(
+            "def capturedPinnedKeyDescription : String :=\n  {:?}\n\n",
+            pinned
         ));
 
         // ---- gates ----
@@ -1206,6 +1351,24 @@ impl VerifyingKey<EqAffine> {
         out.push_str("def capturedScheduleEntries : List (List (TranscriptElt Fp G) × Fp) :=\n");
         out.push_str(&format!("  [{}]\n\n", schedule_entries.join(", ")));
 
+        // ---- captured proof bytes ----
+        if let Some(bytes) = proof_bytes {
+            out.push_str(
+                "/-- The proof string the verifier consumed in this capture, hex-encoded. The\n",
+            );
+            out.push_str(
+                "exporter checked that re-serializing the recorded proof reads (`write_point`,\n",
+            );
+            out.push_str(
+                "`write_scalar`, in read order) reproduces these bytes exactly, so `ps` is their\n",
+            );
+            out.push_str("canonical parse. -/\n");
+            out.push_str(&format!(
+                "def capturedProofHex : String :=\n  {:?}\n\n",
+                hex_lower(bytes)
+            ));
+        }
+
         // ---- captured MSM ----
         let other_lits: Vec<String> = msm_other
             .iter()
@@ -1343,6 +1506,27 @@ mod tests {
         assert_eq!(schedule_entries.len(), 2);
         assert!(schedule_entries[0].ends_with(&format!(", {})", fp(theta))));
         assert!(schedule_entries[1].ends_with(&format!(", {})", fp(beta))));
+    }
+
+    #[test]
+    fn proof_reads_reserialize_as_the_prover_writes() {
+        let point = EqAffine::generator();
+        let scalar = Fp::from(7);
+        let events = [
+            TranscriptEvent::CommonScalar(Fp::from(1)),
+            TranscriptEvent::ReadPoint(point),
+            TranscriptEvent::Squeeze(Fp::from(2)),
+            TranscriptEvent::ReadScalar(scalar),
+        ];
+
+        let mut expected = Blake2bWrite::<Vec<u8>, EqAffine, Challenge255<EqAffine>>::init(vec![]);
+        expected.write_point(point).unwrap();
+        expected.write_scalar(scalar).unwrap();
+        let expected = expected.finalize();
+
+        assert_eq!(reserialize_proof_reads(&events), expected);
+        assert_eq!(expected.len(), 64);
+        assert_eq!(hex_lower(&[0x00, 0x6e, 0xff]), "006eff");
     }
 
     #[test]
