@@ -14,6 +14,11 @@ use crate::{
 
 mod compress_selectors;
 
+#[cfg(feature = "unstable-circuit-fixtures")]
+mod fixture;
+#[cfg(feature = "unstable-circuit-fixtures")]
+pub use fixture::{SelectorAssignment, SelectorAssignmentData};
+
 /// A column type
 pub trait ColumnType:
     'static + Sized + Copy + std::fmt::Debug + PartialEq + Eq + Into<Any>

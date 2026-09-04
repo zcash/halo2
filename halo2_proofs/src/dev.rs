@@ -31,6 +31,10 @@ pub use gates::CircuitGates;
 mod tfp;
 pub use tfp::TracingFloorPlanner;
 
+#[cfg(feature = "unstable-circuit-fixtures")]
+#[cfg_attr(docsrs, doc(cfg(feature = "unstable-circuit-fixtures")))]
+pub mod circuit_fixture;
+
 #[cfg(feature = "dev-graph")]
 mod graph;
 
