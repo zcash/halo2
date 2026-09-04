@@ -184,15 +184,40 @@ impl Config {
         self.assign_xy(value, offset, region)
             .map(|(x, y)| NonIdentityEccPoint::from_coordinates_unchecked(x, y))
     }
+
+    /// Assigns a constant non-identity point with both coordinates pinned via fixed columns.
+    pub(super) fn constant_point_non_id(
+        &self,
+        value: pallas::Affine,
+        offset: usize,
+        region: &mut Region<'_, pallas::Base>,
+    ) -> Result<NonIdentityEccPoint, Error> {
+        // Enable `q_point_non_id` selector
+        self.q_point_non_id.enable(region, offset)?;
+
+        // Return an error if the point is the identity.
+        if value == pallas::Affine::identity() {
+            return Err(Error::Synthesis);
+        }
+
+        let value = {
+            let value = value.coordinates().unwrap();
+            (value.x().into(), value.y().into())
+        };
+
+        self.assign_xy_from_constant(value, offset, region)
+            .map(|(x, y)| NonIdentityEccPoint::from_coordinates_unchecked(x, y))
+    }
 }
 
 #[cfg(test)]
 pub mod tests {
+    use group::{Curve, Group};
     use halo2_proofs::circuit::Layouter;
     use pasta_curves::pallas;
 
     use super::*;
-    use crate::ecc::{EccInstructions, NonIdentityPoint};
+    use crate::ecc::{EccInstructions, NonIdentityPoint, Point};
 
     pub fn test_witness_non_id<
         EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,
@@ -207,5 +232,44 @@ pub mod tests {
             Value::known(pallas::Affine::identity()),
         )
         .expect_err("witnessing 𝒪 should return an error");
+    }
+
+    pub fn test_witness_constant<
+        EccChip: EccInstructions<pallas::Affine> + Clone + Eq + std::fmt::Debug,
+    >(
+        chip: EccChip,
+        mut layouter: impl Layouter<pallas::Base>,
+    ) {
+        // `NonIdentityPoint::new_from_constant` must reject the identity point.
+        NonIdentityPoint::new_from_constant(
+            chip.clone(),
+            layouter.namespace(|| "witness constant identity"),
+            pallas::Affine::identity(),
+        )
+        .expect_err("witnessing 𝒪 should return an error");
+
+        // `NonIdentityPoint::new_from_constant` must accept a non-identity point.
+        let _ = NonIdentityPoint::new_from_constant(
+            chip.clone(),
+            layouter.namespace(|| "witness a constant non-identity point"),
+            pallas::Point::generator().to_affine(),
+        )
+        .unwrap();
+
+        // `Point::new_from_constant` must accept the identity point.
+        let _ = Point::new_from_constant(
+            chip.clone(),
+            layouter.namespace(|| "witness constant identity"),
+            pallas::Affine::identity(),
+        )
+        .unwrap();
+
+        // `Point::new_from_constant` must accept a non-identity point.
+        let _ = Point::new_from_constant(
+            chip,
+            layouter.namespace(|| "witness a constant non-identity point"),
+            pallas::Point::generator().to_affine(),
+        )
+        .unwrap();
     }
 }

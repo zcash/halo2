@@ -527,6 +527,18 @@ where
         )
     }
 
+    fn witness_point_non_id_from_constant(
+        &self,
+        layouter: &mut impl Layouter<pallas::Base>,
+        value: pallas::Affine,
+    ) -> Result<Self::NonIdentityPoint, Error> {
+        let config = self.config().witness_point;
+        layouter.assign_region(
+            || "witness constant non-identity point",
+            |mut region| config.constant_point_non_id(value, 0, &mut region),
+        )
+    }
+
     fn witness_scalar_var(
         &self,
         _layouter: &mut impl Layouter<pallas::Base>,

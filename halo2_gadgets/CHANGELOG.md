@@ -7,6 +7,11 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Added
+- `halo2_gadgets::ecc`:
+  - `EccInstructions::witness_point_non_id_from_constant`
+  - `NonIdentityPoint::new_from_constant`
+
 ## [0.5.0] - 2026-06-02
 
 ### Added

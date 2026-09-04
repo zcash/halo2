@@ -80,6 +80,14 @@ pub trait EccInstructions<C: CurveAffine>:
         value: Value<C>,
     ) -> Result<Self::NonIdentityPoint, Error>;
 
+    /// Witnesses the given constant point with both coordinates pinned via fixed columns.
+    /// Returns an error if the point is the identity.
+    fn witness_point_non_id_from_constant(
+        &self,
+        layouter: &mut impl Layouter<C::Base>,
+        value: C,
+    ) -> Result<Self::NonIdentityPoint, Error>;
+
     /// Witnesses a full-width scalar to be used in variable-base multiplication.
     fn witness_scalar_var(
         &self,
@@ -283,13 +291,24 @@ pub struct NonIdentityPoint<C: CurveAffine, EccChip: EccInstructions<C>> {
 }
 
 impl<C: CurveAffine, EccChip: EccInstructions<C>> NonIdentityPoint<C, EccChip> {
-    /// Constructs a new point with the given value.
+    /// Witnesses the given point with only on-curve / non-identity constraints.
+    /// For known-constant points use [`NonIdentityPoint::new_from_constant`].
     pub fn new(
         chip: EccChip,
         mut layouter: impl Layouter<C::Base>,
         value: Value<C>,
     ) -> Result<Self, Error> {
         let point = chip.witness_point_non_id(&mut layouter, value);
+        point.map(|inner| NonIdentityPoint { chip, inner })
+    }
+
+    /// Witnesses the given constant point with both coordinates pinned via fixed columns.
+    pub fn new_from_constant(
+        chip: EccChip,
+        mut layouter: impl Layouter<C::Base>,
+        value: C,
+    ) -> Result<Self, Error> {
+        let point = chip.witness_point_non_id_from_constant(&mut layouter, value);
         point.map(|inner| NonIdentityPoint { chip, inner })
     }
 
@@ -778,18 +797,28 @@ pub(crate) mod tests {
 
     struct MyEccCircuit<Lookup: PallasLookupRangeCheck> {
         test_errors: bool,
+        test_zsa_additions: bool,
         circuit_version: CircuitVersion,
         _lookup_marker: PhantomData<Lookup>,
     }
 
     impl<Lookup: PallasLookupRangeCheck> MyEccCircuit<Lookup> {
-        fn new(test_errors: bool) -> Self {
-            Self::with_version(test_errors, CircuitVersion::AnchoredBase)
+        fn new(test_errors: bool, test_zsa_additions: bool) -> Self {
+            Self::with_version(
+                test_errors,
+                test_zsa_additions,
+                CircuitVersion::AnchoredBase,
+            )
         }
 
-        fn with_version(test_errors: bool, circuit_version: CircuitVersion) -> Self {
+        fn with_version(
+            test_errors: bool,
+            test_zsa_additions: bool,
+            circuit_version: CircuitVersion,
+        ) -> Self {
             Self {
                 test_errors,
+                test_zsa_additions,
                 circuit_version,
                 _lookup_marker: PhantomData,
             }
@@ -802,7 +831,7 @@ pub(crate) mod tests {
         type FloorPlanner = SimpleFloorPlanner;
 
         fn without_witnesses(&self) -> Self {
-            MyEccCircuit::with_version(false, self.circuit_version)
+            MyEccCircuit::with_version(false, self.test_zsa_additions, self.circuit_version)
         }
 
         fn configure(meta: &mut ConstraintSystem<pallas::Base>) -> Self::Config {
@@ -902,6 +931,14 @@ pub(crate) mod tests {
                 )
             }
 
+            // Test constant witness
+            if self.test_zsa_additions {
+                super::chip::witness_point::tests::test_witness_constant(
+                    chip.clone(),
+                    layouter.namespace(|| "witness constant"),
+                )
+            }
+
             // Test complete addition
             {
                 super::chip::add::tests::test_add(
@@ -978,7 +1015,7 @@ pub(crate) mod tests {
     #[test]
     fn ecc_chip() {
         let k = 13;
-        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(true);
+        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(true, false);
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
         assert_eq!(prover.verify(), Ok(()))
     }
@@ -986,6 +1023,7 @@ pub(crate) mod tests {
     #[test]
     fn test_ecc_chip_fixed_against_stored_circuit() {
         let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::with_version(
+            false,
             false,
             CircuitVersion::AnchoredBase,
         );
@@ -999,9 +1037,24 @@ pub(crate) mod tests {
     fn test_ecc_chip_insecure_against_stored_circuit() {
         let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::with_version(
             false,
+            false,
             CircuitVersion::InsecureUnanchoredBase,
         );
         test_against_stored_circuit(circuit, "ecc_chip_insecure", 3872);
+    }
+
+    #[test]
+    fn ecc_chip_with_zsa_additions() {
+        let k = 13;
+        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(true, true);
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
+    fn test_ecc_chip_with_zsa_additions_against_stored_circuit() {
+        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(false, true);
+        test_against_stored_circuit(circuit, "ecc_chip_with_zsa_additions", 3872);
     }
 
     #[cfg(feature = "test-dev-graph")]
@@ -1013,7 +1066,7 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(false);
+        let circuit = MyEccCircuit::<PallasLookupRangeCheckConfig>::new(false, false);
         halo2_proofs::dev::CircuitLayout::default()
             .render(13, &circuit, &root)
             .unwrap();
@@ -1022,7 +1075,7 @@ pub(crate) mod tests {
     #[test]
     fn ecc_chip_4_5b() {
         let k = 13;
-        let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(true);
+        let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(true, false);
         let prover = MockProver::run(k, &circuit, vec![]).unwrap();
 
         assert_eq!(prover.verify(), Ok(()))
@@ -1032,6 +1085,7 @@ pub(crate) mod tests {
     fn test_against_stored_ecc_chip_4_5b_fixed() {
         let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::with_version(
             false,
+            false,
             CircuitVersion::AnchoredBase,
         );
         test_against_stored_circuit(circuit, "ecc_chip_4_5b_fixed", 3968);
@@ -1040,6 +1094,7 @@ pub(crate) mod tests {
     #[test]
     fn test_against_stored_ecc_chip_4_5b_insecure() {
         let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::with_version(
+            false,
             false,
             CircuitVersion::InsecureUnanchoredBase,
         );
@@ -1055,7 +1110,7 @@ pub(crate) mod tests {
         root.fill(&WHITE).unwrap();
         let root = root.titled("Ecc Chip Layout", ("sans-serif", 60)).unwrap();
 
-        let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(false);
+        let circuit = MyEccCircuit::<PallasLookupRangeCheck4_5BConfig>::new(false, false);
         halo2_proofs::dev::CircuitLayout::default()
             .render(13, &circuit, &root)
             .unwrap();
