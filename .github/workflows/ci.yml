@@ -31,6 +31,10 @@ jobs:
           persist-credentials: false
       - id: prepare
         uses: ./.github/actions/prepare
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: ${{ matrix.stage }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Run tests
         env:
           FEATURE_FLAGS: ${{ steps.prepare.outputs.feature-flags }}
@@ -65,6 +69,10 @@ jobs:
         with:
           beta-features: ${{ matrix.stage == 'beta' }}
           nightly-features: ${{ matrix.stage == 'nightly' }}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: ${{ matrix.stage }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Install cross-platform support dependencies
         # `apt-get update` first: the runner image ships a package index that goes stale when the
         # image rolls, after which `install` cannot resolve `gcc-multilib`. That is what broke every
@@ -100,6 +108,10 @@ jobs:
         with:
           nightly-features: true
           test-dependencies: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: ${{ matrix.target }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Add target
         run: rustup target add ${{ matrix.target }}
       - name: cargo build
@@ -128,6 +140,9 @@ jobs:
         shell: sh
         env:
           TOOLCHAIN: ${{steps.toolchain.outputs.name}}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: sudo apt-get -y install libfontconfig1-dev
       # Build benchmarks and all-features to prevent bitrot
       - name: Build benchmarks
@@ -150,6 +165,9 @@ jobs:
         shell: sh
         env:
           TOOLCHAIN: ${{steps.toolchain.outputs.name}}
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: cargo build
         run: cargo build
       - name: Setup mdBook
@@ -173,6 +191,9 @@ jobs:
         uses: ./.github/actions/prepare
         with:
           nightly-features: true
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       # Extend the timeout to 3600 to ensure the code coverage test pass
       - name: Generate coverage report
         env:
@@ -194,6 +215,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/prepare
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
       - run: sudo apt-get -y install libfontconfig1-dev
       - run: cargo fetch
       # Ensure intra-documentation links all resolve correctly
