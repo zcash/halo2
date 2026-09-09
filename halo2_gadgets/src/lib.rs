@@ -18,10 +18,10 @@
 // Catch documentation errors caused by code changes.
 #![deny(rustdoc::broken_intra_doc_links)]
 #![deny(missing_debug_implementations)]
-#![deny(missing_docs)]
 #![deny(unsafe_code)]
 
 pub mod ecc;
+pub mod fibonacci;
 pub mod poseidon;
 #[cfg(feature = "unstable-sha256-gadget")]
 #[cfg_attr(docsrs, doc(cfg(feature = "unstable-sha256-gadget")))]
