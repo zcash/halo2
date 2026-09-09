@@ -47,7 +47,7 @@ impl Subregion1Word {
                     .iter()
                     .chain(c.iter())
                     .chain(d.iter())
-                    .chain(std::iter::repeat(&false).take(6))
+                    .chain(std::iter::repeat_n(&false, 6))
                     .copied()
                     .collect::<Vec<_>>();
                 let xor_1 = c

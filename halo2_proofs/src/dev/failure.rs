@@ -36,9 +36,9 @@ pub enum FailureLocation {
 impl fmt::Display for FailureLocation {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InRegion { region, offset } => write!(f, "in {} at offset {}", region, offset),
+            Self::InRegion { region, offset } => write!(f, "in {region} at offset {offset}"),
             Self::OutsideRegion { row } => {
-                write!(f, "outside any region, on row {}", row)
+                write!(f, "outside any region, on row {row}")
             }
         }
     }
@@ -197,8 +197,7 @@ impl fmt::Display for VerifyFailure {
             } => {
                 write!(
                     f,
-                    "{} uses {} at offset {}, which requires cell in column {:?} at offset {} to be assigned.",
-                    region, gate, gate_offset, column, offset
+                    "{region} uses {gate} at offset {gate_offset}, which requires cell in column {column:?} at offset {offset} to be assigned."
                 )
             }
             Self::InstanceCellNotAssigned {
@@ -210,8 +209,7 @@ impl fmt::Display for VerifyFailure {
             } => {
                 write!(
                     f,
-                    "{} uses {} at offset {}, which requires cell in instance column {:?} at row {} to be assigned.",
-                    region, gate, gate_offset, column, row
+                    "{region} uses {gate} at offset {gate_offset}, which requires cell in instance column {column:?} at row {row} to be assigned."
                 )
             }
             Self::ConstraintNotSatisfied {
@@ -219,28 +217,26 @@ impl fmt::Display for VerifyFailure {
                 location,
                 cell_values,
             } => {
-                writeln!(f, "{} is not satisfied {}", constraint, location)?;
+                writeln!(f, "{constraint} is not satisfied {location}")?;
                 for (name, value) in cell_values {
-                    writeln!(f, "- {} = {}", name, value)?;
+                    writeln!(f, "- {name} = {value}")?;
                 }
                 Ok(())
             }
             Self::ConstraintPoisoned { constraint } => {
                 write!(
                     f,
-                    "{} is active on an unusable row - missing selector?",
-                    constraint
+                    "{constraint} is active on an unusable row - missing selector?"
                 )
             }
             Self::Lookup {
                 lookup_index,
                 location,
-            } => write!(f, "Lookup {} is not satisfied {}", lookup_index, location),
+            } => write!(f, "Lookup {lookup_index} is not satisfied {location}"),
             Self::Permutation { column, location } => {
                 write!(
                     f,
-                    "Equality constraint not satisfied by cell ({:?}, {})",
-                    column, location
+                    "Equality constraint not satisfied by cell ({column:?}, {location})"
                 )
             }
         }
@@ -284,7 +280,7 @@ fn render_cell_not_assigned<F: Field>(
                 if cell.column == column && gate_offset as i32 + cell.rotation.0 == offset as i32 {
                     "X".to_string()
                 } else {
-                    format!("x{}", i)
+                    format!("x{i}")
                 }
             });
     }
@@ -346,7 +342,7 @@ fn render_constraint_not_satisfied<F: Field>(
             .entry(cell.rotation)
             .or_default()
             .entry(cell.column)
-            .or_insert(format!("x{}", i));
+            .or_insert(format!("x{i}"));
     }
 
     eprintln!("error: constraint not satisfied");
@@ -371,7 +367,7 @@ fn render_constraint_not_satisfied<F: Field>(
     eprintln!();
     eprintln!("  Assigned cell values:");
     for (i, (_, value)) in cell_values.iter().enumerate() {
-        eprintln!("    x{} = {}", i, value);
+        eprintln!("    x{i} = {value}");
     }
 }
 
@@ -503,7 +499,7 @@ fn render_lookup<F: Field>(
                 .entry(cell.rotation)
                 .or_default()
                 .entry(cell.column)
-                .or_insert(format!("x{}", i));
+                .or_insert(format!("x{i}"));
         }
 
         if i != 0 {
@@ -525,7 +521,7 @@ fn render_lookup<F: Field>(
         eprintln!("    |");
         eprintln!("    | Assigned cell values:");
         for (i, (_, value)) in cell_values.iter().enumerate() {
-            eprintln!("    |   x{} = {}", i, value);
+            eprintln!("    |   x{i} = {value}");
         }
     }
 }
@@ -559,7 +555,7 @@ impl VerifyFailure {
                 lookup_index,
                 location,
             } => render_lookup(prover, *lookup_index, location),
-            _ => eprintln!("{}", self),
+            _ => eprintln!("{self}"),
         }
     }
 }

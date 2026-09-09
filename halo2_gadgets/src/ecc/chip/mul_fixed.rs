@@ -218,12 +218,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
             // Assign x-coordinate Lagrange interpolation coefficients
             for k in 0..H {
                 region.assign_fixed(
-                    || {
-                        format!(
-                            "Lagrange interpolation coeff for window: {:?}, k: {:?}",
-                            window, k
-                        )
-                    },
+                    || format!("Lagrange interpolation coeff for window: {window:?}, k: {k:?}"),
                     self.lagrange_coeffs[k],
                     window + offset,
                     || {
@@ -238,7 +233,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
 
             // Assign z-values for each window
             region.assign_fixed(
-                || format!("z-value for window: {:?}", window),
+                || format!("z-value for window: {window:?}"),
                 self.fixed_z,
                 window + offset,
                 || {
@@ -276,7 +271,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
                 x.into()
             });
             let x = region.assign_advice(
-                || format!("mul_b_x, window {}", w),
+                || format!("mul_b_x, window {w}"),
                 self.add_config.x_p,
                 offset + w,
                 || x,
@@ -288,7 +283,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
                 y.into()
             });
             let y = region.assign_advice(
-                || format!("mul_b_y, window {}", w),
+                || format!("mul_b_y, window {w}"),
                 self.add_config.y_p,
                 offset + w,
                 || y,

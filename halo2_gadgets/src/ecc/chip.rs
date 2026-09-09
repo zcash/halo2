@@ -652,7 +652,7 @@ where
     ) -> Result<(Self::Point, Self::ScalarFixed), Error> {
         let config = self.config().mul_fixed_full.clone();
         config.assign(
-            layouter.namespace(|| format!("fixed-base mul of {:?}", base)),
+            layouter.namespace(|| format!("fixed-base mul of {base:?}")),
             scalar,
             base,
         )
@@ -666,7 +666,7 @@ where
     ) -> Result<(Self::Point, Self::ScalarFixedShort), Error> {
         let config = self.config().mul_fixed_short.clone();
         config.assign(
-            layouter.namespace(|| format!("short fixed-base mul of {:?}", base)),
+            layouter.namespace(|| format!("short fixed-base mul of {base:?}")),
             scalar,
             base,
         )
@@ -680,7 +680,7 @@ where
     ) -> Result<Self::Point, Error> {
         let config = self.config().mul_fixed_base_field.clone();
         config.assign(
-            layouter.namespace(|| format!("base-field elem fixed-base mul of {:?}", base)),
+            layouter.namespace(|| format!("base-field elem fixed-base mul of {base:?}")),
             base_field_elem,
             base,
         )

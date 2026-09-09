@@ -26,10 +26,10 @@ fn get_chunk_params(poly_len: usize) -> (usize, usize) {
     // Calculate the ideal chunk size for the desired throughput. We use ceiling
     // division to ensure the minimum chunk size is 1.
     //     chunk_size = ceil(poly_len / num_chunks)
-    let chunk_size = (poly_len + num_chunks - 1) / num_chunks;
+    let chunk_size = poly_len.div_ceil(num_chunks);
     // Now re-calculate num_chunks from the actual chunk size.
     //     num_chunks = ceil(poly_len / chunk_size)
-    let num_chunks = (poly_len + chunk_size - 1) / chunk_size;
+    let num_chunks = poly_len.div_ceil(chunk_size);
 
     (chunk_size, num_chunks)
 }
@@ -641,7 +641,7 @@ mod tests {
                 return;
             }
         };
-        eprintln!("Testing short-chunk regression with k = {}", k);
+        eprintln!("Testing short-chunk regression with k = {k}");
 
         fn test_case<E: Copy + Send + Sync, B: BasisOps>(
             k: u32,

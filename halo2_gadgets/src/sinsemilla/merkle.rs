@@ -120,7 +120,7 @@ where
         leaf: MerkleChip::Var,
     ) -> Result<MerkleChip::Var, Error> {
         // Each chip processes `ceil(PATH_LENGTH / PAR)` layers.
-        let layers_per_chip = (PATH_LENGTH + PAR - 1) / PAR;
+        let layers_per_chip = PATH_LENGTH.div_ceil(PAR);
 
         // Assign each layer to a chip.
         let chips = (0..PATH_LENGTH).map(|i| self.chips[i / layers_per_chip].clone());
@@ -158,7 +158,7 @@ where
             // Compute the node in layer l from its children:
             //     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})
             node = chip.hash_layer(
-                layouter.namespace(|| format!("MerkleCRH({}, left, right)", l)),
+                layouter.namespace(|| format!("MerkleCRH({l}, left, right)")),
                 Q,
                 l,
                 pair.0,

@@ -576,11 +576,11 @@ pub mod tests {
             "-1".into()
         } else {
             // Format value as hex.
-            let s = format!("{:?}", v);
+            let s = format!("{v:?}");
             // Remove leading zeroes.
             let s = s.strip_prefix("0x").unwrap();
             let s = s.trim_start_matches('0');
-            format!("0x{}", s)
+            format!("0x{s}")
         }
     }
 

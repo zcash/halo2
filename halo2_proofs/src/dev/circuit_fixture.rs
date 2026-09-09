@@ -488,9 +488,9 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
         if long_data {
             output.push_str("-- `maxRecDepth` is raised only to elaborate the long flat data lists (the full lookup-table\n-- column contents can be thousands of rows). This is a data-literal elaboration depth, not a\n-- proof-search/heartbeat budget; the fixture is inert data.\nset_option maxRecDepth 100000 in\n");
         }
-        writeln!(output, "def {} : LayoutFixture :=", fixture_name).unwrap();
-        writeln!(output, "  {{ k := {},", k).unwrap();
-        writeln!(output, "    n := {},", n).unwrap();
+        writeln!(output, "def {fixture_name} : LayoutFixture :=").unwrap();
+        writeln!(output, "  {{ k := {k},").unwrap();
+        writeln!(output, "    n := {n},").unwrap();
         writeln!(
             output,
             "    regions := {},",
@@ -542,7 +542,7 @@ fn field_decimal<F: PrimeField>(value: &F) -> String {
     }
     let mut output = format!("{}", limbs.pop().unwrap());
     for limb in limbs.iter().rev() {
-        output.push_str(&format!("{:09}", limb));
+        output.push_str(&format!("{limb:09}"));
     }
     output
 }

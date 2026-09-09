@@ -231,7 +231,7 @@ end {}
                     .map(|expression| fmt_expr(expression, fmt_f))
                     .collect::<Vec<_>>()
                     .join(",");
-                format!("{{\"inputs\":[{}],\"tables\":[{}]}}", inputs, tables)
+                format!("{{\"inputs\":[{inputs}],\"tables\":[{tables}]}}")
             })
             .collect::<Vec<_>>()
             .join(",");

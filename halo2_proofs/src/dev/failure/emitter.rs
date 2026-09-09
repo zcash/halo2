@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::iter;
 
 use group::ff::Field;
 
@@ -13,9 +12,9 @@ fn padded(p: char, width: usize, text: &str) -> String {
     let pad = width - text.len();
     format!(
         "{}{}{}",
-        iter::repeat(p).take(pad - pad / 2).collect::<String>(),
+        std::iter::repeat_n(p, pad - pad / 2).collect::<String>(),
         text,
-        iter::repeat(p).take(pad / 2).collect::<String>(),
+        std::iter::repeat_n(p, pad / 2).collect::<String>(),
     )
 }
 
@@ -38,12 +37,12 @@ pub(super) fn render_cell_layout(
     let offset = match location {
         FailureLocation::InRegion { region, offset } => {
             eprintln!("{}Cell layout in region '{}':", prefix, region.name);
-            eprint!("{}  | Offset |", prefix);
+            eprint!("{prefix}  | Offset |");
             Some(*offset as i32)
         }
         FailureLocation::OutsideRegion { row } => {
-            eprintln!("{}Cell layout at row {}:", prefix, row);
-            eprint!("{}  |Rotation|", prefix);
+            eprintln!("{prefix}Cell layout at row {row}:");
+            eprint!("{prefix}  |Rotation|");
             None
         }
     };
@@ -69,7 +68,7 @@ pub(super) fn render_cell_layout(
         );
     }
     eprintln!();
-    eprint!("{}  +--------+", prefix);
+    eprint!("{prefix}  +--------+");
     for cells in columns.values() {
         eprint!("{}+", padded('-', col_width(*cells), ""));
     }
@@ -135,23 +134,23 @@ pub(super) fn expression_to_string<F: Field>(
         },
         &|a| {
             if a.contains(' ') {
-                format!("-({})", a)
+                format!("-({a})")
             } else {
-                format!("-{}", a)
+                format!("-{a}")
             }
         },
         &|a, b| {
             if let Some(b) = b.strip_prefix('-') {
-                format!("{} - {}", a, b)
+                format!("{a} - {b}")
             } else {
-                format!("{} + {}", a, b)
+                format!("{a} + {b}")
             }
         },
         &|a, b| match (a.contains(' '), b.contains(' ')) {
-            (false, false) => format!("{} * {}", a, b),
-            (false, true) => format!("{} * ({})", a, b),
-            (true, false) => format!("({}) * {}", a, b),
-            (true, true) => format!("({}) * ({})", a, b),
+            (false, false) => format!("{a} * {b}"),
+            (false, true) => format!("{a} * ({b})"),
+            (true, false) => format!("({a}) * {b}"),
+            (true, true) => format!("({a}) * ({b})"),
         },
         &|a, s| {
             if a.contains(' ') {

@@ -285,7 +285,7 @@ impl<
                 let mut state = Vec::with_capacity(WIDTH);
                 let mut load_state_word = |i: usize, value: F| -> Result<_, Error> {
                     let var = region.assign_advice_from_constant(
-                        || format!("state_{}", i),
+                        || format!("state_{i}"),
                         config.state[i],
                         0,
                         value,
@@ -324,7 +324,7 @@ impl<
                     initial_state[i]
                         .0
                         .copy_advice(
-                            || format!("load state_{}", i),
+                            || format!("load state_{i}"),
                             &mut region,
                             config.state[i],
                             0,
@@ -343,7 +343,7 @@ impl<
                             let value = Value::known(*padding_value);
                             let cell = region
                                 .assign_fixed(
-                                    || format!("load pad_{}", i),
+                                    || format!("load pad_{i}"),
                                     config.rc_b[i],
                                     1,
                                     || value,
@@ -354,7 +354,7 @@ impl<
                         _ => panic!("Input is not padded"),
                     };
                     let var = region.assign_advice(
-                        || format!("load input_{}", i),
+                        || format!("load input_{i}"),
                         config.state[i],
                         1,
                         || value,
@@ -380,12 +380,7 @@ impl<
                             // The capacity element is never altered by the input.
                             .unwrap_or_else(|| Value::known(F::ZERO));
                     region
-                        .assign_advice(
-                            || format!("load output_{}", i),
-                            config.state[i],
-                            2,
-                            || value,
-                        )
+                        .assign_advice(|| format!("load output_{i}"), config.state[i], 2, || value)
                         .map(StateWord)
                 };
 
@@ -479,7 +474,7 @@ impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
             });
 
             region.assign_advice(
-                || format!("round_{} partial_sbox", round),
+                || format!("round_{round} partial_sbox"),
                 config.partial_sbox,
                 offset,
                 || r.as_ref().map(|r| r[0]),
@@ -541,7 +536,7 @@ impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
         let load_state_word = |i: usize| {
             initial_state[i]
                 .0
-                .copy_advice(|| format!("load state_{}", i), region, config.state[i], 0)
+                .copy_advice(|| format!("load state_{i}"), region, config.state[i], 0)
                 .map(StateWord)
         };
 
@@ -563,7 +558,7 @@ impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
         // Load the round constants.
         let mut load_round_constant = |i: usize| {
             region.assign_fixed(
-                || format!("round_{} rc_{}", round, i),
+                || format!("round_{round} rc_{i}"),
                 config.rc_a[i],
                 offset,
                 || Value::known(config.round_constants[round][i]),
@@ -579,7 +574,7 @@ impl<F: Field, const WIDTH: usize> Pow5State<F, WIDTH> {
         let next_state_word = |i: usize| {
             let value = next_state[i];
             let var = region.assign_advice(
-                || format!("round_{} state_{}", next_round, i),
+                || format!("round_{next_round} state_{i}"),
                 config.state[i],
                 offset + 1,
                 || value,
@@ -655,7 +650,7 @@ mod tests {
                     let state_word = |i: usize| {
                         let value = Value::known(Fp::from(i as u64));
                         let var = region.assign_advice(
-                            || format!("load state_{}", i),
+                            || format!("load state_{i}"),
                             config.state[i],
                             0,
                             || value,
@@ -694,7 +689,7 @@ mod tests {
                 |mut region| {
                     let mut final_state_word = |i: usize| {
                         let var = region.assign_advice(
-                            || format!("load final_state_{}", i),
+                            || format!("load final_state_{i}"),
                             config.state[i],
                             0,
                             || Value::known(expected_final_state[i]),
@@ -778,7 +773,7 @@ mod tests {
                     let message_word = |i: usize| {
                         let value = self.message.map(|message_vals| message_vals[i]);
                         region.assign_advice(
-                            || format!("load message_{}", i),
+                            || format!("load message_{i}"),
                             config.state[i],
                             0,
                             || value,

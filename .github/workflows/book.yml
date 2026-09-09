@@ -23,6 +23,8 @@ jobs:
         env:
           TOOLCHAIN: ${{steps.toolchain.outputs.name}}
 
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@ee69d230fe19748b7abf22df32acaa93833fad08 # v2.0.0
         with:
