@@ -11,6 +11,9 @@ use std::{
 use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
 
+#[cfg(feature = "dev-graph")]
+use serde::ser::SerializeStruct;
+
 use crate::{
     circuit::{layouter::RegionColumn, Value},
     plonk::{
@@ -54,9 +57,37 @@ pub struct CircuitCost<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> {
     _marker: PhantomData<(G, ConcreteCircuit)>,
 }
 
+#[cfg(feature = "dev-graph")]
+impl serde::Serialize for Column<Any> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("Column", 2)?;
+        state.serialize_field(
+            "kind",
+            match self.column_type() {
+                Any::Advice => "advice",
+                Any::Fixed => "fixed",
+                Any::Instance => "instance",
+            },
+        )?;
+        state.serialize_field("index", &self.index())?;
+        state.end()
+    }
+}
+
+#[derive(Debug)]
+#[cfg_attr(feature = "dev-graph", derive(serde::Serialize))]
+pub(crate) struct Cell {
+    pub(crate) column: RegionColumn,
+    pub(crate) row: usize,
+}
+
 /// Region implementation used by Layout
 #[allow(dead_code)]
 #[derive(Debug)]
+#[cfg_attr(feature = "dev-graph", derive(serde::Serialize))]
 pub(crate) struct LayoutRegion {
     /// The name of the region. Not required to be unique.
     pub(crate) name: String,
@@ -66,8 +97,9 @@ pub(crate) struct LayoutRegion {
     pub(crate) offset: Option<usize>,
     /// The number of rows that this region takes up.
     pub(crate) rows: usize,
-    /// The cells assigned in this region.
-    pub(crate) cells: Vec<(RegionColumn, usize)>,
+    /// The cells assigned in this region. We store this as a `Vec` to track multiple
+    /// assignments to a cell.
+    pub(crate) cells: Vec<Cell>,
 }
 
 /// Cost and graphing layouter
@@ -84,10 +116,11 @@ pub(crate) struct Layout {
     pub(crate) total_advice_rows: usize,
     /// Total fixed rows
     pub(crate) total_fixed_rows: usize,
-    /// Any cells assigned outside of a region.
-    pub(crate) loose_cells: Vec<(RegionColumn, usize)>,
+    /// Any cells assigned outside of a region. We store this as a `Vec` to track multiple
+    /// assignments to a cell.
+    pub(crate) loose_cells: Vec<Cell>,
     /// Pairs of cells between which we have equality constraints.
-    pub(crate) equality: Vec<(Column<Any>, usize, Column<Any>, usize)>,
+    pub(crate) equality: Vec<(Cell, Cell)>,
     /// Selector assignments used for optimization pass
     pub(crate) selectors: Vec<Vec<bool>>,
 }
@@ -139,9 +172,9 @@ impl Layout {
             region.rows = cmp::max(region.rows, row - offset + 1);
             region.offset = Some(offset);
 
-            region.cells.push((column, row));
+            region.cells.push(Cell { column, row });
         } else {
-            self.loose_cells.push((column, row));
+            self.loose_cells.push(Cell { column, row });
         }
     }
 }
@@ -228,7 +261,16 @@ impl<F: Field> Assignment<F> for Layout {
         r_col: Column<Any>,
         r_row: usize,
     ) -> Result<(), crate::plonk::Error> {
-        self.equality.push((l_col, l_row, r_col, r_row));
+        self.equality.push((
+            Cell {
+                column: l_col.into(),
+                row: l_row,
+            },
+            Cell {
+                column: r_col.into(),
+                row: r_row,
+            },
+        ));
         Ok(())
     }
 
