@@ -19,7 +19,7 @@ use std::marker::PhantomData;
 #[derive(Clone, Debug)]
 pub struct EvaluationDomain<F: Field> {
     n: u64,
-    k: u32,
+    pub(crate) k: u32,
     extended_k: u32,
     omega: F,
     omega_inv: F,
