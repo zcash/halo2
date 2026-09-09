@@ -21,6 +21,12 @@ use std::marker::PhantomData;
 
 #[test]
 fn plonk_api() {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_ansi(false)
+        .without_time()
+        .init();
+
     const K: u32 = 5;
 
     // Initialize the polynomial commitment parameters
