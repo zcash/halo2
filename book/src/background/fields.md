@@ -48,7 +48,7 @@ and fewer axioms. They also have an identity, which we'll denote as $1$.
 [group]: https://en.wikipedia.org/wiki/Group_(mathematics)
 [group-axioms]: https://en.wikipedia.org/wiki/Group_(mathematics)#Definition
 
-Any non-zero element $a$ in a group has an _inverse_ $b = a^{-1}$,
+Any element $a$ in a group has an _inverse_ $b = a^{-1}$,
 which is the _unique_ element $b$ such that $a \cdot b = 1$.
      
 For example, the set of nonzero elements of $\mathbb{F}_p$ forms a group, where the
@@ -86,9 +86,9 @@ notation). The order _of the group_ is the number of elements.
 
 Groups always have a [generating set], which is a set of elements such that we can produce
 any element of the group as (in multiplicative terminology) a product of powers of those
-elements. So if the generating set is $g_{1..k}$, we can produce any element of the group
-as $\prod\limits_{i=1}^{k} g_i^{a_i}$. There can be many different generating sets for a
-given group.
+elements. So if the generating set is $g_{1..n}$, we can produce any element of the group
+as $\prod\limits_{i=1}^{n} g_i^{k_i}$ where $k_i \in \mathbb{Z}$. There can be many
+different generating sets for a given group.
 
 [generating set]: https://en.wikipedia.org/wiki/Generating_set_of_a_group
 
@@ -168,7 +168,7 @@ also form a group under $\cdot$.
 
 In the previous section we said that $\alpha$ is a generator of the $(p - 1)$-order
 multiplicative group $\mathbb{F}_p^\times$. This group has _composite_ order, and so by
-the Chinese remainder theorem[^chinese-remainder] it has strict subgroups. As an example
+the Chinese remainder theorem[^chinese-remainder] it has proper subgroups. As an example
 let's imagine that $p = 11$, and so $p - 1$ factors into $5 \cdot 2$. Thus, there is a
 generator $\beta$ of the $5$-order subgroup and a generator $\gamma$ of the $2$-order
 subgroup. All elements in $\mathbb{F}_p^\times$, therefore, can be written uniquely as
