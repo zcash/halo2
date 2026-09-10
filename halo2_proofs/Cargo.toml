@@ -49,11 +49,12 @@ harness = false
 
 [dependencies]
 backtrace = { version = "0.3", optional = true }
-ff = "0.13"
-group = "0.13"
+ff = "0.14"
+group = "0.14"
 indexmap = "1"
 pasta_curves = "0.5"
-rand_core = { version = "0.6", default-features = false }
+rand = { version = "0.10", default-features = false, features = ["sys_rng"], optional = true }
+rand_core = { version = "0.10", default-features = false }
 tracing = "0.1"
 blake2b_simd = "1"
 maybe-rayon = {version = "0.1.0", default-features = false}
@@ -70,15 +71,10 @@ assert_matches = "1.5"
 criterion = "0.3"
 gumdrop = "0.8"
 proptest = "1"
-rand_core = { version = "0.6", default-features = false, features = ["getrandom"] }
-
-# Indirect dev-dependencies that we pin to preserve MSRV in CI checks.
-dashmap = ">=5, <5.5.0" # dashmap 5.5.0 has MSRV 1.64
-image = ">=0.24, <0.24.5" # image 0.24.5 has MSRV 1.61
-tempfile = ">=3, <3.7.0" # tempfile 3.7.0 has MSRV 1.63
+rand = "0.10"
 
 [target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
 default = ["batch", "multicore"]
@@ -92,7 +88,7 @@ test-dev-graph = [
 ]
 gadget-traces = ["backtrace"]
 sanity-checks = []
-batch = ["rand_core/getrandom"]
+batch = ["dep:rand"]
 floor-planner-v1-legacy-pdqsort = ["halo2_legacy_pdqsort"]
 
 # In-development features

@@ -1,6 +1,6 @@
 use super::{EccPoint, NonIdentityEccPoint};
 
-use group::prime::PrimeCurveAffine;
+use group::CurveAffine as _;
 
 use halo2_proofs::{
     circuit::{AssignedCell, Region, Value},

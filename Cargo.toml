@@ -1,7 +1,12 @@
 [workspace]
+resolver = "2"
 members = [
     "halo2",
     "halo2_gadgets",
     "halo2_poseidon",
     "halo2_proofs",
 ]
+
+[patch.crates-io]
+pasta_curves = { git = "https://github.com/zcash/pasta_curves.git", rev = "6aac244ffd28d4f704ef873ceb8c374610d328ec" }
+sinsemilla = { git = "https://github.com/zcash/sinsemilla.git", rev = "fd0e46c6db9c6572218e95a9c55fea5a824751ad" }

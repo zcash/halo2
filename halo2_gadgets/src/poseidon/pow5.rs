@@ -599,7 +599,7 @@ mod tests {
         transcript::{Blake2bRead, Blake2bWrite, Challenge255},
     };
     use pasta_curves::{pallas, EqAffine};
-    use rand::rngs::OsRng;
+    use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
     use super::{PoseidonInstructions, Pow5Chip, Pow5Config, StateWord};
     use crate::poseidon::{
@@ -808,9 +808,9 @@ mod tests {
 
     #[test]
     fn poseidon_hash() {
-        let rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
-        let message = [Fp::random(rng), Fp::random(rng)];
+        let message = [Fp::random(&mut rng), Fp::random(&mut rng)];
         let output =
             poseidon::Hash::<_, OrchardNullifier, ConstantLength<2>, 3, 2>::init().hash(message);
 
@@ -826,9 +826,13 @@ mod tests {
 
     #[test]
     fn poseidon_hash_longer_input() {
-        let rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
-        let message = [Fp::random(rng), Fp::random(rng), Fp::random(rng)];
+        let message = [
+            Fp::random(&mut rng),
+            Fp::random(&mut rng),
+            Fp::random(&mut rng),
+        ];
         let output =
             poseidon::Hash::<_, OrchardNullifier, ConstantLength<3>, 3, 2>::init().hash(message);
 
@@ -851,7 +855,7 @@ mod tests {
             &pk,
             &[circuit],
             &[&[]],
-            &mut OsRng,
+            &mut UnwrapErr(SysRng),
             &mut transcript,
         )
         .unwrap();

@@ -22,7 +22,8 @@ use halo2_proofs::plonk::{
 use halo2_proofs::poly::commitment::Params;
 use halo2_proofs::poly::Rotation;
 use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
-use rand_core::OsRng;
+use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
 
 const K: u32 = 5;
 
@@ -158,7 +159,7 @@ fn prove() -> (
         &pk,
         &[circuit],
         &[&[&[product]]],
-        OsRng,
+        UnwrapErr(SysRng),
         &mut transcript,
     )
     .expect("proof generation");

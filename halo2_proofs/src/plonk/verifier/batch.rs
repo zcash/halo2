@@ -1,6 +1,7 @@
 use group::ff::{Field, FromUniformBytes};
 use pasta_curves::arithmetic::CurveAffine;
-use rand_core::OsRng;
+use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
 
 use super::{verify_proof, VerificationStrategy};
 use crate::{
@@ -75,7 +76,7 @@ where
     /// Returns `false` if *some* proof was invalid. If the caller needs to identify
     /// specific failing proofs, it must re-process the proofs separately.
     ///
-    /// This uses [`OsRng`] internally instead of taking an `R: RngCore` argument, because
+    /// This uses [`SysRng`] internally instead of taking an `R: Rng` argument, because
     /// the internal parallelization requires access to a RNG that is guaranteed to not
     /// clone its internal state when shared between threads.
     pub fn finalize(self, params: &Params<C>, vk: &VerifyingKey<C>) -> bool {
@@ -86,7 +87,7 @@ where
             // Scale the MSM by a random factor to ensure that if the existing MSM has
             // `is_zero() == false` then this argument won't be able to interfere with it
             // to make it true, with high probability.
-            acc.scale(C::Scalar::random(OsRng));
+            acc.scale(C::Scalar::random(&mut UnwrapErr(SysRng)));
 
             acc.add_msm(&msm);
             acc

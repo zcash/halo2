@@ -509,7 +509,7 @@ where
         {
             use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
 
-            use group::{prime::PrimeCurveAffine, Curve};
+            use group::{Curve, CurveAffine as _};
             use pasta_curves::arithmetic::CurveExt;
 
             let field_elems: Value<Vec<_>> = message
