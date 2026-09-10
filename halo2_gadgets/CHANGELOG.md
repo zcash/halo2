@@ -14,6 +14,10 @@ and this project adheres to Rust's notion of
   - `EccInstructions::witness_point_non_id_from_constant`
   - `NonIdentityPoint::new_from_constant`
 
+### Fixed
+- `halo2_gadgets::utilities::decompose_word` now rejects zero-bit windows with
+  an explicit panic message.
+
 ## [0.5.0] - 2026-06-02
 
 ### Added
