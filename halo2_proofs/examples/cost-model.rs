@@ -9,6 +9,8 @@ use ff::Field;
 use group::{Curve, Group};
 use gumdrop::Options;
 use halo2_proofs::{arithmetic::best_multiexp, pasta::pallas};
+use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
 
 struct Estimator {
     /// Scalars for estimating multiexp performance.
@@ -26,7 +28,7 @@ impl fmt::Debug for Estimator {
 impl Estimator {
     fn random(k: usize) -> Self {
         let max_size = 1 << (k + 1);
-        let mut rng = rand_core::OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         Estimator {
             multiexp_scalars: (0..max_size)

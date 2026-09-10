@@ -2,7 +2,7 @@ use group::{
     ff::{BatchInvert, Field, PrimeField},
     Curve,
 };
-use rand_core::RngCore;
+use rand_core::Rng;
 use std::iter::{self, ExactSizeIterator};
 
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
@@ -48,7 +48,7 @@ impl Argument {
         C: CurveAffine,
         E: EncodedChallenge<C>,
         Ev: Copy + Send + Sync,
-        R: RngCore,
+        R: Rng,
         T: TranscriptWrite<C, E>,
     >(
         &self,

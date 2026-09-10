@@ -432,19 +432,23 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
 }
 
 #[cfg(test)]
-use rand_core::OsRng;
+use rand::rngs::SysRng;
+#[cfg(test)]
+use rand_core::UnwrapErr;
 
 #[cfg(test)]
 use crate::pasta::{Eq, EqAffine, Fp};
 
 #[test]
 fn test_multiexp() {
-    let rng = OsRng;
+    let mut rng = UnwrapErr(SysRng);
     let k = 8;
 
-    let coeffs = (0..(1 << k)).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+    let coeffs = (0..(1 << k))
+        .map(|_| Fp::random(&mut rng))
+        .collect::<Vec<_>>();
     let bases = (0..(1 << k))
-        .map(|_| EqAffine::from(Eq::random(rng)))
+        .map(|_| EqAffine::from(Eq::random(&mut rng)))
         .collect::<Vec<_>>();
 
     let expected = best_multiexp(&coeffs, &bases);
@@ -459,10 +463,10 @@ fn test_multiexp() {
 
 #[test]
 fn test_lagrange_interpolate() {
-    let rng = OsRng;
+    let mut rng = UnwrapErr(SysRng);
 
-    let points = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
-    let evals = (0..5).map(|_| Fp::random(rng)).collect::<Vec<_>>();
+    let points = (0..5).map(|_| Fp::random(&mut rng)).collect::<Vec<_>>();
+    let evals = (0..5).map(|_| Fp::random(&mut rng)).collect::<Vec<_>>();
 
     for coeffs in 0..5 {
         let points = &points[0..coeffs];

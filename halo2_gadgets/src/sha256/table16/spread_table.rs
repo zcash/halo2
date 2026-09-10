@@ -291,7 +291,7 @@ impl SpreadTableConfig {
 #[cfg(test)]
 mod tests {
     use super::{get_tag, SpreadTableChip, SpreadTableConfig};
-    use rand::Rng;
+    use rand::RngExt;
 
     use group::ff::PrimeField;
     use halo2_proofs::{
@@ -413,7 +413,7 @@ mod tests {
                         )?;
 
                         // Test random lookup values
-                        let mut rng = rand::thread_rng();
+                        let mut rng = rand::rng();
 
                         fn interleave_u16_with_zeros(word: u16) -> u32 {
                             let mut word: u32 = word.into();
@@ -425,7 +425,7 @@ mod tests {
                         }
 
                         for _ in 0..10 {
-                            let word: u16 = rng.gen();
+                            let word: u16 = rng.random();
                             add_row(
                                 F::from(u64::from(get_tag(word))),
                                 F::from(u64::from(word)),

@@ -527,7 +527,7 @@ pub(crate) mod tests {
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use rand::rngs::OsRng;
+    use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
     use super::{
         chip::{SinsemillaChip, SinsemillaConfig},
@@ -678,7 +678,7 @@ pub(crate) mod tests {
         config: EccSinsemillaConfig<Lookup>,
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
-        let rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         let ecc_chip = EccChip::construct(config.0, CircuitVersion::AnchoredBase);
 
@@ -762,7 +762,7 @@ pub(crate) mod tests {
             let chip2 = SinsemillaChip::construct(config.2);
 
             let test_commit = CommitDomain::new(chip2.clone(), ecc_chip.clone(), &TestCommitDomain);
-            let r_val = pallas::Scalar::random(rng);
+            let r_val = pallas::Scalar::random(&mut rng);
             let message: Vec<Value<bool>> = (0..500)
                 .map(|_| Value::known(rand::random::<bool>()))
                 .collect();

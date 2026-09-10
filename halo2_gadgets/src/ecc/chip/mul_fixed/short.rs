@@ -315,6 +315,7 @@ pub mod tests {
         plonk::{Any, Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::pallas;
+    use rand::{rand_core::UnwrapErr, rngs::SysRng};
     use std::marker::PhantomData;
 
     use crate::{
@@ -757,7 +758,7 @@ pub mod tests {
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         // Generate a random non-identity point P
-        let p_val = pallas::Point::random(rand::rngs::OsRng).to_affine();
+        let p_val = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine();
         let p = Point::new(
             chip.clone(),
             layouter.namespace(|| "P"),
@@ -907,7 +908,7 @@ pub mod tests {
         fn test_invalid_magnitude_sign() {
             // Sign that is not +/- 1 should fail
             // Generate a random non-identity point
-            let point = pallas::Point::random(rand::rngs::OsRng);
+            let point = pallas::Point::random(&mut UnwrapErr(SysRng));
             let circuit: MyMulSignCircuit<Lookup> = MyMulSignCircuit {
                 base: Value::known(point.to_affine()),
                 sign: Value::known(pallas::Base::zero()),

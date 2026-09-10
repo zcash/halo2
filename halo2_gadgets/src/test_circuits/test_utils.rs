@@ -2,7 +2,7 @@
 
 use std::{env, fs, path::Path};
 
-use rand::rngs::OsRng;
+use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
 use pasta_curves::{pallas, vesta};
 
@@ -39,7 +39,14 @@ impl Proof {
         let pk = plonk::keygen_pk(params, vk.clone(), &circuit).unwrap();
 
         let mut transcript = Blake2bWrite::<_, vesta::Affine, _>::init(vec![]);
-        plonk::create_proof(params, &pk, &[circuit], &[&[]], OsRng, &mut transcript)?;
+        plonk::create_proof(
+            params,
+            &pk,
+            &[circuit],
+            &[&[]],
+            UnwrapErr(SysRng),
+            &mut transcript,
+        )?;
         let proof = transcript.finalize();
 
         Ok(Proof(proof))

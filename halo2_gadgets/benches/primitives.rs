@@ -8,15 +8,18 @@ use halo2_gadgets::{
 use pasta_curves::pallas;
 #[cfg(unix)]
 use pprof::criterion::{Output, PProfProfiler};
-use rand::{rngs::OsRng, Rng};
+use rand::{rand_core::UnwrapErr, rngs::SysRng, RngExt};
 
 fn bench_primitives(c: &mut Criterion) {
-    let mut rng = OsRng;
+    let mut rng = UnwrapErr(SysRng);
 
     {
         let mut group = c.benchmark_group("Poseidon");
 
-        let message = [pallas::Base::random(rng), pallas::Base::random(rng)];
+        let message = [
+            pallas::Base::random(&mut rng),
+            pallas::Base::random(&mut rng),
+        ];
 
         group.bench_function("2-to-1", |b| {
             b.iter(|| {
@@ -30,8 +33,8 @@ fn bench_primitives(c: &mut Criterion) {
 
         let hasher = sinsemilla::HashDomain::new("hasher");
         let committer = sinsemilla::CommitDomain::new("committer");
-        let bits: Vec<bool> = (0..1086).map(|_| rng.gen()).collect();
-        let r = pallas::Scalar::random(rng);
+        let bits: Vec<bool> = (0..1086).map(|_| rng.random()).collect();
+        let r = pallas::Scalar::random(&mut rng);
 
         // Benchmark the input sizes we use in Orchard:
         // - 510 bits for Commit^ivk

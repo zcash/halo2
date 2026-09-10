@@ -215,7 +215,7 @@ mod tests {
         plonk::{Any, Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::pallas;
-    use rand::rngs::OsRng;
+    use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
     use crate::ecc::chip::{
         FIXED_BASE_WINDOW_SIZE, L_SCALAR_SHORT as L_SHORT, NUM_WINDOWS, NUM_WINDOWS_SHORT,
@@ -299,7 +299,7 @@ mod tests {
 
         // Random base field element
         {
-            let alpha = pallas::Base::random(OsRng);
+            let alpha = pallas::Base::random(&mut UnwrapErr(SysRng));
 
             // Strict full decomposition should pass.
             let circuit: MyCircuit<pallas::Base, L_BASE, FIXED_BASE_WINDOW_SIZE, { NUM_WINDOWS }> =

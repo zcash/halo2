@@ -5,7 +5,8 @@ use halo2_proofs::{
     plonk::{Advice, Assigned, Circuit, Column, ConstraintSystem, Error, Fixed, TableColumn},
     poly::Rotation,
 };
-use rand_core::OsRng;
+use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
 use std::marker::PhantomData;
 
 #[derive(Clone)]
@@ -269,7 +270,7 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
 fn main() {
     // Prepare the circuit you want to render.
     // You don't need to include any witness variables.
-    let a = Fp::random(OsRng);
+    let a = Fp::random(&mut UnwrapErr(SysRng));
     let instance = Fp::ONE + Fp::ONE;
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let circuit: MyCircuit<Fp> = MyCircuit {

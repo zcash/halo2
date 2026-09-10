@@ -2,7 +2,7 @@ use std::iter;
 
 use ff::Field;
 use group::Curve;
-use rand_core::RngCore;
+use rand_core::Rng;
 
 use super::Argument;
 use crate::{
@@ -35,7 +35,7 @@ pub(in crate::plonk) struct Evaluated<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Argument<C> {
-    pub(in crate::plonk) fn commit<E: EncodedChallenge<C>, R: RngCore, T: TranscriptWrite<C, E>>(
+    pub(in crate::plonk) fn commit<E: EncodedChallenge<C>, R: Rng, T: TranscriptWrite<C, E>>(
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         mut rng: R,
@@ -47,7 +47,7 @@ impl<C: CurveAffine> Argument<C> {
             *coeff = C::Scalar::random(&mut rng);
         }
         // Sample a random blinding factor
-        let random_blind = Blind(C::Scalar::random(rng));
+        let random_blind = Blind(C::Scalar::random(&mut rng));
 
         // Commit
         let c = params.commit(&random_poly, random_blind).to_affine();
@@ -65,7 +65,7 @@ impl<C: CurveAffine> Committed<C> {
     pub(in crate::plonk) fn construct<
         E: EncodedChallenge<C>,
         Ev: Copy + Send + Sync,
-        R: RngCore,
+        R: Rng,
         T: TranscriptWrite<C, E>,
     >(
         self,
