@@ -8,6 +8,7 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 ### Changed
 - The minimum supported Rust version is now 1.88.
+- Migrated to `ff 0.14`, `group 0.14` and `rand 0.10`.
 
 ### Added
 - `halo2_gadgets::ecc`:

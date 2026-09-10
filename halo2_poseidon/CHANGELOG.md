@@ -8,6 +8,7 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 ### Changed
 - The minimum supported Rust version is now 1.88.
+- Migrated to `ff 0.14` and `group 0.14`.
 
 ## [0.1.0] - 2024-12-16
 Initial release, extracted from `halo2_gadgets 0.3.0`. Includes minor changes

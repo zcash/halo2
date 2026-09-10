@@ -8,6 +8,8 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 ### Changed
 - The minimum supported Rust version is now 1.88.
+- The re-exported `halo2_proofs` API migrated to `ff 0.14`, `group 0.14` and
+  `rand_core 0.10`; see the `halo2_proofs` changelog for the breaking changes.
 
 ## [0.1.0-beta.2] - 2022-02-14
 ### Removed

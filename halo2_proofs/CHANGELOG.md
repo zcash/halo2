@@ -25,6 +25,20 @@ and this project adheres to Rust's notion of
 
 ### Changed
 - The minimum supported Rust version is now 1.88.
+- Migrated to `ff 0.14`, `group 0.14` and `rand_core 0.10`.
+- The RNG type parameter of `halo2_proofs::plonk::create_proof` (and of the
+  internal committing APIs it drives) is now bound by `rand_core::Rng` instead
+  of `rand_core::RngCore`, which `rand_core 0.10` deprecates in favour of `Rng`.
+  `Rng` is the infallible half of the new fallible RNG interface, so a fallible
+  source such as `getrandom::SysRng` must be wrapped in `rand_core::UnwrapErr`
+  (which panics on failure, matching the old `rand_core::OsRng` behaviour).
+- `halo2_proofs::plonk::BatchVerifier::finalize` now draws its internal
+  randomness from `UnwrapErr(rand::rngs::SysRng)` rather than
+  `rand_core::OsRng`, which no longer exists. `SysRng` is likewise stateless, so
+  the property this relies on (an RNG that does not clone its internal state
+  when shared between threads) is preserved.
+- The `batch` feature flag now enables an optional `rand` dependency with its
+  `sys_rng` feature, instead of `rand_core/getrandom`.
 
 ## [0.3.5] - 2026-08-02
 ### Added
