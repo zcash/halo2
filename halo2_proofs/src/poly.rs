@@ -183,6 +183,8 @@ impl<'a, F: Field, B: Basis> Add<&'a Polynomial<F, B>> for Polynomial<F, B> {
     type Output = Polynomial<F, B>;
 
     fn add(mut self, rhs: &'a Polynomial<F, B>) -> Polynomial<F, B> {
+        assert_eq!(self.values.len(), rhs.values.len());
+
         parallelize(&mut self.values, |lhs, start| {
             for (lhs, rhs) in lhs.iter_mut().zip(rhs.values[start..].iter()) {
                 *lhs += *rhs;
@@ -329,6 +331,29 @@ mod tests {
     use rand_core::OsRng;
 
     use super::{EvaluationDomain, Rotation};
+
+    #[test]
+    fn test_polynomial_add() {
+        let domain = EvaluationDomain::<pallas::Base>::new(1, 3);
+        let lhs = domain.lagrange_from_vec((1u64..=8).map(pallas::Base::from).collect());
+        let rhs = domain.constant_lagrange(pallas::Base::from(2));
+
+        let sum = lhs + &rhs;
+
+        assert_eq!(
+            &sum[..],
+            &(3u64..=10).map(pallas::Base::from).collect::<Vec<_>>()[..]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_polynomial_add_rejects_mismatched_lengths() {
+        let lhs = EvaluationDomain::<pallas::Base>::new(1, 3).empty_lagrange();
+        let rhs = EvaluationDomain::<pallas::Base>::new(1, 4).empty_lagrange();
+
+        let _ = lhs + &rhs;
+    }
 
     #[test]
     fn test_get_chunk_of_rotated() {
