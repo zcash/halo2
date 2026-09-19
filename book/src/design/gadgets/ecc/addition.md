@@ -37,9 +37,14 @@ $
 
 So we get the constraints:
 - $(x_r + x_q + x_p) \cdot (x_p - x_q)^2 - (y_p - y_q)^2 = 0$
-  - Note that this constraint is unsatisfiable for $P \;⸭\; (-P)$ (when $P \neq \mathcal{O}$),
-    and so cannot be used with arbitrary inputs.
+  - Note that this constraint is unsatisfiable for $P \;⸭\; (-P)$ (when $P \neq \mathcal{O}$).
 - $(y_r + y_q) \cdot (x_p - x_q) - (y_p - y_q) \cdot (x_q - x_r) = 0.$
+
+For $P \;⸭\; P$ (when $P \neq \mathcal{O}$), both constraints reduce to $0 = 0$, so they leave
+$(x_r, y_r)$ unconstrained; and neither constraint implements the cases involving $\mathcal{O}$.
+So incomplete addition is neither sound nor complete for arbitrary inputs: a gadget that uses
+it must either exclude these cases or show that they do not arise, as in the
+[Sinsemilla argument](../sinsemilla.md).
 
 ### Constraints <a name="incomplete-addition-constraints"></a>
 
@@ -63,7 +68,7 @@ $\hspace{1em} \begin{array}{rcll}
  (x_p, y_p) &+& (x_q, y_q)  &= (x_p, y_p) \;⸭\; (x_q, y_q), \text{ if } x_p \neq x_q.
 \end{array}$
 
-Suppose that we represent $\mathcal{O}$ as $(0, 0)$. ($0$ is not an $x$-coordinate of a valid point because we would need $y^2 = x^3 + 5$, and $5$ is not square in $\mathbb{F}_q$. Also $0$ is not a $y$-coordinate of a valid point because $-5$ is not a cube in $\mathbb{F}_q$.)
+Suppose that we represent $\mathcal{O}$ as $(0, 0)$. ($0$ is not an $x$-coordinate of a valid point because we would need $y^2 = x^3 + 5$, and $5$ is not square in $\mathbb{F}_p$. Also $0$ is not a $y$-coordinate of a valid point because $-5$ is not a cube in $\mathbb{F}_p$.)
 
 $$
 \begin{aligned}
@@ -165,7 +170,7 @@ $$
    & \\
    & \begin{aligned}
        \text{At least one of } &x_p = 0 \\
-                    \text{or } &x_p = 0 \\
+                    \text{or } &x_q = 0 \\
                     \text{or } &(x_q - x_p) = 0 \\
                     \text{or } &(\lambda^2 - x_p - x_q - x_r) = 0 \\
      \end{aligned} \\
@@ -301,7 +306,7 @@ point on the Pallas curve other than $\mathcal{O}$.
         (1)&\text{holds because } x_q \neq x_p, \text{ therefore } \lambda = (y_q - y_p) / (x_q - x_p) \text{ is a solution} \\
         (2)&\text{holds because } x_q \neq x_p, \text{ therefore } \alpha = (x_q - x_p)^{-1} \text{ is a solution} \\
         (3)&\text{holds because } x_p = 0 \\
-        (4)&\text{holds because } x_p = 0 \text{ only when } (x_r, y_r) = (x_q, y_q) \\
+        (4)&\text{holds because } (x_r, y_r) = (x_q, y_q) \\
         (5)&\text{holds because } x_q \neq 0, \text{ therefore } \gamma = x_q^{-1} \text{ is a solution}\\
         (6)&\text{holds because } x_q \neq x_p, \text{ therefore } \alpha = (x_q - x_p)^{-1} \text{ and } \delta = 0 \text{ is a solution.}
         \end{array}
@@ -318,7 +323,7 @@ point on the Pallas curve other than $\mathcal{O}$.
         (2)&\text{holds because } x_q = x_p \wedge y_p \neq 0, \text{ therefore } \lambda = 3x_p^2 / 2y_p \text{ is a solution}\\
         (3)&\text{holds because } x_r = \lambda^2 - x_p - x_q \wedge y_r = \lambda \cdot (x_p - x_r) - y_p \text{ in this case} \\
         (4)&\text{holds because } x_p \neq 0, \text{ therefore } \beta = x_p^{-1} \text{ is a solution} \\
-        (5)&\text{holds because } x_p \neq 0, \text{ therefore } \gamma = x_q^{-1} \text{ is a solution} \\
+        (5)&\text{holds because } x_q \neq 0, \text{ therefore } \gamma = x_q^{-1} \text{ is a solution} \\
         (6)&\text{holds because } x_q = x_p \text{ and } y_q \neq -y_p, \text{ therefore } \alpha = 0 \text{ and } \delta = (y_q + y_p)^{-1} \text{ is a solution.} \\
         \end{array}
         $
