@@ -26,6 +26,12 @@ and this project adheres to Rust's notion of
 ### Changed
 - The minimum supported Rust version is now 1.88.
 
+### Fixed
+- `halo2_proofs::poly::commitment::Params::read` now returns an
+  `io::ErrorKind::InvalidData` error when the serialized `k` is out of range
+  (`k >= 32`, the bound enforced by `Params::new`), instead of overflowing
+  `1 << k` or trying to read 2^k generators from the buffer.
+
 ## [0.3.5] - 2026-08-02
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_match_only`

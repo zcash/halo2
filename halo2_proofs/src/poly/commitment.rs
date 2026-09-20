@@ -186,6 +186,15 @@ impl<C: CurveAffine> Params<C> {
         reader.read_exact(&mut k[..])?;
         let k = u32::from_le_bytes(k);
 
+        // Enforce the same bound as `Params::new`, so that `1 << k` below cannot
+        // overflow and we never attempt to read 2^k generators for an absurd `k`.
+        if k >= 32 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("invalid k = {k}: Params require k < 32"),
+            ));
+        }
+
         let n: u64 = 1 << k;
 
         let g: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
