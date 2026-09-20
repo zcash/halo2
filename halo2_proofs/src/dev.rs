@@ -61,9 +61,12 @@ struct Region {
 impl Region {
     fn update_extent(&mut self, column: Column<Any>, row: usize) {
         self.columns.insert(column);
+        self.update_rows(row);
+    }
 
-        // The region start is the earliest row assigned to.
-        // The region end is the latest row assigned to.
+    fn update_rows(&mut self, row: usize) {
+        // The region start is the earliest row assigned to (or on which a selector
+        // was enabled). The region end is the latest such row.
         let (mut start, mut end) = self.rows.unwrap_or((row, row));
         if row < start {
             // The first row assigned was not at start 0 within the region.
@@ -345,9 +348,12 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
         // Track that this selector was enabled. We require that all selectors are enabled
         // inside some region (i.e. no floating selectors).
-        self.current_region
-            .as_mut()
-            .unwrap()
+        let region = self.current_region.as_mut().unwrap();
+        // Enabling a selector uses a row of the region, just as assigning a cell does
+        // (`RegionShape` measures regions the same way). Tracking it here means a
+        // region containing only selectors still has a known start row.
+        region.update_rows(row);
+        region
             .enabled_selectors
             .entry(*selector)
             .or_default()
