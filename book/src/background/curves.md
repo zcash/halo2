@@ -282,18 +282,26 @@ Sometimes it is useful to be able to produce a random point on an elliptic curve
 $E_p/\mathbb{F}_p$ corresponding to some input, in such a way that no-one will know its
 discrete logarithm (to any other base).
 
-This is described in detail in the [Internet draft on Hashing to Elliptic Curves][cfrg-hash-to-curve].
-Several algorithms can be used depending on efficiency and security requirements. The
-framework used in the Internet Draft makes use of several functions:
+This is described in [RFC 9380: Hashing to Elliptic Curves](https://www.rfc-editor.org/rfc/rfc9380.html).
+(The Zcash Protocol Specification references an
+[earlier Internet Draft](https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/10/?include-text=1),
+but the RFC is equivalent to that draft.)
+
+Several algorithms can be used depending on efficiency and security requirements.
+The one used by the Orchard protocol is called Simplified SWU [^sswu], using the
+isogeny-based optimizations that [^sswu-bls12381] introduced for BLS12-381. The
+framework used in the RFC makes use of several functions:
 
 * ``hash_to_field``: takes a byte sequence input and maps it to a element in the base
   field $\mathbb{F}_p$
 * ``map_to_curve``: takes an $\mathbb{F}_p$ element and maps it to $E_p$.
 
-[cfrg-hash-to-curve]: https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1
-
-### TODO: Simplified SWU
-Reference: https://eprint.iacr.org/2019/403.pdf
+For much more detail on the Simplified SWU construction and how its security can be
+modelled formally, see the
+[Group-Hash Indifferentiability](https://zcash.github.io/ironwood/formal-verification/group-hash-indifferentiability.html)
+page of the Ironwood book.
 
 ## References
-[^complete-formulae]: [Renes, J., Costello, C., & Batina, L. (2016, May). "Complete addition formulas for prime order elliptic curves." In Annual International Conference on the Theory and Applications of Cryptographic Techniques (pp. 403-428). Springer, Berlin, Heidelberg.](https://eprint.iacr.org/2015/1060)
+[^complete-formulae]: [Joost Renes, Craig Costello, and Lejla Batina. "Complete addition formulas for prime order elliptic curves." IACR eprint 2015/1060, May 2016. Also published in the Annual International Conference on the Theory and Applications of Cryptographic Techniques (pp. 403-428). Springer, Berlin, Heidelberg.](https://eprint.iacr.org/2015/1060)
+[^sswu]: [RFC 9380 section 6.6.2: Simplified Shallue-van de Woestijne-Ulas Method.](https://www.rfc-editor.org/rfc/rfc9380.html#name-simplified-shallue-van-de-w)
+[^sswu-bls12381]: [Riad S. Wahby and Dan Boneh. "Fast and simple constant-time hashing to the BLS12-381 elliptic curve." IACR eprint 2019/403, revised September 2019.](https://eprint.iacr.org/2019/403)
