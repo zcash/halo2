@@ -210,10 +210,10 @@ As mentioned in the [Fields](./fields.md) section, we can interpret the least si
 bit of a field element as its "sign", since its additive inverse will always have the
 opposite LSB. So we record the LSB of the $y$-coordinate as `sign`.
 
-Pallas and Vesta are defined over the $\mathbb{F}_p$ and $\mathbb{F}_q$ fields, which
-elements can be expressed in $255$ bits. This conveniently leaves one unused bit in a
-32-byte representation. We pack the $y$-coordinate `sign` bit into the highest bit in
-the representation of the $x$-coordinate:
+Pallas and Vesta are defined over the [fields](fields.md#the-pasta-primes) $\mathbb{F}_p$
+and $\mathbb{F}_q$ respectively, whose elements can be expressed in $255$ bits. This
+conveniently leaves one unused bit in a 32-byte representation. We pack the $y$-coordinate
+`sign` bit into the highest bit in the representation of the $x$-coordinate:
 
 ```text
          <----------------------------------- x --------------------------------->
