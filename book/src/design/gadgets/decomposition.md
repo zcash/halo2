@@ -1,7 +1,11 @@
 # Decomposition
-Given a field element $\alpha$, these gadgets decompose it into $W$ $K$-bit windows $$\alpha = k_0 + 2^{K} \cdot k_1 + 2^{2K} \cdot k_2 + \cdots + 2^{(W-1)K} \cdot k_{W-1}$$ where each $k_i$ a $K$-bit value.
+Given a field element $\alpha$, these gadgets decompose it into $W$ $K$-bit windows
+$$\alpha = k_0 + 2^{K} \cdot k_1 + 2^{2K} \cdot k_2 + \cdots + 2^{(W-1)K} \cdot k_{W-1}$$
+where each $k_i$ is a $K$-bit value.
 
-This is done using a running sum $z_i, i \in [0..W).$ We initialize the running sum $z_0 = \alpha,$ and compute subsequent terms $z_{i+1} = \frac{z_i - k_i}{2^{K}}.$ This gives us:
+This is done using a running sum $z_i, i \in [0..W].$ We initialize the running sum
+$z_0 = \alpha,$ and compute subsequent terms $z_{i+1} = \frac{z_i - k_i}{2^{K}}.$ This
+gives us:
 
 $$
 \begin{aligned}
@@ -14,7 +18,7 @@ z_2 &= (z_1 - k_1) / 2^K \\
     &\vdots \\
 \downarrow &\text{ (in strict mode)} \\
 z_W &= (z_{W-1} - k_{W-1}) / 2^K \\
-    &= 0 \text{ (because } z_{W-1} = k_{W-1} \text{)}
+    &= 0 \text{ (so } z_{W-1} = k_{W-1} \text{)}
 \end{aligned}
 $$
 
@@ -34,8 +38,8 @@ $$
   z_0    &     1      &       1     \\\hline
   z_1    &     1      &       1     \\\hline
 \vdots   &   \vdots   &     \vdots  \\\hline
-z_{n-1}  &     1      &       1     \\\hline
-z_n      &     0      &       0     \\\hline
+z_{W-1}  &     1      &       1     \\\hline
+z_W      &     0      &       0     \\\hline
 \end{array}
 $$
 ### Short range check
@@ -52,16 +56,18 @@ $$
 \hline
 \alpha        &     1      &      0      &       0      \\\hline
 \alpha'       &     1      &      0      &       1      \\\hline
-2^{K-n}       &     0      &      0      &       0      \\\hline
+2^{-n}        &     0      &      0      &       0      \\\hline
 \end{array}
 $$
 
-where $\alpha' = \alpha \cdot 2^{K - n}.$ Note that $2^{K-n}$ is assigned to a fixed column at keygen, and copied in at proving time. This is used in the gate enabled by the $q_\mathit{bitshift}$ selector to check that $\alpha$ was shifted correctly:
+where $\alpha' = \alpha \cdot 2^{K - n}.$ Note that $2^{-n}$ is assigned to a fixed column
+at keygen, and copied in at proving time. This is used in the gate enabled by the
+$q_\mathit{bitshift}$ selector to check that $\alpha$ was shifted correctly:
 $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-       2      & q_\mathit{bitshift} \cdot ((\alpha \cdot 2^{K - n}) - \alpha') \\\hline
+       3      & q_\mathit{bitshift} \cdot (\alpha \cdot 2^K \cdot 2^{-n} - \alpha') = 0 \\\hline
 \end{array}
 $$
 
