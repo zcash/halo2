@@ -1016,6 +1016,73 @@ mod tests {
     }
 
     #[test]
+    fn unassigned_cell_in_selector_only_region() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            q: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let q = meta.selector();
+
+                meta.create_gate("Zero check", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let q = cells.query_selector(q);
+
+                    // If q is enabled, a must be assigned to.
+                    vec![q * a]
+                });
+
+                FaultyCircuitConfig { q }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_region(
+                    || "Faulty synthesis",
+                    |mut region| {
+                        // Enable the gate.
+                        config.q.enable(&mut region, 0)?;
+
+                        // BUG: Forget to assign a = 0! This could go unnoticed during
+                        // development, because cell values default to zero, but the
+                        // region now contains a selector and no cells at all.
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit {}, vec![]).unwrap();
+        assert_eq!(
+            prover.verify(),
+            Err(vec![VerifyFailure::CellNotAssigned {
+                gate: (0, "Zero check").into(),
+                region: (0, "Faulty synthesis".to_owned()).into(),
+                gate_offset: 0,
+                column: Column::new(0, Any::Advice),
+                offset: 0,
+            }])
+        );
+    }
+
+    #[test]
     fn bad_lookup() {
         const K: u32 = 4;
 
