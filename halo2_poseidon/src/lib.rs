@@ -419,7 +419,10 @@ impl<F: PrimeField, const RATE: usize, const L: usize> Domain<F, RATE> for Const
         // of RATE. On its own this would not be sponge-compliant padding, but the
         // Poseidon authors encode the constant length into the capacity element, ensuring
         // that inputs of different lengths do not share the same permutation.
-        let k = L.div_ceil(RATE);
+        //
+        // An empty message is padded to a single all-zero block, so that the sponge
+        // still absorbs (and permutes) exactly once before squeezing.
+        let k = core::cmp::max(1, L.div_ceil(RATE));
         iter::repeat(F::ZERO).take(k * RATE - L)
     }
 }
@@ -466,6 +469,8 @@ impl<F: PrimeField, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, cons
     Hash<F, S, ConstantLength<L>, T, RATE>
 {
     /// Hashes the given input.
+    ///
+    /// An empty message (`L = 0`) is hashed as a single all-zero block.
     pub fn hash(mut self, message: [F; L]) -> F {
         for value in message
             .into_iter()
