@@ -270,12 +270,11 @@ an $\mathbb{F}_q$-arithmetic circuit that can efficiently verify proofs from the
 curve. As a bonus, if this second curve were $E_p$ with base field $\mathbb{F}_p,$ it
 would generate proofs that could be efficiently verified in the first curve's
 $\mathbb{F}_p$-arithmetic circuit. In other words, we instantiate a second proof system
-over $E_p/\mathbb{F}_p,$ forming a 2-cycle with the first:
+over $E_p/\mathbb{F}_p,$ forming a 2-cycle with the first.
 
-![](https://i.imgur.com/bNMyMRu.png)
-
-### TODO: Pallas-Vesta curves
-Reference: https://github.com/zcash/pasta
+For further explanation of how this works, watch Daira‑Emma Hopwood's section of hir
+[presentation](https://www.youtube.com/watch?v=YlTt12s7vGE&t=2066s) with Ying Tong Lai
+for the ZK Seoul Meetup.
 
 ## Hashing to curves
 
