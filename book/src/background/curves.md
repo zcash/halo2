@@ -239,35 +239,38 @@ If `sign == ysign`, we already have the correct sign and simply return the curve
 $(x, y)$. Otherwise, we negate $y$ and return $(x, -y)$.
 
 ## Cycles of curves
-Let $E_p$ be an elliptic curve over a finite field $\mathbb{F}_p,$ where $p$ is a prime.
-We denote this by $E_p/\mathbb{F}_p.$ and we denote the group of points of $E_p$ over
-$\mathbb{F}_p,$ with order $q = \#E(\mathbb{F}_p).$ For this curve, we call $\mathbb{F}_p$
-the "base field" and  $\mathbb{F}_q$ the "scalar field".
+Let $E_q$ be an elliptic curve over a finite field $\mathbb{F}_q,$ where $q$ is a prime.
+We denote this by $E_q/\mathbb{F}_q$. The corresponding group of points has order
+$p = \#E_q$. For this curve, we call $\mathbb{F}_q$ the "base field" and $\mathbb{F}_p$
+the "scalar field".
 
-We instantiate our proof system over the elliptic curve $E_p/\mathbb{F}_p$. This allows us
-to prove statements about $\mathbb{F}_q$-arithmetic circuit satisfiability.
+We instantiate our proof system over the elliptic curve $E_q/\mathbb{F}_q$. This allows us
+to prove statements about $\mathbb{F}_p$-arithmetic circuit satisfiability. This is the
+situation in the Orchard protocol, where we use Halo 2 over the **Vesta** curve to prove
+statements over $\mathbb{F}_p$, making arithmetic on the Pallas "application curve" more
+efficient to compute in a circuit.
 
-> **(aside) If our curve $E_p$ is over $\mathbb{F}_p,$ why is the arithmetic circuit instead in $\mathbb{F}_q$?**
+> **(aside) If our curve $E_q$ is over $\mathbb{F}_q,$ why is the arithmetic circuit instead in $\mathbb{F}_p$?** <br/>
 > The proof system is basically working on encodings of the scalars in the circuit (or
 > more precisely, commitments to polynomials whose coefficients are scalars). The scalars
-> are in $\mathbb{F}_q$ when their encodings/commitments are elliptic curve points in
-> $E_p/\mathbb{F}_p$.
+> are in $\mathbb{F}_p$ when their encodings/commitments are elliptic curve points in
+> $E_q/\mathbb{F}_q$.
 
 However, most of the verifier's arithmetic computations are over the base field
-$\mathbb{F}_p,$ and are thus efficiently expressed as an $\mathbb{F}_p$-arithmetic
+$\mathbb{F}_q,$ and are thus efficiently expressed as an $\mathbb{F}_q$-arithmetic
 circuit.
 
-> **(aside) Why are the verifier's computations (mainly) over $\mathbb{F}_p$?**
+> **(aside) Why are the verifier's computations (mainly) over $\mathbb{F}_q$?** <br/>
 > The Halo 2 verifier actually has to perform group operations using information output by
 > the circuit. Group operations like point doubling and addition use arithmetic in
-> $\mathbb{F}_p$, because the coordinates of points are in $\mathbb{F}_p.$ 
+> $\mathbb{F}_q$, because the coordinates of points are in $\mathbb{F}_q.$
 
-This motivates us to construct another curve with scalar field $\mathbb{F}_p$, which has
-an $\mathbb{F}_p$-arithmetic circuit that can efficiently verify proofs from the first
-curve. As a bonus, if this second curve had base field $E_q/\mathbb{F}_q,$ it would
-generate proofs that could be efficiently verified in the first curve's
-$\mathbb{F}_q$-arithmetic circuit. In other words, we instantiate a second proof system
-over $E_q/\mathbb{F}_q,$ forming a 2-cycle with the first:
+This motivates us to construct another curve with scalar field $\mathbb{F}_q$, which has
+an $\mathbb{F}_q$-arithmetic circuit that can efficiently verify proofs from the first
+curve. As a bonus, if this second curve were $E_p$ with base field $\mathbb{F}_p,$ it
+would generate proofs that could be efficiently verified in the first curve's
+$\mathbb{F}_p$-arithmetic circuit. In other words, we instantiate a second proof system
+over $E_p/\mathbb{F}_p,$ forming a 2-cycle with the first:
 
 ![](https://i.imgur.com/bNMyMRu.png)
 
