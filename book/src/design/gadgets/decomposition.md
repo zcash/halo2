@@ -23,13 +23,18 @@ z_W &= (z_{W-1} - k_{W-1}) / 2^K \\
 $$
 
 ### Strict mode
-Strict mode constrains the running sum output $z_{W}$ to be zero, thus range-constraining the field element to be within $W \cdot K$ bits.
+Strict mode constrains the running sum output $z_{W}$ to be zero, thus range-constraining
+the field element to be within $W \cdot K$ bits.
 
-In strict mode, we are also assured that $z_{W-1} = k_{W-1}$ gives us the last window in the decomposition.
+In strict mode, we are also assured that $z_{W-1} = k_{W-1}$ gives us the last window in
+the decomposition.
 ## Lookup decomposition
-This gadget makes use of a $K$-bit lookup table to decompose a field element $\alpha$ into $K$-bit words. Each $K$-bit word $k_i = z_i - 2^K \cdot z_{i+1}$ is range-constrained by a lookup in the $K$-bit table.
+This gadget makes use of a $K$-bit lookup table to decompose a field element $\alpha$ into
+$K$-bit words. Each $K$-bit word $k_i = z_i - 2^K \cdot z_{i+1}$ is range-constrained by a
+lookup in the $K$-bit table.
 
-The region layout for the lookup decomposition uses a single advice column $z$, and two selectors $q_{lookup}$ and $q_{running}.$
+The region layout for the lookup decomposition uses a single advice column $z$, and two
+selectors $q_{lookup}$ and $q_{running}.$
 $$
 \begin{array}{|c|c|c|}
 \hline
@@ -43,12 +48,15 @@ z_W      &     0      &       0     \\\hline
 \end{array}
 $$
 ### Short range check
-Using two $K$-bit lookups, we can range-constrain a field element $\alpha$ to be $n$ bits, where $n \leq K.$ To do this:
+Using two $K$-bit lookups, we can range-constrain a field element $\alpha$ to be $n$ bits,
+where $n \leq K.$ To do this:
 
 1. Constrain $0 \leq \alpha < 2^K$ to be within $K$ bits using a $K$-bit lookup.
-2. Constrain $0 \leq \alpha \cdot 2^{K - n} < 2^K$ to be within $K$ bits using a $K$-bit lookup.
+2. Constrain $0 \leq \alpha \cdot 2^{K - n} < 2^K$ to be within $K$ bits using a $K$-bit
+   lookup.
 
-The short variant of the lookup decomposition introduces a $q_{bitshift}$ selector. The same advice column $z$ has here been renamed to $\textsf{word}$ for clarity:
+The short variant of the lookup decomposition introduces a $q_{bitshift}$ selector. The
+same advice column $z$ has here been renamed to $\textsf{word}$ for clarity:
 $$
 \begin{array}{|c|c|c|c|}
 \hline
@@ -72,11 +80,16 @@ $$
 $$
 
 ### Combined lookup expression
-Since the lookup decomposition and its short variant both make use of the same lookup table, we combine their lookup input expressions into a single one:
+Since the lookup decomposition and its short variant both make use of the same lookup
+table, we combine their lookup input expressions into a single one:
 
 $$q_\mathit{lookup} \cdot \left(q_\mathit{running} \cdot (z_i - 2^K \cdot z_{i+1}) + (1 - q_\mathit{running}) \cdot \textsf{word} \right)$$
 
-where $z_i$ and $\textsf{word}$ are the same cell (but distinguished here for clarity of usage).
+where $z_i$ and $\textsf{word}$ are the same cell (but distinguished here for clarity of
+usage).
 
 ## Short range decomposition
-For a short range (for instance, $[0, \texttt{range})$ where $\texttt{range} \leq 8$), we can range-constrain each word using a degree-$\texttt{range}$ polynomial constraint instead of a lookup: $$\RangeCheck{word}{range} = \texttt{word} \cdot (1 - \texttt{word}) \cdots (\texttt{range} - 1 - \texttt{word}).$$
+For a short range (for instance, $[0, \texttt{range})$ where $\texttt{range} \leq 8$), we
+can range-constrain each word using a degree-$\texttt{range}$ polynomial constraint
+instead of a lookup:
+$$\RangeCheck{word}{range} = \texttt{word} \cdot (1 - \texttt{word}) \cdots (\texttt{range} - 1 - \texttt{word}).$$
