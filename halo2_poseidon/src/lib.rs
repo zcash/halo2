@@ -499,4 +499,18 @@ mod tests {
         permute::<_, OrchardNullifier, 3, 2>(&mut state, &mds, &round_constants);
         assert_eq!(state[0], result);
     }
+
+    #[test]
+    fn empty_message() {
+        let (round_constants, mds, _) = OrchardNullifier::constants();
+
+        let hasher = Hash::<_, OrchardNullifier, ConstantLength<0>, 3, 2>::init();
+        let result = hasher.hash([]);
+
+        // An empty message is padded to a single all-zero block, so the result is
+        // one permutation of the initial state (with capacity element 0 * 2^64 = 0).
+        let mut state = [pallas::Base::zero(); 3];
+        permute::<_, OrchardNullifier, 3, 2>(&mut state, &mds, &round_constants);
+        assert_eq!(state[0], result);
+    }
 }

@@ -825,6 +825,21 @@ mod tests {
     }
 
     #[test]
+    fn poseidon_hash_empty_input() {
+        let output =
+            poseidon::Hash::<_, OrchardNullifier, ConstantLength<0>, 3, 2>::init().hash([]);
+
+        let k = 6;
+        let circuit = MyHashCircuit::<OrchardNullifier, 3, 2, 0> {
+            message: Value::known([]),
+            output: Value::known(output),
+            _spec: PhantomData,
+        };
+        let prover = MockProver::run(k, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()))
+    }
+
+    #[test]
     fn poseidon_hash_longer_input() {
         let rng = OsRng;
 
