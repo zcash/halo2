@@ -231,24 +231,29 @@ impl<F: PrimeField> CondSwapChip<F> {
     ///
     /// # Side-effects
     ///
-    /// `advices[0]` will be equality-enabled.
+    /// `advices[0]`, `advices[1]` and `advices[4]` will be equality-enabled.
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         advices: [Column<Advice>; 5],
     ) -> CondSwapConfig {
         let a = advices[0];
-        // Only column a is used in an equality constraint directly by this chip.
+        let b = advices[1];
+        let swap = advices[4];
+        // `swap` copies its first input into column `a`; `mux` additionally copies its
+        // inputs into columns `b` and `swap`.
         meta.enable_equality(a);
+        meta.enable_equality(b);
+        meta.enable_equality(swap);
 
         let q_swap = meta.selector();
 
         let config = CondSwapConfig {
             q_swap,
             a,
-            b: advices[1],
+            b,
             a_swapped: advices[2],
             b_swapped: advices[3],
-            swap: advices[4],
+            swap,
         };
 
         // TODO: optimise shape of gate for Merkle path validation
