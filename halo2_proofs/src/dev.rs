@@ -1016,6 +1016,114 @@ mod tests {
     }
 
     #[test]
+    fn constraint_not_satisfied_on_unusable_row() {
+        const K: u32 = 3;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            a: Column<Advice>,
+            b: Column<Advice>,
+            q: Selector,
+        }
+
+        struct FaultyCircuit {
+            rows: usize,
+        }
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let q = meta.complex_selector();
+
+                meta.create_gate("Previous check", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let b_prev = cells.query_advice(b, Rotation::prev());
+                    let q = cells.query_selector(q);
+
+                    // BUG: `b_prev` is not gated by `q`, so this constraint is active on
+                    // every row, including the unusable rows at the end of the circuit.
+                    vec![q * a - b_prev]
+                });
+
+                FaultyCircuitConfig { a, b, q }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self { rows: self.rows }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_region(
+                    || "Faulty synthesis",
+                    |mut region| {
+                        for offset in 0..self.rows {
+                            region.assign_advice(
+                                || "b",
+                                config.b,
+                                offset,
+                                || Value::known(Fp::from(5)),
+                            )?;
+                            if offset > 0 {
+                                config.q.enable(&mut region, offset)?;
+                                region.assign_advice(
+                                    || "a",
+                                    config.a,
+                                    offset,
+                                    || Value::known(Fp::from(5)),
+                                )?;
+                            }
+                        }
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        // Fill every usable row, so that the first unusable row sees `b_prev = 5` and
+        // `a` poisoned.
+        let mut cs = ConstraintSystem::<Fp>::default();
+        FaultyCircuit::configure(&mut cs);
+        let usable_rows = (1 << K) - (cs.blinding_factors() + 1);
+
+        let prover = MockProver::run(K, &FaultyCircuit { rows: usable_rows }, vec![]).unwrap();
+        let constraint = || ((0, "Previous check").into(), 0, "").into();
+        assert_eq!(
+            prover.verify(),
+            Err(vec![
+                // Row 0 reads `b_prev` from the (poisoned) last row of the circuit.
+                VerifyFailure::ConstraintPoisoned {
+                    constraint: constraint(),
+                },
+                // The first unusable row reads `b_prev = 5` from the last usable row,
+                // while `a` is poisoned but multiplied by the disabled selector.
+                VerifyFailure::ConstraintNotSatisfied {
+                    constraint: constraint(),
+                    location: FailureLocation::OutsideRegion { row: usable_rows },
+                    cell_values: vec![
+                        (
+                            ((Any::Advice, 0).into(), 0).into(),
+                            "<unusable row>".to_string()
+                        ),
+                        (((Any::Advice, 1).into(), -1).into(), "0x5".to_string()),
+                    ],
+                },
+                // The remaining unusable rows read a poisoned `b_prev`.
+                VerifyFailure::ConstraintPoisoned {
+                    constraint: constraint(),
+                },
+            ])
+        );
+    }
+
+    #[test]
     fn bad_lookup() {
         const K: u32 = 4;
 
