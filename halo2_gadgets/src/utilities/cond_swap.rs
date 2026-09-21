@@ -402,6 +402,81 @@ mod tests {
     }
 
     #[test]
+    fn mux_with_configure_side_effects_only() {
+        // `mux` copies `left`, `right` and `choice` into the chip's columns, so it must
+        // work in a circuit that relies solely on the equality constraints that
+        // `CondSwapChip::configure` documents it enables itself.
+        #[derive(Default)]
+        struct MyMuxCircuit<F: Field> {
+            choice: Value<F>,
+            left: Value<F>,
+            right: Value<F>,
+        }
+
+        impl<F: PrimeField> Circuit<F> for MyMuxCircuit<F> {
+            type Config = CondSwapConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self::default()
+            }
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+                let advices = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+
+                CondSwapChip::<F>::configure(meta, advices)
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<F>,
+            ) -> Result<(), Error> {
+                let chip = CondSwapChip::<F>::construct(config.clone());
+
+                let choice =
+                    chip.load_private(layouter.namespace(|| "choice"), config.a, self.choice)?;
+                let left = chip.load_private(layouter.namespace(|| "left"), config.a, self.left)?;
+                let right =
+                    chip.load_private(layouter.namespace(|| "right"), config.a, self.right)?;
+
+                let out = chip.mux(&mut layouter, choice, left, right)?;
+
+                self.choice
+                    .zip(self.left.zip(self.right))
+                    .zip(out.value())
+                    .assert_if_known(|((choice, (left, right)), out)| {
+                        if *choice == F::ZERO {
+                            *out == left
+                        } else {
+                            *out == right
+                        }
+                    });
+
+                Ok(())
+            }
+        }
+
+        let rng = OsRng;
+
+        for choice in [false, true] {
+            let circuit: MyMuxCircuit<Base> = MyMuxCircuit {
+                choice: Value::known(Base::from(choice as u64)),
+                left: Value::known(Base::random(rng)),
+                right: Value::known(Base::random(rng)),
+            };
+            let prover = MockProver::<Base>::run(4, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+    }
+
+    #[test]
     fn test_mux() {
         use crate::ecc::{
             chip::{EccChip, EccConfig},
