@@ -86,7 +86,10 @@ impl FloorPlanner for V1 {
             .max()
             .unwrap_or(0);
 
-        // - Position the constants within those rows.
+        // - Position the constants within those rows, preferring the gaps left between
+        //   regions. If the gaps are not enough, continue in the rows following the
+        //   planned circuit (which are free in every column) using the first constants
+        //   column.
         let fixed_allocations: Vec<_> = constants
             .into_iter()
             .map(|c| {
@@ -99,12 +102,20 @@ impl FloorPlanner for V1 {
                 )
             })
             .collect();
+        let overflow_column = fixed_allocations.first().map(|(c, _)| *c);
         let constant_positions = || {
-            fixed_allocations.iter().flat_map(|(c, a)| {
-                let c = *c;
-                a.free_intervals(0, Some(first_unassigned_row))
-                    .flat_map(move |e| e.range().unwrap().map(move |i| (c, i)))
-            })
+            fixed_allocations
+                .iter()
+                .flat_map(|(c, a)| {
+                    let c = *c;
+                    a.free_intervals(0, Some(first_unassigned_row))
+                        .flat_map(move |e| e.range().unwrap().map(move |i| (c, i)))
+                })
+                .chain(
+                    overflow_column
+                        .into_iter()
+                        .flat_map(move |c| (first_unassigned_row..).map(move |i| (c, i))),
+                )
         };
 
         // Second pass:
@@ -116,7 +127,7 @@ impl FloorPlanner for V1 {
         }
 
         // - Assign the constants.
-        if constant_positions().count() < plan.constants.len() {
+        if overflow_column.is_none() && !plan.constants.is_empty() {
             return Err(Error::NotEnoughColumnsForConstants);
         }
         for ((fixed_column, fixed_row), (value, advice)) in constant_positions().zip(plan.constants)

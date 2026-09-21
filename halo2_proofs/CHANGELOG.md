@@ -25,6 +25,11 @@ and this project adheres to Rust's notion of
 
 ### Changed
 - The minimum supported Rust version is now 1.88.
+- `halo2_proofs::circuit::floor_planner::V1` no longer fails with
+  `Error::NotEnoughColumnsForConstants` when the constants do not fit into the
+  gaps of the constants columns within the planned rows: the remaining
+  constants are now placed in the rows following the planned circuit. Circuits
+  that previously synthesized successfully are laid out exactly as before.
 
 ## [0.3.5] - 2026-08-02
 ### Added
