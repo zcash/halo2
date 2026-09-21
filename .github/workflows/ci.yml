@@ -205,7 +205,7 @@ jobs:
           --timeout 3600
           --out xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
+        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
 
   doc-links:
     name: Intra-doc links
