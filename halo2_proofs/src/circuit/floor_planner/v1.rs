@@ -528,4 +528,68 @@ mod tests {
             Error::NotEnoughColumnsForConstants,
         ));
     }
+
+    #[test]
+    fn more_constants_than_planned_rows() {
+        #[derive(Clone)]
+        struct MyConfig {
+            a: Column<Advice>,
+            b: Column<Advice>,
+        }
+
+        struct MyCircuit {}
+
+        impl Circuit<vesta::Scalar> for MyCircuit {
+            type Config = MyConfig;
+            type FloorPlanner = super::V1;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
+
+            fn configure(meta: &mut crate::plonk::ConstraintSystem<vesta::Scalar>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let constants = meta.fixed_column();
+                meta.enable_equality(a);
+                meta.enable_equality(b);
+                meta.enable_constant(constants);
+                MyConfig { a, b }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl crate::circuit::Layouter<vesta::Scalar>,
+            ) -> Result<(), crate::plonk::Error> {
+                // A single-row region that needs two constants: only one free row exists
+                // in the constants column within the planned rows, so the second
+                // constant must be placed after them.
+                layouter.assign_region(
+                    || "assign constants",
+                    |mut region| {
+                        region.assign_advice_from_constant(
+                            || "one",
+                            config.a,
+                            0,
+                            vesta::Scalar::one(),
+                        )?;
+                        region.assign_advice_from_constant(
+                            || "two",
+                            config.b,
+                            0,
+                            vesta::Scalar::from(2),
+                        )?;
+                        Ok(())
+                    },
+                )?;
+
+                Ok(())
+            }
+        }
+
+        let circuit = MyCircuit {};
+        let prover = MockProver::run(4, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()));
+    }
 }
