@@ -370,7 +370,12 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         self.instance
             .get(column.index())
             .and_then(|column| column.get(row))
-            .map(|v| circuit::Value::known(v.value()))
+            .and_then(|v| match v {
+                InstanceValue::Assigned(v) => Some(circuit::Value::known(*v)),
+                // Padding rows were not provided by the caller. The real prover only
+                // exposes the rows it was given, so treat this as out of bounds too.
+                InstanceValue::Padding => None,
+            })
             .ok_or(Error::BoundsFailure)
     }
 
