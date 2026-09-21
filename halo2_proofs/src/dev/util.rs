@@ -123,7 +123,11 @@ fn cell_value<'a, F: Field, Q: Into<AnyQuery> + Copy>(
                     cell.clone().into(),
                     match load(query) {
                         Value::Real(v) => format_value(v),
-                        Value::Poison => unreachable!(),
+                        // A poisoned cell lives on an unusable row. The constraint can
+                        // still evaluate to a non-poisoned value (e.g. when the poisoned
+                        // cell is multiplied by a zero selector) so we may get here when
+                        // rendering a `ConstraintNotSatisfied` failure.
+                        Value::Poison => "<unusable row>".to_string(),
                     },
                 )
             })

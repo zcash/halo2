@@ -26,6 +26,13 @@ and this project adheres to Rust's notion of
 ### Changed
 - The minimum supported Rust version is now 1.88.
 
+### Fixed
+- `halo2_proofs::dev::MockProver::verify` panicked with "entered unreachable
+  code" when a `ConstraintNotSatisfied` failure occurred on an unusable row and
+  one of the constraint's queried cells was poisoned (for example, a rotated
+  term that is not gated by the constraint's selector). The poisoned cell is
+  now rendered as `<unusable row>` in the failure's `cell_values`.
+
 ## [0.3.5] - 2026-08-02
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_match_only`
