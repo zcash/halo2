@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["FailureLocation","VerifyFailure"],"fn":["circuit_dot_graph"],"mod":["cost","metadata"],"struct":["CircuitGates","CircuitLayout","MockProver","TracingFloorPlanner"]};
+window.SIDEBAR_ITEMS = {"enum":["FailureLocation","VerifyFailure"],"fn":["circuit_dot_graph"],"mod":["circuit_fixture","cost","metadata"],"struct":["CircuitGates","CircuitLayout","MockProver","TracingFloorPlanner"]};

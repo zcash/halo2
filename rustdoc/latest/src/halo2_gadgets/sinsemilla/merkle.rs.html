@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/sinsemilla/merkle.rs`."><title>merkle.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/sinsemilla/merkle.rs`."><title>merkle.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/sinsemilla/</div>merkle.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Gadgets for implementing a Merkle tree with Sinsemilla.
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/sinsemilla/</div>merkle.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Gadgets for implementing a Merkle tree with Sinsemilla.
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>halo2_proofs::{
 <a href=#4 id=4 data-nosnippet>4</a>    circuit::{Chip, Layouter, Value},
@@ -135,7 +135,7 @@
 <a href=#120 id=120 data-nosnippet>120</a>        leaf: MerkleChip::Var,
 <a href=#121 id=121 data-nosnippet>121</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;MerkleChip::Var, Error&gt; {
 <a href=#122 id=122 data-nosnippet>122</a>        <span class="comment">// Each chip processes `ceil(PATH_LENGTH / PAR)` layers.
-<a href=#123 id=123 data-nosnippet>123</a>        </span><span class="kw">let </span>layers_per_chip = (PATH_LENGTH + PAR - <span class="number">1</span>) / PAR;
+<a href=#123 id=123 data-nosnippet>123</a>        </span><span class="kw">let </span>layers_per_chip = PATH_LENGTH.div_ceil(PAR);
 <a href=#124 id=124 data-nosnippet>124</a>
 <a href=#125 id=125 data-nosnippet>125</a>        <span class="comment">// Assign each layer to a chip.
 <a href=#126 id=126 data-nosnippet>126</a>        </span><span class="kw">let </span>chips = (<span class="number">0</span>..PATH_LENGTH).map(|i| <span class="self">self</span>.chips[i / layers_per_chip].clone());
@@ -173,7 +173,7 @@
 <a href=#158 id=158 data-nosnippet>158</a>            <span class="comment">// Compute the node in layer l from its children:
 <a href=#159 id=159 data-nosnippet>159</a>            //     M^l_i = MerkleCRH(l, M^{l+1}_{2i}, M^{l+1}_{2i+1})
 <a href=#160 id=160 data-nosnippet>160</a>            </span>node = chip.hash_layer(
-<a href=#161 id=161 data-nosnippet>161</a>                layouter.namespace(|| <span class="macro">format!</span>(<span class="string">"MerkleCRH({}, left, right)"</span>, l)),
+<a href=#161 id=161 data-nosnippet>161</a>                layouter.namespace(|| <span class="macro">format!</span>(<span class="string">"MerkleCRH({l}, left, right)"</span>)),
 <a href=#162 id=162 data-nosnippet>162</a>                Q,
 <a href=#163 id=163 data-nosnippet>163</a>                l,
 <a href=#164 id=164 data-nosnippet>164</a>                pair.<span class="number">0</span>,
@@ -219,7 +219,7 @@
 <a href=#204 id=204 data-nosnippet>204</a>        plonk::{Circuit, ConstraintSystem, Error},
 <a href=#205 id=205 data-nosnippet>205</a>    };
 <a href=#206 id=206 data-nosnippet>206</a>
-<a href=#207 id=207 data-nosnippet>207</a>    <span class="kw">use </span>rand::{rngs::OsRng, RngCore};
+<a href=#207 id=207 data-nosnippet>207</a>    <span class="kw">use </span>rand::{rand_core::UnwrapErr, rngs::SysRng, Rng};
 <a href=#208 id=208 data-nosnippet>208</a>    <span class="kw">use </span>std::{convert::TryInto, iter, marker::PhantomData};
 <a href=#209 id=209 data-nosnippet>209</a>
 <a href=#210 id=210 data-nosnippet>210</a>    <span class="kw">const </span>MERKLE_DEPTH: usize = <span class="number">32</span>;
@@ -408,15 +408,15 @@
 <a href=#393 id=393 data-nosnippet>393</a>    }
 <a href=#394 id=394 data-nosnippet>394</a>
 <a href=#395 id=395 data-nosnippet>395</a>    <span class="kw">fn </span>generate_circuit&lt;Lookup: PallasLookupRangeCheck&gt;() -&gt; MyMerkleCircuit&lt;Lookup&gt; {
-<a href=#396 id=396 data-nosnippet>396</a>        <span class="kw">let </span><span class="kw-2">mut </span>rng = OsRng;
+<a href=#396 id=396 data-nosnippet>396</a>        <span class="kw">let </span><span class="kw-2">mut </span>rng = UnwrapErr(SysRng);
 <a href=#397 id=397 data-nosnippet>397</a>
 <a href=#398 id=398 data-nosnippet>398</a>        <span class="comment">// Choose a random leaf and position
-<a href=#399 id=399 data-nosnippet>399</a>        </span><span class="kw">let </span>leaf = pallas::Base::random(rng);
+<a href=#399 id=399 data-nosnippet>399</a>        </span><span class="kw">let </span>leaf = pallas::Base::random(<span class="kw-2">&amp;mut </span>rng);
 <a href=#400 id=400 data-nosnippet>400</a>        <span class="kw">let </span>pos = rng.next_u32();
 <a href=#401 id=401 data-nosnippet>401</a>
 <a href=#402 id=402 data-nosnippet>402</a>        <span class="comment">// Choose a path of random inner nodes
 <a href=#403 id=403 data-nosnippet>403</a>        </span><span class="kw">let </span>path: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..(MERKLE_DEPTH))
-<a href=#404 id=404 data-nosnippet>404</a>            .map(|<span class="kw">_</span>| pallas::Base::random(rng))
+<a href=#404 id=404 data-nosnippet>404</a>            .map(|<span class="kw">_</span>| pallas::Base::random(<span class="kw-2">&amp;mut </span>rng))
 <a href=#405 id=405 data-nosnippet>405</a>            .collect();
 <a href=#406 id=406 data-nosnippet>406</a>
 <a href=#407 id=407 data-nosnippet>407</a>        <span class="comment">// The root is provided as a public input in the Orchard circuit.
@@ -589,15 +589,15 @@
 <a href=#574 id=574 data-nosnippet>574</a>
 <a href=#575 id=575 data-nosnippet>575</a>    <span class="kw">fn </span>generate_circuit_4_5b&lt;Lookup: PallasLookupRangeCheck&gt;(
 <a href=#576 id=576 data-nosnippet>576</a>    ) -&gt; MyMerkleCircuitWithHashFromPrivatePoint&lt;Lookup&gt; {
-<a href=#577 id=577 data-nosnippet>577</a>        <span class="kw">let </span><span class="kw-2">mut </span>rng = OsRng;
+<a href=#577 id=577 data-nosnippet>577</a>        <span class="kw">let </span><span class="kw-2">mut </span>rng = UnwrapErr(SysRng);
 <a href=#578 id=578 data-nosnippet>578</a>
 <a href=#579 id=579 data-nosnippet>579</a>        <span class="comment">// Choose a random leaf and position
-<a href=#580 id=580 data-nosnippet>580</a>        </span><span class="kw">let </span>leaf = pallas::Base::random(rng);
+<a href=#580 id=580 data-nosnippet>580</a>        </span><span class="kw">let </span>leaf = pallas::Base::random(<span class="kw-2">&amp;mut </span>rng);
 <a href=#581 id=581 data-nosnippet>581</a>        <span class="kw">let </span>pos = rng.next_u32();
 <a href=#582 id=582 data-nosnippet>582</a>
 <a href=#583 id=583 data-nosnippet>583</a>        <span class="comment">// Choose a path of random inner nodes
 <a href=#584 id=584 data-nosnippet>584</a>        </span><span class="kw">let </span>path: Vec&lt;<span class="kw">_</span>&gt; = (<span class="number">0</span>..(MERKLE_DEPTH))
-<a href=#585 id=585 data-nosnippet>585</a>            .map(|<span class="kw">_</span>| pallas::Base::random(rng))
+<a href=#585 id=585 data-nosnippet>585</a>            .map(|<span class="kw">_</span>| pallas::Base::random(<span class="kw-2">&amp;mut </span>rng))
 <a href=#586 id=586 data-nosnippet>586</a>            .collect();
 <a href=#587 id=587 data-nosnippet>587</a>
 <a href=#588 id=588 data-nosnippet>588</a>        <span class="comment">// The root is provided as a public input in the Orchard circuit.

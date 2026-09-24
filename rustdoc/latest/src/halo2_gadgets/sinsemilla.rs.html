@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/sinsemilla.rs`."><title>sinsemilla.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/sinsemilla.rs`."><title>sinsemilla.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/</div>sinsemilla.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The [Sinsemilla] hash function.
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/</div>sinsemilla.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The [Sinsemilla] hash function.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! [Sinsemilla]: https://zips.z.cash/protocol/protocol.pdf#concretesinsemillahash
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use crate</span>::{
@@ -162,7 +162,7 @@
 <a href=#147 id=147 data-nosnippet>147</a>                |(i, piece)| -&gt; <span class="prelude-ty">Result</span>&lt;MessagePiece&lt;C, SinsemillaChip, K, MAX_WORDS&gt;, Error&gt; {
 <a href=#148 id=148 data-nosnippet>148</a>                    MessagePiece::from_bitstring(
 <a href=#149 id=149 data-nosnippet>149</a>                        chip.clone(),
-<a href=#150 id=150 data-nosnippet>150</a>                        layouter.namespace(|| <span class="macro">format!</span>(<span class="string">"message piece {}"</span>, i)),
+<a href=#150 id=150 data-nosnippet>150</a>                        layouter.namespace(|| <span class="macro">format!</span>(<span class="string">"message piece {i}"</span>)),
 <a href=#151 id=151 data-nosnippet>151</a>                        piece,
 <a href=#152 id=152 data-nosnippet>152</a>                    )
 <a href=#153 id=153 data-nosnippet>153</a>                },
@@ -542,7 +542,7 @@
 <a href=#527 id=527 data-nosnippet>527</a>        dev::MockProver,
 <a href=#528 id=528 data-nosnippet>528</a>        plonk::{Circuit, ConstraintSystem, Error},
 <a href=#529 id=529 data-nosnippet>529</a>    };
-<a href=#530 id=530 data-nosnippet>530</a>    <span class="kw">use </span>rand::rngs::OsRng;
+<a href=#530 id=530 data-nosnippet>530</a>    <span class="kw">use </span>rand::{rand_core::UnwrapErr, rngs::SysRng};
 <a href=#531 id=531 data-nosnippet>531</a>
 <a href=#532 id=532 data-nosnippet>532</a>    <span class="kw">use super</span>::{
 <a href=#533 id=533 data-nosnippet>533</a>        chip::{SinsemillaChip, SinsemillaConfig},
@@ -553,7 +553,7 @@
 <a href=#538 id=538 data-nosnippet>538</a>        ecc::{
 <a href=#539 id=539 data-nosnippet>539</a>            chip::{find_zs_and_us, EccChip, EccConfig, H, NUM_WINDOWS},
 <a href=#540 id=540 data-nosnippet>540</a>            tests::{FullWidth, TestFixedBases},
-<a href=#541 id=541 data-nosnippet>541</a>            NonIdentityPoint, ScalarFixed,
+<a href=#541 id=541 data-nosnippet>541</a>            CircuitVersion, NonIdentityPoint, ScalarFixed,
 <a href=#542 id=542 data-nosnippet>542</a>        },
 <a href=#543 id=543 data-nosnippet>543</a>        sinsemilla::primitives::{<span class="self">self </span><span class="kw">as </span>sinsemilla, K},
 <a href=#544 id=544 data-nosnippet>544</a>        test_circuits::test_utils::test_against_stored_circuit,
@@ -693,9 +693,9 @@
 <a href=#678 id=678 data-nosnippet>678</a>        config: EccSinsemillaConfig&lt;Lookup&gt;,
 <a href=#679 id=679 data-nosnippet>679</a>        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
 <a href=#680 id=680 data-nosnippet>680</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-<a href=#681 id=681 data-nosnippet>681</a>        <span class="kw">let </span>rng = OsRng;
+<a href=#681 id=681 data-nosnippet>681</a>        <span class="kw">let </span><span class="kw-2">mut </span>rng = UnwrapErr(SysRng);
 <a href=#682 id=682 data-nosnippet>682</a>
-<a href=#683 id=683 data-nosnippet>683</a>        <span class="kw">let </span>ecc_chip = EccChip::construct(config.<span class="number">0</span>);
+<a href=#683 id=683 data-nosnippet>683</a>        <span class="kw">let </span>ecc_chip = EccChip::construct(config.<span class="number">0</span>, CircuitVersion::AnchoredBase);
 <a href=#684 id=684 data-nosnippet>684</a>
 <a href=#685 id=685 data-nosnippet>685</a>        <span class="comment">// The two `SinsemillaChip`s share the same lookup table.
 <a href=#686 id=686 data-nosnippet>686</a>        </span>SinsemillaChip::&lt;TestHashDomain, TestCommitDomain, TestFixedBases, Lookup&gt;::load(
@@ -748,200 +748,196 @@
 <a href=#733 id=733 data-nosnippet>733</a>                    |(l, (left, right))| {
 <a href=#734 id=734 data-nosnippet>734</a>                        <span class="kw">let </span>merkle_crh = sinsemilla::HashDomain::from_Q((<span class="kw-2">*</span>Q).into());
 <a href=#735 id=735 data-nosnippet>735</a>                        <span class="kw">let </span>point = merkle_crh
-<a href=#736 id=736 data-nosnippet>736</a>                            .hash_to_point(
-<a href=#737 id=737 data-nosnippet>737</a>                                l.into_iter()
-<a href=#738 id=738 data-nosnippet>738</a>                                    .chain(left.into_iter())
-<a href=#739 id=739 data-nosnippet>739</a>                                    .chain(right.into_iter()),
-<a href=#740 id=740 data-nosnippet>740</a>                            )
-<a href=#741 id=741 data-nosnippet>741</a>                            .unwrap();
-<a href=#742 id=742 data-nosnippet>742</a>                        point.to_affine()
-<a href=#743 id=743 data-nosnippet>743</a>                    },
-<a href=#744 id=744 data-nosnippet>744</a>                );
-<a href=#745 id=745 data-nosnippet>745</a>
-<a href=#746 id=746 data-nosnippet>746</a>                NonIdentityPoint::new(
-<a href=#747 id=747 data-nosnippet>747</a>                    ecc_chip.clone(),
-<a href=#748 id=748 data-nosnippet>748</a>                    layouter.namespace(|| <span class="string">"Witness expected parent"</span>),
-<a href=#749 id=749 data-nosnippet>749</a>                    expected_parent,
-<a href=#750 id=750 data-nosnippet>750</a>                )<span class="question-mark">?
-<a href=#751 id=751 data-nosnippet>751</a>            </span>};
-<a href=#752 id=752 data-nosnippet>752</a>
-<a href=#753 id=753 data-nosnippet>753</a>            <span class="comment">// Parent
-<a href=#754 id=754 data-nosnippet>754</a>            </span><span class="kw">let </span>(parent, <span class="kw">_</span>) = {
-<a href=#755 id=755 data-nosnippet>755</a>                <span class="kw">let </span>message = Message::from_pieces(chip1, <span class="macro">vec!</span>[l, left, right]);
-<a href=#756 id=756 data-nosnippet>756</a>                merkle_crh.hash_to_point(layouter.namespace(|| <span class="string">"parent"</span>), message)<span class="question-mark">?
-<a href=#757 id=757 data-nosnippet>757</a>            </span>};
-<a href=#758 id=758 data-nosnippet>758</a>
-<a href=#759 id=759 data-nosnippet>759</a>            parent.constrain_equal(
-<a href=#760 id=760 data-nosnippet>760</a>                layouter.namespace(|| <span class="string">"parent == expected parent"</span>),
-<a href=#761 id=761 data-nosnippet>761</a>                <span class="kw-2">&amp;</span>expected_parent,
-<a href=#762 id=762 data-nosnippet>762</a>            )<span class="question-mark">?</span>;
-<a href=#763 id=763 data-nosnippet>763</a>        }
-<a href=#764 id=764 data-nosnippet>764</a>
-<a href=#765 id=765 data-nosnippet>765</a>        {
-<a href=#766 id=766 data-nosnippet>766</a>            <span class="kw">let </span>chip2 = SinsemillaChip::construct(config.<span class="number">2</span>);
-<a href=#767 id=767 data-nosnippet>767</a>
-<a href=#768 id=768 data-nosnippet>768</a>            <span class="kw">let </span>test_commit = CommitDomain::new(chip2.clone(), ecc_chip.clone(), <span class="kw-2">&amp;</span>TestCommitDomain);
-<a href=#769 id=769 data-nosnippet>769</a>            <span class="kw">let </span>r_val = pallas::Scalar::random(rng);
-<a href=#770 id=770 data-nosnippet>770</a>            <span class="kw">let </span>message: Vec&lt;Value&lt;bool&gt;&gt; = (<span class="number">0</span>..<span class="number">500</span>)
-<a href=#771 id=771 data-nosnippet>771</a>                .map(|<span class="kw">_</span>| Value::known(rand::random::&lt;bool&gt;()))
-<a href=#772 id=772 data-nosnippet>772</a>                .collect();
-<a href=#773 id=773 data-nosnippet>773</a>
-<a href=#774 id=774 data-nosnippet>774</a>            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
-<a href=#775 id=775 data-nosnippet>775</a>                <span class="kw">let </span>r = ScalarFixed::new(
-<a href=#776 id=776 data-nosnippet>776</a>                    ecc_chip.clone(),
-<a href=#777 id=777 data-nosnippet>777</a>                    layouter.namespace(|| <span class="string">"r"</span>),
-<a href=#778 id=778 data-nosnippet>778</a>                    Value::known(r_val),
-<a href=#779 id=779 data-nosnippet>779</a>                )<span class="question-mark">?</span>;
-<a href=#780 id=780 data-nosnippet>780</a>                <span class="kw">let </span>message = Message::from_bitstring(
-<a href=#781 id=781 data-nosnippet>781</a>                    chip2,
-<a href=#782 id=782 data-nosnippet>782</a>                    layouter.namespace(|| <span class="string">"witness message"</span>),
-<a href=#783 id=783 data-nosnippet>783</a>                    message.clone(),
-<a href=#784 id=784 data-nosnippet>784</a>                )<span class="question-mark">?</span>;
-<a href=#785 id=785 data-nosnippet>785</a>                test_commit.commit(layouter.namespace(|| <span class="string">"commit"</span>), message, r)<span class="question-mark">?
-<a href=#786 id=786 data-nosnippet>786</a>            </span>};
-<a href=#787 id=787 data-nosnippet>787</a>
-<a href=#788 id=788 data-nosnippet>788</a>            <span class="comment">// Witness expected result.
-<a href=#789 id=789 data-nosnippet>789</a>            </span><span class="kw">let </span>expected_result = {
-<a href=#790 id=790 data-nosnippet>790</a>                <span class="kw">let </span>message: Value&lt;Vec&lt;bool&gt;&gt; = message.into_iter().collect();
-<a href=#791 id=791 data-nosnippet>791</a>                <span class="kw">let </span>expected_result = message.map(|message| {
-<a href=#792 id=792 data-nosnippet>792</a>                    <span class="kw">let </span>domain = sinsemilla::CommitDomain::new(PERSONALIZATION);
-<a href=#793 id=793 data-nosnippet>793</a>                    <span class="kw">let </span>point = domain.commit(message.into_iter(), <span class="kw-2">&amp;</span>r_val).unwrap();
-<a href=#794 id=794 data-nosnippet>794</a>                    point.to_affine()
-<a href=#795 id=795 data-nosnippet>795</a>                });
-<a href=#796 id=796 data-nosnippet>796</a>
-<a href=#797 id=797 data-nosnippet>797</a>                NonIdentityPoint::new(
-<a href=#798 id=798 data-nosnippet>798</a>                    ecc_chip,
-<a href=#799 id=799 data-nosnippet>799</a>                    layouter.namespace(|| <span class="string">"Witness expected result"</span>),
-<a href=#800 id=800 data-nosnippet>800</a>                    expected_result,
-<a href=#801 id=801 data-nosnippet>801</a>                )<span class="question-mark">?
-<a href=#802 id=802 data-nosnippet>802</a>            </span>};
-<a href=#803 id=803 data-nosnippet>803</a>
-<a href=#804 id=804 data-nosnippet>804</a>            result.constrain_equal(
-<a href=#805 id=805 data-nosnippet>805</a>                layouter.namespace(|| <span class="string">"result == expected result"</span>),
-<a href=#806 id=806 data-nosnippet>806</a>                <span class="kw-2">&amp;</span>expected_result,
-<a href=#807 id=807 data-nosnippet>807</a>            )
-<a href=#808 id=808 data-nosnippet>808</a>        }
-<a href=#809 id=809 data-nosnippet>809</a>    }
+<a href=#736 id=736 data-nosnippet>736</a>                            .hash_to_point(l.into_iter().chain(left).chain(right))
+<a href=#737 id=737 data-nosnippet>737</a>                            .unwrap();
+<a href=#738 id=738 data-nosnippet>738</a>                        point.to_affine()
+<a href=#739 id=739 data-nosnippet>739</a>                    },
+<a href=#740 id=740 data-nosnippet>740</a>                );
+<a href=#741 id=741 data-nosnippet>741</a>
+<a href=#742 id=742 data-nosnippet>742</a>                NonIdentityPoint::new(
+<a href=#743 id=743 data-nosnippet>743</a>                    ecc_chip.clone(),
+<a href=#744 id=744 data-nosnippet>744</a>                    layouter.namespace(|| <span class="string">"Witness expected parent"</span>),
+<a href=#745 id=745 data-nosnippet>745</a>                    expected_parent,
+<a href=#746 id=746 data-nosnippet>746</a>                )<span class="question-mark">?
+<a href=#747 id=747 data-nosnippet>747</a>            </span>};
+<a href=#748 id=748 data-nosnippet>748</a>
+<a href=#749 id=749 data-nosnippet>749</a>            <span class="comment">// Parent
+<a href=#750 id=750 data-nosnippet>750</a>            </span><span class="kw">let </span>(parent, <span class="kw">_</span>) = {
+<a href=#751 id=751 data-nosnippet>751</a>                <span class="kw">let </span>message = Message::from_pieces(chip1, <span class="macro">vec!</span>[l, left, right]);
+<a href=#752 id=752 data-nosnippet>752</a>                merkle_crh.hash_to_point(layouter.namespace(|| <span class="string">"parent"</span>), message)<span class="question-mark">?
+<a href=#753 id=753 data-nosnippet>753</a>            </span>};
+<a href=#754 id=754 data-nosnippet>754</a>
+<a href=#755 id=755 data-nosnippet>755</a>            parent.constrain_equal(
+<a href=#756 id=756 data-nosnippet>756</a>                layouter.namespace(|| <span class="string">"parent == expected parent"</span>),
+<a href=#757 id=757 data-nosnippet>757</a>                <span class="kw-2">&amp;</span>expected_parent,
+<a href=#758 id=758 data-nosnippet>758</a>            )<span class="question-mark">?</span>;
+<a href=#759 id=759 data-nosnippet>759</a>        }
+<a href=#760 id=760 data-nosnippet>760</a>
+<a href=#761 id=761 data-nosnippet>761</a>        {
+<a href=#762 id=762 data-nosnippet>762</a>            <span class="kw">let </span>chip2 = SinsemillaChip::construct(config.<span class="number">2</span>);
+<a href=#763 id=763 data-nosnippet>763</a>
+<a href=#764 id=764 data-nosnippet>764</a>            <span class="kw">let </span>test_commit = CommitDomain::new(chip2.clone(), ecc_chip.clone(), <span class="kw-2">&amp;</span>TestCommitDomain);
+<a href=#765 id=765 data-nosnippet>765</a>            <span class="kw">let </span>r_val = pallas::Scalar::random(<span class="kw-2">&amp;mut </span>rng);
+<a href=#766 id=766 data-nosnippet>766</a>            <span class="kw">let </span>message: Vec&lt;Value&lt;bool&gt;&gt; = (<span class="number">0</span>..<span class="number">500</span>)
+<a href=#767 id=767 data-nosnippet>767</a>                .map(|<span class="kw">_</span>| Value::known(rand::random::&lt;bool&gt;()))
+<a href=#768 id=768 data-nosnippet>768</a>                .collect();
+<a href=#769 id=769 data-nosnippet>769</a>
+<a href=#770 id=770 data-nosnippet>770</a>            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
+<a href=#771 id=771 data-nosnippet>771</a>                <span class="kw">let </span>r = ScalarFixed::new(
+<a href=#772 id=772 data-nosnippet>772</a>                    ecc_chip.clone(),
+<a href=#773 id=773 data-nosnippet>773</a>                    layouter.namespace(|| <span class="string">"r"</span>),
+<a href=#774 id=774 data-nosnippet>774</a>                    Value::known(r_val),
+<a href=#775 id=775 data-nosnippet>775</a>                )<span class="question-mark">?</span>;
+<a href=#776 id=776 data-nosnippet>776</a>                <span class="kw">let </span>message = Message::from_bitstring(
+<a href=#777 id=777 data-nosnippet>777</a>                    chip2,
+<a href=#778 id=778 data-nosnippet>778</a>                    layouter.namespace(|| <span class="string">"witness message"</span>),
+<a href=#779 id=779 data-nosnippet>779</a>                    message.clone(),
+<a href=#780 id=780 data-nosnippet>780</a>                )<span class="question-mark">?</span>;
+<a href=#781 id=781 data-nosnippet>781</a>                test_commit.commit(layouter.namespace(|| <span class="string">"commit"</span>), message, r)<span class="question-mark">?
+<a href=#782 id=782 data-nosnippet>782</a>            </span>};
+<a href=#783 id=783 data-nosnippet>783</a>
+<a href=#784 id=784 data-nosnippet>784</a>            <span class="comment">// Witness expected result.
+<a href=#785 id=785 data-nosnippet>785</a>            </span><span class="kw">let </span>expected_result = {
+<a href=#786 id=786 data-nosnippet>786</a>                <span class="kw">let </span>message: Value&lt;Vec&lt;bool&gt;&gt; = message.into_iter().collect();
+<a href=#787 id=787 data-nosnippet>787</a>                <span class="kw">let </span>expected_result = message.map(|message| {
+<a href=#788 id=788 data-nosnippet>788</a>                    <span class="kw">let </span>domain = sinsemilla::CommitDomain::new(PERSONALIZATION);
+<a href=#789 id=789 data-nosnippet>789</a>                    <span class="kw">let </span>point = domain.commit(message.into_iter(), <span class="kw-2">&amp;</span>r_val).unwrap();
+<a href=#790 id=790 data-nosnippet>790</a>                    point.to_affine()
+<a href=#791 id=791 data-nosnippet>791</a>                });
+<a href=#792 id=792 data-nosnippet>792</a>
+<a href=#793 id=793 data-nosnippet>793</a>                NonIdentityPoint::new(
+<a href=#794 id=794 data-nosnippet>794</a>                    ecc_chip,
+<a href=#795 id=795 data-nosnippet>795</a>                    layouter.namespace(|| <span class="string">"Witness expected result"</span>),
+<a href=#796 id=796 data-nosnippet>796</a>                    expected_result,
+<a href=#797 id=797 data-nosnippet>797</a>                )<span class="question-mark">?
+<a href=#798 id=798 data-nosnippet>798</a>            </span>};
+<a href=#799 id=799 data-nosnippet>799</a>
+<a href=#800 id=800 data-nosnippet>800</a>            result.constrain_equal(
+<a href=#801 id=801 data-nosnippet>801</a>                layouter.namespace(|| <span class="string">"result == expected result"</span>),
+<a href=#802 id=802 data-nosnippet>802</a>                <span class="kw-2">&amp;</span>expected_result,
+<a href=#803 id=803 data-nosnippet>803</a>            )
+<a href=#804 id=804 data-nosnippet>804</a>        }
+<a href=#805 id=805 data-nosnippet>805</a>    }
+<a href=#806 id=806 data-nosnippet>806</a>
+<a href=#807 id=807 data-nosnippet>807</a>    <span class="kw">impl</span>&lt;Lookup: PallasLookupRangeCheck&gt; Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MySinsemillaCircuit&lt;Lookup&gt; {
+<a href=#808 id=808 data-nosnippet>808</a>        <span class="kw">type </span>Config = EccSinsemillaConfig&lt;Lookup&gt;;
+<a href=#809 id=809 data-nosnippet>809</a>        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
 <a href=#810 id=810 data-nosnippet>810</a>
-<a href=#811 id=811 data-nosnippet>811</a>    <span class="kw">impl</span>&lt;Lookup: PallasLookupRangeCheck&gt; Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MySinsemillaCircuit&lt;Lookup&gt; {
-<a href=#812 id=812 data-nosnippet>812</a>        <span class="kw">type </span>Config = EccSinsemillaConfig&lt;Lookup&gt;;
-<a href=#813 id=813 data-nosnippet>813</a>        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
+<a href=#811 id=811 data-nosnippet>811</a>        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+<a href=#812 id=812 data-nosnippet>812</a>            MySinsemillaCircuit::new()
+<a href=#813 id=813 data-nosnippet>813</a>        }
 <a href=#814 id=814 data-nosnippet>814</a>
-<a href=#815 id=815 data-nosnippet>815</a>        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-<a href=#816 id=816 data-nosnippet>816</a>            MySinsemillaCircuit::new()
-<a href=#817 id=817 data-nosnippet>817</a>        }
-<a href=#818 id=818 data-nosnippet>818</a>
-<a href=#819 id=819 data-nosnippet>819</a>        <span class="attr">#[allow(non_snake_case)]
-<a href=#820 id=820 data-nosnippet>820</a>        </span><span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
-<a href=#821 id=821 data-nosnippet>821</a>            configure::&lt;Lookup&gt;(meta, <span class="bool-val">false</span>)
-<a href=#822 id=822 data-nosnippet>822</a>        }
-<a href=#823 id=823 data-nosnippet>823</a>
-<a href=#824 id=824 data-nosnippet>824</a>        <span class="kw">fn </span>synthesize(
-<a href=#825 id=825 data-nosnippet>825</a>            <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#826 id=826 data-nosnippet>826</a>            config: <span class="self">Self</span>::Config,
-<a href=#827 id=827 data-nosnippet>827</a>            layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
-<a href=#828 id=828 data-nosnippet>828</a>        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-<a href=#829 id=829 data-nosnippet>829</a>            synthesize(config, layouter)
-<a href=#830 id=830 data-nosnippet>830</a>        }
-<a href=#831 id=831 data-nosnippet>831</a>    }
-<a href=#832 id=832 data-nosnippet>832</a>
-<a href=#833 id=833 data-nosnippet>833</a>    <span class="attr">#[test]
-<a href=#834 id=834 data-nosnippet>834</a>    </span><span class="kw">fn </span>sinsemilla_chip() {
-<a href=#835 id=835 data-nosnippet>835</a>        <span class="kw">let </span>k = <span class="number">11</span>;
-<a href=#836 id=836 data-nosnippet>836</a>        <span class="kw">let </span>circuit = MySinsemillaCircuit::&lt;PallasLookupRangeCheckConfig&gt;::new();
-<a href=#837 id=837 data-nosnippet>837</a>        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
-<a href=#838 id=838 data-nosnippet>838</a>        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
-<a href=#839 id=839 data-nosnippet>839</a>    }
-<a href=#840 id=840 data-nosnippet>840</a>
-<a href=#841 id=841 data-nosnippet>841</a>    <span class="attr">#[test]
-<a href=#842 id=842 data-nosnippet>842</a>    </span><span class="kw">fn </span>test_sinsemilla_chip_against_stored_circuit() {
-<a href=#843 id=843 data-nosnippet>843</a>        <span class="kw">let </span>circuit = MySinsemillaCircuit::&lt;PallasLookupRangeCheckConfig&gt;::new();
-<a href=#844 id=844 data-nosnippet>844</a>        test_against_stored_circuit(circuit, <span class="string">"sinsemilla_chip"</span>, <span class="number">4576</span>);
-<a href=#845 id=845 data-nosnippet>845</a>    }
-<a href=#846 id=846 data-nosnippet>846</a>
-<a href=#847 id=847 data-nosnippet>847</a>    <span class="attr">#[cfg(feature = <span class="string">"test-dev-graph"</span>)]
-<a href=#848 id=848 data-nosnippet>848</a>    #[test]
-<a href=#849 id=849 data-nosnippet>849</a>    </span><span class="kw">fn </span>print_sinsemilla_chip() {
-<a href=#850 id=850 data-nosnippet>850</a>        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
-<a href=#851 id=851 data-nosnippet>851</a>
-<a href=#852 id=852 data-nosnippet>852</a>        <span class="kw">let </span>root =
-<a href=#853 id=853 data-nosnippet>853</a>            BitMapBackend::new(<span class="string">"sinsemilla-hash-layout.png"</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).into_drawing_area();
-<a href=#854 id=854 data-nosnippet>854</a>        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
-<a href=#855 id=855 data-nosnippet>855</a>        <span class="kw">let </span>root = root.titled(<span class="string">"SinsemillaHash"</span>, (<span class="string">"sans-serif"</span>, <span class="number">60</span>)).unwrap();
-<a href=#856 id=856 data-nosnippet>856</a>
-<a href=#857 id=857 data-nosnippet>857</a>        <span class="kw">let </span>circuit = MySinsemillaCircuit::&lt;PallasLookupRangeCheckConfig&gt;::new();
-<a href=#858 id=858 data-nosnippet>858</a>        halo2_proofs::dev::CircuitLayout::default()
-<a href=#859 id=859 data-nosnippet>859</a>            .render(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
-<a href=#860 id=860 data-nosnippet>860</a>            .unwrap();
+<a href=#815 id=815 data-nosnippet>815</a>        <span class="attr">#[allow(non_snake_case)]
+<a href=#816 id=816 data-nosnippet>816</a>        </span><span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
+<a href=#817 id=817 data-nosnippet>817</a>            configure::&lt;Lookup&gt;(meta, <span class="bool-val">false</span>)
+<a href=#818 id=818 data-nosnippet>818</a>        }
+<a href=#819 id=819 data-nosnippet>819</a>
+<a href=#820 id=820 data-nosnippet>820</a>        <span class="kw">fn </span>synthesize(
+<a href=#821 id=821 data-nosnippet>821</a>            <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#822 id=822 data-nosnippet>822</a>            config: <span class="self">Self</span>::Config,
+<a href=#823 id=823 data-nosnippet>823</a>            layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+<a href=#824 id=824 data-nosnippet>824</a>        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#825 id=825 data-nosnippet>825</a>            synthesize(config, layouter)
+<a href=#826 id=826 data-nosnippet>826</a>        }
+<a href=#827 id=827 data-nosnippet>827</a>    }
+<a href=#828 id=828 data-nosnippet>828</a>
+<a href=#829 id=829 data-nosnippet>829</a>    <span class="attr">#[test]
+<a href=#830 id=830 data-nosnippet>830</a>    </span><span class="kw">fn </span>sinsemilla_chip() {
+<a href=#831 id=831 data-nosnippet>831</a>        <span class="kw">let </span>k = <span class="number">11</span>;
+<a href=#832 id=832 data-nosnippet>832</a>        <span class="kw">let </span>circuit = MySinsemillaCircuit::&lt;PallasLookupRangeCheckConfig&gt;::new();
+<a href=#833 id=833 data-nosnippet>833</a>        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+<a href=#834 id=834 data-nosnippet>834</a>        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
+<a href=#835 id=835 data-nosnippet>835</a>    }
+<a href=#836 id=836 data-nosnippet>836</a>
+<a href=#837 id=837 data-nosnippet>837</a>    <span class="attr">#[test]
+<a href=#838 id=838 data-nosnippet>838</a>    </span><span class="kw">fn </span>test_sinsemilla_chip_against_stored_circuit() {
+<a href=#839 id=839 data-nosnippet>839</a>        <span class="kw">let </span>circuit = MySinsemillaCircuit::&lt;PallasLookupRangeCheckConfig&gt;::new();
+<a href=#840 id=840 data-nosnippet>840</a>        test_against_stored_circuit(circuit, <span class="string">"sinsemilla_chip"</span>, <span class="number">4576</span>);
+<a href=#841 id=841 data-nosnippet>841</a>    }
+<a href=#842 id=842 data-nosnippet>842</a>
+<a href=#843 id=843 data-nosnippet>843</a>    <span class="attr">#[cfg(feature = <span class="string">"test-dev-graph"</span>)]
+<a href=#844 id=844 data-nosnippet>844</a>    #[test]
+<a href=#845 id=845 data-nosnippet>845</a>    </span><span class="kw">fn </span>print_sinsemilla_chip() {
+<a href=#846 id=846 data-nosnippet>846</a>        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
+<a href=#847 id=847 data-nosnippet>847</a>
+<a href=#848 id=848 data-nosnippet>848</a>        <span class="kw">let </span>root =
+<a href=#849 id=849 data-nosnippet>849</a>            BitMapBackend::new(<span class="string">"sinsemilla-hash-layout.png"</span>, (<span class="number">1024</span>, <span class="number">7680</span>)).into_drawing_area();
+<a href=#850 id=850 data-nosnippet>850</a>        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
+<a href=#851 id=851 data-nosnippet>851</a>        <span class="kw">let </span>root = root.titled(<span class="string">"SinsemillaHash"</span>, (<span class="string">"sans-serif"</span>, <span class="number">60</span>)).unwrap();
+<a href=#852 id=852 data-nosnippet>852</a>
+<a href=#853 id=853 data-nosnippet>853</a>        <span class="kw">let </span>circuit = MySinsemillaCircuit::&lt;PallasLookupRangeCheckConfig&gt;::new();
+<a href=#854 id=854 data-nosnippet>854</a>        halo2_proofs::dev::CircuitLayout::default()
+<a href=#855 id=855 data-nosnippet>855</a>            .render(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
+<a href=#856 id=856 data-nosnippet>856</a>            .unwrap();
+<a href=#857 id=857 data-nosnippet>857</a>    }
+<a href=#858 id=858 data-nosnippet>858</a>
+<a href=#859 id=859 data-nosnippet>859</a>    <span class="kw">struct </span>MySinsemillaCircuitWithHashFromPrivatePoint&lt;Lookup: PallasLookupRangeCheck&gt; {
+<a href=#860 id=860 data-nosnippet>860</a>        _lookup_marker: PhantomData&lt;Lookup&gt;,
 <a href=#861 id=861 data-nosnippet>861</a>    }
 <a href=#862 id=862 data-nosnippet>862</a>
-<a href=#863 id=863 data-nosnippet>863</a>    <span class="kw">struct </span>MySinsemillaCircuitWithHashFromPrivatePoint&lt;Lookup: PallasLookupRangeCheck&gt; {
-<a href=#864 id=864 data-nosnippet>864</a>        _lookup_marker: PhantomData&lt;Lookup&gt;,
-<a href=#865 id=865 data-nosnippet>865</a>    }
-<a href=#866 id=866 data-nosnippet>866</a>
-<a href=#867 id=867 data-nosnippet>867</a>    <span class="kw">impl</span>&lt;Lookup: PallasLookupRangeCheck&gt; MySinsemillaCircuitWithHashFromPrivatePoint&lt;Lookup&gt; {
-<a href=#868 id=868 data-nosnippet>868</a>        <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
-<a href=#869 id=869 data-nosnippet>869</a>            <span class="self">Self </span>{
-<a href=#870 id=870 data-nosnippet>870</a>                _lookup_marker: PhantomData,
-<a href=#871 id=871 data-nosnippet>871</a>            }
-<a href=#872 id=872 data-nosnippet>872</a>        }
-<a href=#873 id=873 data-nosnippet>873</a>    }
-<a href=#874 id=874 data-nosnippet>874</a>
-<a href=#875 id=875 data-nosnippet>875</a>    <span class="kw">impl</span>&lt;Lookup: PallasLookupRangeCheck&gt; Circuit&lt;pallas::Base&gt;
-<a href=#876 id=876 data-nosnippet>876</a>        <span class="kw">for </span>MySinsemillaCircuitWithHashFromPrivatePoint&lt;Lookup&gt;
-<a href=#877 id=877 data-nosnippet>877</a>    {
-<a href=#878 id=878 data-nosnippet>878</a>        <span class="kw">type </span>Config = EccSinsemillaConfig&lt;Lookup&gt;;
-<a href=#879 id=879 data-nosnippet>879</a>        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
+<a href=#863 id=863 data-nosnippet>863</a>    <span class="kw">impl</span>&lt;Lookup: PallasLookupRangeCheck&gt; MySinsemillaCircuitWithHashFromPrivatePoint&lt;Lookup&gt; {
+<a href=#864 id=864 data-nosnippet>864</a>        <span class="kw">fn </span>new() -&gt; <span class="self">Self </span>{
+<a href=#865 id=865 data-nosnippet>865</a>            <span class="self">Self </span>{
+<a href=#866 id=866 data-nosnippet>866</a>                _lookup_marker: PhantomData,
+<a href=#867 id=867 data-nosnippet>867</a>            }
+<a href=#868 id=868 data-nosnippet>868</a>        }
+<a href=#869 id=869 data-nosnippet>869</a>    }
+<a href=#870 id=870 data-nosnippet>870</a>
+<a href=#871 id=871 data-nosnippet>871</a>    <span class="kw">impl</span>&lt;Lookup: PallasLookupRangeCheck&gt; Circuit&lt;pallas::Base&gt;
+<a href=#872 id=872 data-nosnippet>872</a>        <span class="kw">for </span>MySinsemillaCircuitWithHashFromPrivatePoint&lt;Lookup&gt;
+<a href=#873 id=873 data-nosnippet>873</a>    {
+<a href=#874 id=874 data-nosnippet>874</a>        <span class="kw">type </span>Config = EccSinsemillaConfig&lt;Lookup&gt;;
+<a href=#875 id=875 data-nosnippet>875</a>        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
+<a href=#876 id=876 data-nosnippet>876</a>
+<a href=#877 id=877 data-nosnippet>877</a>        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+<a href=#878 id=878 data-nosnippet>878</a>            MySinsemillaCircuitWithHashFromPrivatePoint::new()
+<a href=#879 id=879 data-nosnippet>879</a>        }
 <a href=#880 id=880 data-nosnippet>880</a>
-<a href=#881 id=881 data-nosnippet>881</a>        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-<a href=#882 id=882 data-nosnippet>882</a>            MySinsemillaCircuitWithHashFromPrivatePoint::new()
-<a href=#883 id=883 data-nosnippet>883</a>        }
-<a href=#884 id=884 data-nosnippet>884</a>
-<a href=#885 id=885 data-nosnippet>885</a>        <span class="attr">#[allow(non_snake_case)]
-<a href=#886 id=886 data-nosnippet>886</a>        </span><span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
-<a href=#887 id=887 data-nosnippet>887</a>            configure::&lt;Lookup&gt;(meta, <span class="bool-val">true</span>)
-<a href=#888 id=888 data-nosnippet>888</a>        }
-<a href=#889 id=889 data-nosnippet>889</a>
-<a href=#890 id=890 data-nosnippet>890</a>        <span class="kw">fn </span>synthesize(
-<a href=#891 id=891 data-nosnippet>891</a>            <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#892 id=892 data-nosnippet>892</a>            config: <span class="self">Self</span>::Config,
-<a href=#893 id=893 data-nosnippet>893</a>            layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
-<a href=#894 id=894 data-nosnippet>894</a>        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-<a href=#895 id=895 data-nosnippet>895</a>            synthesize(config, layouter)
-<a href=#896 id=896 data-nosnippet>896</a>        }
-<a href=#897 id=897 data-nosnippet>897</a>    }
-<a href=#898 id=898 data-nosnippet>898</a>
-<a href=#899 id=899 data-nosnippet>899</a>    <span class="attr">#[test]
-<a href=#900 id=900 data-nosnippet>900</a>    </span><span class="kw">fn </span>sinsemilla_with_hash_from_private_point_chip_4_5b() {
-<a href=#901 id=901 data-nosnippet>901</a>        <span class="kw">let </span>k = <span class="number">11</span>;
-<a href=#902 id=902 data-nosnippet>902</a>        <span class="kw">let </span>circuit =
-<a href=#903 id=903 data-nosnippet>903</a>            MySinsemillaCircuitWithHashFromPrivatePoint::&lt;PallasLookupRangeCheck4_5BConfig&gt;::new();
-<a href=#904 id=904 data-nosnippet>904</a>        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
-<a href=#905 id=905 data-nosnippet>905</a>        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
-<a href=#906 id=906 data-nosnippet>906</a>    }
-<a href=#907 id=907 data-nosnippet>907</a>
-<a href=#908 id=908 data-nosnippet>908</a>    <span class="attr">#[test]
-<a href=#909 id=909 data-nosnippet>909</a>    </span><span class="kw">fn </span>test_against_stored_sinsemilla_with_hash_from_private_point_chip_4_5b() {
-<a href=#910 id=910 data-nosnippet>910</a>        <span class="kw">let </span>circuit =
-<a href=#911 id=911 data-nosnippet>911</a>            MySinsemillaCircuitWithHashFromPrivatePoint::&lt;PallasLookupRangeCheck4_5BConfig&gt;::new();
-<a href=#912 id=912 data-nosnippet>912</a>        test_against_stored_circuit(circuit, <span class="string">"sinsemilla_with_private_init_chip_4_5b"</span>, <span class="number">4672</span>);
-<a href=#913 id=913 data-nosnippet>913</a>    }
-<a href=#914 id=914 data-nosnippet>914</a>
-<a href=#915 id=915 data-nosnippet>915</a>    <span class="attr">#[cfg(feature = <span class="string">"test-dev-graph"</span>)]
-<a href=#916 id=916 data-nosnippet>916</a>    #[test]
-<a href=#917 id=917 data-nosnippet>917</a>    </span><span class="kw">fn </span>print_sinsemilla_with_hash_from_private_point_chip_4_5b() {
-<a href=#918 id=918 data-nosnippet>918</a>        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
-<a href=#919 id=919 data-nosnippet>919</a>
-<a href=#920 id=920 data-nosnippet>920</a>        <span class="kw">let </span>root = BitMapBackend::new(<span class="string">"sinsemilla-with-private-init-4_5b-layout.png"</span>, (<span class="number">1024</span>, <span class="number">7680</span>))
-<a href=#921 id=921 data-nosnippet>921</a>            .into_drawing_area();
-<a href=#922 id=922 data-nosnippet>922</a>        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
-<a href=#923 id=923 data-nosnippet>923</a>        <span class="kw">let </span>root = root.titled(<span class="string">"SinsemillaHash"</span>, (<span class="string">"sans-serif"</span>, <span class="number">60</span>)).unwrap();
-<a href=#924 id=924 data-nosnippet>924</a>
-<a href=#925 id=925 data-nosnippet>925</a>        <span class="kw">let </span>circuit =
-<a href=#926 id=926 data-nosnippet>926</a>            MySinsemillaCircuitWithHashFromPrivatePoint::&lt;PallasLookupRangeCheck4_5BConfig&gt;::new();
-<a href=#927 id=927 data-nosnippet>927</a>        halo2_proofs::dev::CircuitLayout::default()
-<a href=#928 id=928 data-nosnippet>928</a>            .render(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
-<a href=#929 id=929 data-nosnippet>929</a>            .unwrap();
-<a href=#930 id=930 data-nosnippet>930</a>    }
-<a href=#931 id=931 data-nosnippet>931</a>}
+<a href=#881 id=881 data-nosnippet>881</a>        <span class="attr">#[allow(non_snake_case)]
+<a href=#882 id=882 data-nosnippet>882</a>        </span><span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; <span class="self">Self</span>::Config {
+<a href=#883 id=883 data-nosnippet>883</a>            configure::&lt;Lookup&gt;(meta, <span class="bool-val">true</span>)
+<a href=#884 id=884 data-nosnippet>884</a>        }
+<a href=#885 id=885 data-nosnippet>885</a>
+<a href=#886 id=886 data-nosnippet>886</a>        <span class="kw">fn </span>synthesize(
+<a href=#887 id=887 data-nosnippet>887</a>            <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#888 id=888 data-nosnippet>888</a>            config: <span class="self">Self</span>::Config,
+<a href=#889 id=889 data-nosnippet>889</a>            layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+<a href=#890 id=890 data-nosnippet>890</a>        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#891 id=891 data-nosnippet>891</a>            synthesize(config, layouter)
+<a href=#892 id=892 data-nosnippet>892</a>        }
+<a href=#893 id=893 data-nosnippet>893</a>    }
+<a href=#894 id=894 data-nosnippet>894</a>
+<a href=#895 id=895 data-nosnippet>895</a>    <span class="attr">#[test]
+<a href=#896 id=896 data-nosnippet>896</a>    </span><span class="kw">fn </span>sinsemilla_with_hash_from_private_point_chip_4_5b() {
+<a href=#897 id=897 data-nosnippet>897</a>        <span class="kw">let </span>k = <span class="number">11</span>;
+<a href=#898 id=898 data-nosnippet>898</a>        <span class="kw">let </span>circuit =
+<a href=#899 id=899 data-nosnippet>899</a>            MySinsemillaCircuitWithHashFromPrivatePoint::&lt;PallasLookupRangeCheck4_5BConfig&gt;::new();
+<a href=#900 id=900 data-nosnippet>900</a>        <span class="kw">let </span>prover = MockProver::run(k, <span class="kw-2">&amp;</span>circuit, <span class="macro">vec!</span>[]).unwrap();
+<a href=#901 id=901 data-nosnippet>901</a>        <span class="macro">assert_eq!</span>(prover.verify(), <span class="prelude-val">Ok</span>(()))
+<a href=#902 id=902 data-nosnippet>902</a>    }
+<a href=#903 id=903 data-nosnippet>903</a>
+<a href=#904 id=904 data-nosnippet>904</a>    <span class="attr">#[test]
+<a href=#905 id=905 data-nosnippet>905</a>    </span><span class="kw">fn </span>test_against_stored_sinsemilla_with_hash_from_private_point_chip_4_5b() {
+<a href=#906 id=906 data-nosnippet>906</a>        <span class="kw">let </span>circuit =
+<a href=#907 id=907 data-nosnippet>907</a>            MySinsemillaCircuitWithHashFromPrivatePoint::&lt;PallasLookupRangeCheck4_5BConfig&gt;::new();
+<a href=#908 id=908 data-nosnippet>908</a>        test_against_stored_circuit(circuit, <span class="string">"sinsemilla_with_private_init_chip_4_5b"</span>, <span class="number">4672</span>);
+<a href=#909 id=909 data-nosnippet>909</a>    }
+<a href=#910 id=910 data-nosnippet>910</a>
+<a href=#911 id=911 data-nosnippet>911</a>    <span class="attr">#[cfg(feature = <span class="string">"test-dev-graph"</span>)]
+<a href=#912 id=912 data-nosnippet>912</a>    #[test]
+<a href=#913 id=913 data-nosnippet>913</a>    </span><span class="kw">fn </span>print_sinsemilla_with_hash_from_private_point_chip_4_5b() {
+<a href=#914 id=914 data-nosnippet>914</a>        <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
+<a href=#915 id=915 data-nosnippet>915</a>
+<a href=#916 id=916 data-nosnippet>916</a>        <span class="kw">let </span>root = BitMapBackend::new(<span class="string">"sinsemilla-with-private-init-4_5b-layout.png"</span>, (<span class="number">1024</span>, <span class="number">7680</span>))
+<a href=#917 id=917 data-nosnippet>917</a>            .into_drawing_area();
+<a href=#918 id=918 data-nosnippet>918</a>        root.fill(<span class="kw-2">&amp;</span>WHITE).unwrap();
+<a href=#919 id=919 data-nosnippet>919</a>        <span class="kw">let </span>root = root.titled(<span class="string">"SinsemillaHash"</span>, (<span class="string">"sans-serif"</span>, <span class="number">60</span>)).unwrap();
+<a href=#920 id=920 data-nosnippet>920</a>
+<a href=#921 id=921 data-nosnippet>921</a>        <span class="kw">let </span>circuit =
+<a href=#922 id=922 data-nosnippet>922</a>            MySinsemillaCircuitWithHashFromPrivatePoint::&lt;PallasLookupRangeCheck4_5BConfig&gt;::new();
+<a href=#923 id=923 data-nosnippet>923</a>        halo2_proofs::dev::CircuitLayout::default()
+<a href=#924 id=924 data-nosnippet>924</a>            .render(<span class="number">11</span>, <span class="kw-2">&amp;</span>circuit, <span class="kw-2">&amp;</span>root)
+<a href=#925 id=925 data-nosnippet>925</a>            .unwrap();
+<a href=#926 id=926 data-nosnippet>926</a>    }
+<a href=#927 id=927 data-nosnippet>927</a>}
 </code></pre></div></section></main></body></html>

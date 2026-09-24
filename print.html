@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-7fe67300.js";
+            window.path_to_searchindex_js = "searchindex-2b63c490.js";
         </script>
 
         <!-- Custom JS scripts for mdbook-pdf PDF generation -->
@@ -207,7 +207,7 @@
 <p>This repository contains the <a href="https://github.com/zcash/halo2/blob/main/halo2_proofs/README.md">halo2_proofs</a> and
 <a href="https://github.com/zcash/halo2/blob/main/halo2_gadgets/README.md">halo2_gadgets</a> crates, which should be used directly.</p>
 <h2 id="minimum-supported-rust-version"><a class="header" href="#minimum-supported-rust-version">Minimum Supported Rust Version</a></h2>
-<p>Requires Rust <strong>1.60</strong> or higher.</p>
+<p>Requires Rust <strong>1.88</strong> or higher.</p>
 <p>Minimum supported Rust version can be changed in the future, but it will be done with a
 minor version bump.</p>
 <h2 id="controlling-parallelism"><a class="header" href="#controlling-parallelism">Controlling parallelism</a></h2>
@@ -507,7 +507,7 @@ representations of circuits.</p>
 <pre><code class="language-rust ignore no_run">fn main() {
     // Prepare the circuit you want to render.
     // You don't need to include any witness variables.
-    let a = Fp::random(OsRng);
+    let a = Fp::random(&amp;mut UnwrapErr(SysRng));
     let instance = Fp::ONE + Fp::ONE;
     let lookup_table = vec![instance, a, a, Fp::zero()];
     let circuit: MyCircuit&lt;Fp&gt; = MyCircuit {

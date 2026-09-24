@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["BaseFieldElem","FullScalar","ScalarVar","ShortScalar"],"mod":["constants"],"struct":["EccChip","EccConfig","EccPoint","EccScalarFixed","EccScalarFixedShort","NonIdentityEccPoint"],"trait":["FixedPoint","FixedScalarKind"]};
+window.SIDEBAR_ITEMS = {"enum":["BaseFieldElem","CircuitVersion","FullScalar","ScalarVar","ShortScalar"],"mod":["constants"],"struct":["EccChip","EccConfig","EccPoint","EccScalarFixed","EccScalarFixedShort","NonIdentityEccPoint"],"trait":["FixedPoint","FixedScalarKind"]};

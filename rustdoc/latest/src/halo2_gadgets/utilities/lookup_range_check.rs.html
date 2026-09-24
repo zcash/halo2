@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/utilities/lookup_range_check.rs`."><title>lookup_range_check.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/utilities/lookup_range_check.rs`."><title>lookup_range_check.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/utilities/</div>lookup_range_check.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Make use of a K-bit lookup table to decompose a field element into K-bit
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/utilities/</div>lookup_range_check.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Make use of a K-bit lookup table to decompose a field element into K-bit
 <a href=#2 id=2 data-nosnippet>2</a>//! words.
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use </span>halo2_proofs::{
@@ -68,7 +68,7 @@
 <a href=#53 id=53 data-nosnippet>53</a>            .map(|inner| <span class="self">Self </span>{
 <a href=#54 id=54 data-nosnippet>54</a>                inner,
 <a href=#55 id=55 data-nosnippet>55</a>                num_bits,
-<a href=#56 id=56 data-nosnippet>56</a>                _phantom: PhantomData::default(),
+<a href=#56 id=56 data-nosnippet>56</a>                _phantom: PhantomData,
 <a href=#57 id=57 data-nosnippet>57</a>            })
 <a href=#58 id=58 data-nosnippet>58</a>    }
 <a href=#59 id=59 data-nosnippet>59</a>}
@@ -144,7 +144,7 @@
 <a href=#129 id=129 data-nosnippet>129</a>        strict: bool,
 <a href=#130 id=130 data-nosnippet>130</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;RunningSum&lt;F&gt;, Error&gt; {
 <a href=#131 id=131 data-nosnippet>131</a>        layouter.assign_region(
-<a href=#132 id=132 data-nosnippet>132</a>            || <span class="macro">format!</span>(<span class="string">"{:?} words range check"</span>, num_words),
+<a href=#132 id=132 data-nosnippet>132</a>            || <span class="macro">format!</span>(<span class="string">"{num_words:?} words range check"</span>),
 <a href=#133 id=133 data-nosnippet>133</a>            |<span class="kw-2">mut </span>region| {
 <a href=#134 id=134 data-nosnippet>134</a>                <span class="comment">// Copy `element` and initialize running sum `z_0 = element` to decompose it.
 <a href=#135 id=135 data-nosnippet>135</a>                </span><span class="kw">let </span>z_0 =
@@ -268,7 +268,7 @@
 <a href=#253 id=253 data-nosnippet>253</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
 <a href=#254 id=254 data-nosnippet>254</a>        <span class="macro">assert!</span>(num_bits &lt; K);
 <a href=#255 id=255 data-nosnippet>255</a>        layouter.assign_region(
-<a href=#256 id=256 data-nosnippet>256</a>            || <span class="macro">format!</span>(<span class="string">"Range check {:?} bits"</span>, num_bits),
+<a href=#256 id=256 data-nosnippet>256</a>            || <span class="macro">format!</span>(<span class="string">"Range check {num_bits:?} bits"</span>),
 <a href=#257 id=257 data-nosnippet>257</a>            |<span class="kw-2">mut </span>region| {
 <a href=#258 id=258 data-nosnippet>258</a>                <span class="comment">// Copy `element` to use in the k-bit lookup.
 <a href=#259 id=259 data-nosnippet>259</a>                </span><span class="kw">let </span>element =
@@ -291,7 +291,7 @@
 <a href=#276 id=276 data-nosnippet>276</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;AssignedCell&lt;F, F&gt;, Error&gt; {
 <a href=#277 id=277 data-nosnippet>277</a>        <span class="macro">assert!</span>(num_bits &lt;= K);
 <a href=#278 id=278 data-nosnippet>278</a>        layouter.assign_region(
-<a href=#279 id=279 data-nosnippet>279</a>            || <span class="macro">format!</span>(<span class="string">"Range check {:?} bits"</span>, num_bits),
+<a href=#279 id=279 data-nosnippet>279</a>            || <span class="macro">format!</span>(<span class="string">"Range check {num_bits:?} bits"</span>),
 <a href=#280 id=280 data-nosnippet>280</a>            |<span class="kw-2">mut </span>region| {
 <a href=#281 id=281 data-nosnippet>281</a>                <span class="comment">// Witness `element` to use in the k-bit lookup.
 <a href=#282 id=282 data-nosnippet>282</a>                </span><span class="kw">let </span>element = region.assign_advice(
@@ -486,7 +486,7 @@
 <a href=#471 id=471 data-nosnippet>471</a>        </span><span class="kw">let </span>shifted = element.value().into_field() * F::from(<span class="number">1 </span>&lt;&lt; (K - num_bits));
 <a href=#472 id=472 data-nosnippet>472</a>
 <a href=#473 id=473 data-nosnippet>473</a>        region.assign_advice(
-<a href=#474 id=474 data-nosnippet>474</a>            || <span class="macro">format!</span>(<span class="string">"element * 2^({}-{})"</span>, K, num_bits),
+<a href=#474 id=474 data-nosnippet>474</a>            || <span class="macro">format!</span>(<span class="string">"element * 2^({K}-{num_bits})"</span>),
 <a href=#475 id=475 data-nosnippet>475</a>            <span class="self">self</span>.running_sum,
 <a href=#476 id=476 data-nosnippet>476</a>            <span class="number">1</span>,
 <a href=#477 id=477 data-nosnippet>477</a>            || shifted,
@@ -495,7 +495,7 @@
 <a href=#480 id=480 data-nosnippet>480</a>        <span class="comment">// Assign 2^{-num_bits} from a fixed column.
 <a href=#481 id=481 data-nosnippet>481</a>        </span><span class="kw">let </span>inv_two_pow_s = F::from(<span class="number">1 </span>&lt;&lt; num_bits).invert().unwrap();
 <a href=#482 id=482 data-nosnippet>482</a>        region.assign_advice_from_constant(
-<a href=#483 id=483 data-nosnippet>483</a>            || <span class="macro">format!</span>(<span class="string">"2^(-{})"</span>, num_bits),
+<a href=#483 id=483 data-nosnippet>483</a>            || <span class="macro">format!</span>(<span class="string">"2^(-{num_bits})"</span>),
 <a href=#484 id=484 data-nosnippet>484</a>            <span class="self">self</span>.running_sum,
 <a href=#485 id=485 data-nosnippet>485</a>            <span class="number">2</span>,
 <a href=#486 id=486 data-nosnippet>486</a>            inv_two_pow_s,

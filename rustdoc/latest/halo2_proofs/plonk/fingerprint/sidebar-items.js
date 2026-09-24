@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["TranscriptEvent"],"fn":["capture_proof_fingerprint"],"struct":["ChallengeRecorder"]};

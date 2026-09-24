@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/ecc/chip/mul.rs`."><title>mul.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/ecc/chip/mul.rs`."><title>mul.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/ecc/chip/</div>mul.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use super</span>::{add, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/ecc/chip/</div>mul.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use super</span>::{add, CircuitVersion, EccPoint, NonIdentityEccPoint, ScalarVar, T_Q};
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::utilities::{
 <a href=#3 id=3 data-nosnippet>3</a>    lookup_range_check::{PallasLookupRangeCheck, PallasLookupRangeCheckConfig},
 <a href=#4 id=4 data-nosnippet>4</a>    {bool_check, ternary},
@@ -181,418 +181,702 @@
 <a href=#166 id=166 data-nosnippet>166</a>        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
 <a href=#167 id=167 data-nosnippet>167</a>        alpha: AssignedCell&lt;pallas::Base, pallas::Base&gt;,
 <a href=#168 id=168 data-nosnippet>168</a>        base: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
-<a href=#169 id=169 data-nosnippet>169</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(EccPoint, ScalarVar), Error&gt; {
-<a href=#170 id=170 data-nosnippet>170</a>        <span class="kw">let </span>(result, zs): (EccPoint, Vec&lt;Z&lt;pallas::Base&gt;&gt;) = layouter.assign_region(
-<a href=#171 id=171 data-nosnippet>171</a>            || <span class="string">"variable-base scalar mul"</span>,
-<a href=#172 id=172 data-nosnippet>172</a>            |<span class="kw-2">mut </span>region| {
-<a href=#173 id=173 data-nosnippet>173</a>                <span class="kw">let </span>offset = <span class="number">0</span>;
-<a href=#174 id=174 data-nosnippet>174</a>
-<a href=#175 id=175 data-nosnippet>175</a>                <span class="comment">// Case `base` into an `EccPoint` for later use.
-<a href=#176 id=176 data-nosnippet>176</a>                </span><span class="kw">let </span>base_point: EccPoint = base.clone().into();
-<a href=#177 id=177 data-nosnippet>177</a>
-<a href=#178 id=178 data-nosnippet>178</a>                <span class="comment">// Decompose `k = alpha + t_q` bitwise (big-endian bit order).
-<a href=#179 id=179 data-nosnippet>179</a>                </span><span class="kw">let </span>bits = decompose_for_scalar_mul(alpha.value());
-<a href=#180 id=180 data-nosnippet>180</a>
-<a href=#181 id=181 data-nosnippet>181</a>                <span class="comment">// Define ranges for each part of the algorithm.
-<a href=#182 id=182 data-nosnippet>182</a>                </span><span class="kw">let </span>bits_incomplete_hi = <span class="kw-2">&amp;</span>bits[INCOMPLETE_HI_RANGE];
-<a href=#183 id=183 data-nosnippet>183</a>                <span class="kw">let </span>bits_incomplete_lo = <span class="kw-2">&amp;</span>bits[INCOMPLETE_LO_RANGE];
-<a href=#184 id=184 data-nosnippet>184</a>                <span class="kw">let </span>lsb = bits[pallas::Scalar::NUM_BITS <span class="kw">as </span>usize - <span class="number">1</span>];
-<a href=#185 id=185 data-nosnippet>185</a>
-<a href=#186 id=186 data-nosnippet>186</a>                <span class="comment">// Initialize the accumulator `acc = [2]base` using complete addition.
-<a href=#187 id=187 data-nosnippet>187</a>                </span><span class="kw">let </span>acc =
-<a href=#188 id=188 data-nosnippet>188</a>                    <span class="self">self</span>.add_config
-<a href=#189 id=189 data-nosnippet>189</a>                        .assign_region(<span class="kw-2">&amp;</span>base_point, <span class="kw-2">&amp;</span>base_point, offset, <span class="kw-2">&amp;mut </span>region)<span class="question-mark">?</span>;
-<a href=#190 id=190 data-nosnippet>190</a>
-<a href=#191 id=191 data-nosnippet>191</a>                <span class="comment">// Increase the offset by 1 after complete addition.
-<a href=#192 id=192 data-nosnippet>192</a>                </span><span class="kw">let </span>offset = offset + <span class="number">1</span>;
-<a href=#193 id=193 data-nosnippet>193</a>
-<a href=#194 id=194 data-nosnippet>194</a>                <span class="comment">// Initialize the running sum for scalar decomposition to zero.
-<a href=#195 id=195 data-nosnippet>195</a>                //
-<a href=#196 id=196 data-nosnippet>196</a>                // `incomplete::Config::double_and_add` will copy this cell directly into
-<a href=#197 id=197 data-nosnippet>197</a>                // itself. This is fine because we are just assigning the same value to
-<a href=#198 id=198 data-nosnippet>198</a>                // the same cell twice, and then applying an equality constraint between
-<a href=#199 id=199 data-nosnippet>199</a>                // the cell and itself (which the permutation argument treats as a no-op).
-<a href=#200 id=200 data-nosnippet>200</a>                </span><span class="kw">let </span>z_init = Z(region.assign_advice_from_constant(
-<a href=#201 id=201 data-nosnippet>201</a>                    || <span class="string">"z_init = 0"</span>,
-<a href=#202 id=202 data-nosnippet>202</a>                    <span class="self">self</span>.hi_config.z,
-<a href=#203 id=203 data-nosnippet>203</a>                    offset,
-<a href=#204 id=204 data-nosnippet>204</a>                    pallas::Base::zero(),
-<a href=#205 id=205 data-nosnippet>205</a>                )<span class="question-mark">?</span>);
-<a href=#206 id=206 data-nosnippet>206</a>
-<a href=#207 id=207 data-nosnippet>207</a>                <span class="comment">// Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
-<a href=#208 id=208 data-nosnippet>208</a>                </span><span class="kw">let </span>(x_a, y_a, zs_incomplete_hi) = <span class="self">self</span>.hi_config.double_and_add(
-<a href=#209 id=209 data-nosnippet>209</a>                    <span class="kw-2">&amp;mut </span>region,
-<a href=#210 id=210 data-nosnippet>210</a>                    offset,
-<a href=#211 id=211 data-nosnippet>211</a>                    base,
-<a href=#212 id=212 data-nosnippet>212</a>                    bits_incomplete_hi,
-<a href=#213 id=213 data-nosnippet>213</a>                    (X(acc.x), Y(acc.y), z_init.clone()),
-<a href=#214 id=214 data-nosnippet>214</a>                )<span class="question-mark">?</span>;
-<a href=#215 id=215 data-nosnippet>215</a>
-<a href=#216 id=216 data-nosnippet>216</a>                <span class="comment">// Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
-<a href=#217 id=217 data-nosnippet>217</a>                </span><span class="kw">let </span>z = zs_incomplete_hi.last().expect(<span class="string">"should not be empty"</span>);
-<a href=#218 id=218 data-nosnippet>218</a>                <span class="kw">let </span>(x_a, y_a, zs_incomplete_lo) = <span class="self">self</span>.lo_config.double_and_add(
-<a href=#219 id=219 data-nosnippet>219</a>                    <span class="kw-2">&amp;mut </span>region,
-<a href=#220 id=220 data-nosnippet>220</a>                    offset,
-<a href=#221 id=221 data-nosnippet>221</a>                    base,
-<a href=#222 id=222 data-nosnippet>222</a>                    bits_incomplete_lo,
-<a href=#223 id=223 data-nosnippet>223</a>                    (x_a, y_a, z.clone()),
-<a href=#224 id=224 data-nosnippet>224</a>                )<span class="question-mark">?</span>;
-<a href=#225 id=225 data-nosnippet>225</a>
-<a href=#226 id=226 data-nosnippet>226</a>                <span class="comment">// Move from incomplete addition to complete addition.
-<a href=#227 id=227 data-nosnippet>227</a>                // Inside incomplete::double_and_add, the offset was increased once after initialization
-<a href=#228 id=228 data-nosnippet>228</a>                // of the running sum.
-<a href=#229 id=229 data-nosnippet>229</a>                // Then, the final assignment of double-and-add was made on row + offset + 1.
-<a href=#230 id=230 data-nosnippet>230</a>                // Outside of incomplete addition, we must account for these offset increases by adding
-<a href=#231 id=231 data-nosnippet>231</a>                // 2 to the incomplete addition length.
-<a href=#232 id=232 data-nosnippet>232</a>                </span><span class="macro">assert!</span>(INCOMPLETE_LO_RANGE.len() &gt;= INCOMPLETE_HI_RANGE.len());
-<a href=#233 id=233 data-nosnippet>233</a>                <span class="kw">let </span>offset = offset + INCOMPLETE_LO_RANGE.len() + <span class="number">2</span>;
-<a href=#234 id=234 data-nosnippet>234</a>
-<a href=#235 id=235 data-nosnippet>235</a>                <span class="comment">// Complete addition
-<a href=#236 id=236 data-nosnippet>236</a>                </span><span class="kw">let </span>(acc, zs_complete) = {
-<a href=#237 id=237 data-nosnippet>237</a>                    <span class="kw">let </span>z = zs_incomplete_lo.last().expect(<span class="string">"should not be empty"</span>);
-<a href=#238 id=238 data-nosnippet>238</a>                    <span class="comment">// Bits used in complete addition. k_{3} to k_{1} inclusive
-<a href=#239 id=239 data-nosnippet>239</a>                    // The LSB k_{0} is handled separately.
-<a href=#240 id=240 data-nosnippet>240</a>                    </span><span class="kw">let </span>bits_complete = <span class="kw-2">&amp;</span>bits[COMPLETE_RANGE];
-<a href=#241 id=241 data-nosnippet>241</a>                    <span class="self">self</span>.complete_config.assign_region(
-<a href=#242 id=242 data-nosnippet>242</a>                        <span class="kw-2">&amp;mut </span>region,
-<a href=#243 id=243 data-nosnippet>243</a>                        offset,
-<a href=#244 id=244 data-nosnippet>244</a>                        bits_complete,
-<a href=#245 id=245 data-nosnippet>245</a>                        <span class="kw-2">&amp;</span>base_point,
-<a href=#246 id=246 data-nosnippet>246</a>                        x_a,
-<a href=#247 id=247 data-nosnippet>247</a>                        y_a,
-<a href=#248 id=248 data-nosnippet>248</a>                        z.clone(),
-<a href=#249 id=249 data-nosnippet>249</a>                    )<span class="question-mark">?
-<a href=#250 id=250 data-nosnippet>250</a>                </span>};
-<a href=#251 id=251 data-nosnippet>251</a>
-<a href=#252 id=252 data-nosnippet>252</a>                <span class="comment">// Each iteration of the complete addition uses two rows.
-<a href=#253 id=253 data-nosnippet>253</a>                </span><span class="kw">let </span>offset = offset + COMPLETE_RANGE.len() * <span class="number">2</span>;
+<a href=#169 id=169 data-nosnippet>169</a>        circuit_version: CircuitVersion,
+<a href=#170 id=170 data-nosnippet>170</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(EccPoint, ScalarVar), Error&gt; {
+<a href=#171 id=171 data-nosnippet>171</a>        <span class="kw">let </span>(result, zs): (EccPoint, Vec&lt;Z&lt;pallas::Base&gt;&gt;) = layouter.assign_region(
+<a href=#172 id=172 data-nosnippet>172</a>            || <span class="string">"variable-base scalar mul"</span>,
+<a href=#173 id=173 data-nosnippet>173</a>            |<span class="kw-2">mut </span>region| {
+<a href=#174 id=174 data-nosnippet>174</a>                <span class="kw">let </span>offset = <span class="number">0</span>;
+<a href=#175 id=175 data-nosnippet>175</a>
+<a href=#176 id=176 data-nosnippet>176</a>                <span class="comment">// Case `base` into an `EccPoint` for later use.
+<a href=#177 id=177 data-nosnippet>177</a>                </span><span class="kw">let </span>base_point: EccPoint = base.clone().into();
+<a href=#178 id=178 data-nosnippet>178</a>
+<a href=#179 id=179 data-nosnippet>179</a>                <span class="comment">// Decompose `k = alpha + t_q` bitwise (big-endian bit order).
+<a href=#180 id=180 data-nosnippet>180</a>                </span><span class="kw">let </span>bits = decompose_for_scalar_mul(alpha.value());
+<a href=#181 id=181 data-nosnippet>181</a>
+<a href=#182 id=182 data-nosnippet>182</a>                <span class="comment">// Define ranges for each part of the algorithm.
+<a href=#183 id=183 data-nosnippet>183</a>                </span><span class="kw">let </span>bits_incomplete_hi = <span class="kw-2">&amp;</span>bits[INCOMPLETE_HI_RANGE];
+<a href=#184 id=184 data-nosnippet>184</a>                <span class="kw">let </span>bits_incomplete_lo = <span class="kw-2">&amp;</span>bits[INCOMPLETE_LO_RANGE];
+<a href=#185 id=185 data-nosnippet>185</a>                <span class="kw">let </span>lsb = bits[pallas::Scalar::NUM_BITS <span class="kw">as </span>usize - <span class="number">1</span>];
+<a href=#186 id=186 data-nosnippet>186</a>
+<a href=#187 id=187 data-nosnippet>187</a>                <span class="comment">// Initialize the accumulator `acc = [2]base` using complete addition.
+<a href=#188 id=188 data-nosnippet>188</a>                </span><span class="kw">let </span>acc =
+<a href=#189 id=189 data-nosnippet>189</a>                    <span class="self">self</span>.add_config
+<a href=#190 id=190 data-nosnippet>190</a>                        .assign_region(<span class="kw-2">&amp;</span>base_point, <span class="kw-2">&amp;</span>base_point, offset, <span class="kw-2">&amp;mut </span>region)<span class="question-mark">?</span>;
+<a href=#191 id=191 data-nosnippet>191</a>
+<a href=#192 id=192 data-nosnippet>192</a>                <span class="comment">// Increase the offset by 1 after complete addition.
+<a href=#193 id=193 data-nosnippet>193</a>                </span><span class="kw">let </span>offset = offset + <span class="number">1</span>;
+<a href=#194 id=194 data-nosnippet>194</a>
+<a href=#195 id=195 data-nosnippet>195</a>                <span class="comment">// Initialize the running sum for scalar decomposition to zero.
+<a href=#196 id=196 data-nosnippet>196</a>                //
+<a href=#197 id=197 data-nosnippet>197</a>                // `incomplete::Config::double_and_add` will copy this cell directly into
+<a href=#198 id=198 data-nosnippet>198</a>                // itself. This is fine because we are just assigning the same value to
+<a href=#199 id=199 data-nosnippet>199</a>                // the same cell twice, and then applying an equality constraint between
+<a href=#200 id=200 data-nosnippet>200</a>                // the cell and itself (which the permutation argument treats as a no-op).
+<a href=#201 id=201 data-nosnippet>201</a>                </span><span class="kw">let </span>z_init = Z(region.assign_advice_from_constant(
+<a href=#202 id=202 data-nosnippet>202</a>                    || <span class="string">"z_init = 0"</span>,
+<a href=#203 id=203 data-nosnippet>203</a>                    <span class="self">self</span>.hi_config.z,
+<a href=#204 id=204 data-nosnippet>204</a>                    offset,
+<a href=#205 id=205 data-nosnippet>205</a>                    pallas::Base::zero(),
+<a href=#206 id=206 data-nosnippet>206</a>                )<span class="question-mark">?</span>);
+<a href=#207 id=207 data-nosnippet>207</a>
+<a href=#208 id=208 data-nosnippet>208</a>                <span class="comment">// Double-and-add (incomplete addition) for the `hi` half of the scalar decomposition
+<a href=#209 id=209 data-nosnippet>209</a>                </span><span class="kw">let </span>(x_a, y_a, zs_incomplete_hi) = <span class="self">self</span>.hi_config.double_and_add(
+<a href=#210 id=210 data-nosnippet>210</a>                    <span class="kw-2">&amp;mut </span>region,
+<a href=#211 id=211 data-nosnippet>211</a>                    offset,
+<a href=#212 id=212 data-nosnippet>212</a>                    base,
+<a href=#213 id=213 data-nosnippet>213</a>                    bits_incomplete_hi,
+<a href=#214 id=214 data-nosnippet>214</a>                    (X(acc.x), Y(acc.y), z_init.clone()),
+<a href=#215 id=215 data-nosnippet>215</a>                    circuit_version,
+<a href=#216 id=216 data-nosnippet>216</a>                )<span class="question-mark">?</span>;
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a>                <span class="comment">// Double-and-add (incomplete addition) for the `lo` half of the scalar decomposition
+<a href=#219 id=219 data-nosnippet>219</a>                </span><span class="kw">let </span>z = zs_incomplete_hi.last().expect(<span class="string">"should not be empty"</span>);
+<a href=#220 id=220 data-nosnippet>220</a>                <span class="kw">let </span>(x_a, y_a, zs_incomplete_lo) = <span class="self">self</span>.lo_config.double_and_add(
+<a href=#221 id=221 data-nosnippet>221</a>                    <span class="kw-2">&amp;mut </span>region,
+<a href=#222 id=222 data-nosnippet>222</a>                    offset,
+<a href=#223 id=223 data-nosnippet>223</a>                    base,
+<a href=#224 id=224 data-nosnippet>224</a>                    bits_incomplete_lo,
+<a href=#225 id=225 data-nosnippet>225</a>                    (x_a, y_a, z.clone()),
+<a href=#226 id=226 data-nosnippet>226</a>                    circuit_version,
+<a href=#227 id=227 data-nosnippet>227</a>                )<span class="question-mark">?</span>;
+<a href=#228 id=228 data-nosnippet>228</a>
+<a href=#229 id=229 data-nosnippet>229</a>                <span class="comment">// Move from incomplete addition to complete addition.
+<a href=#230 id=230 data-nosnippet>230</a>                // Inside incomplete::double_and_add, the offset was increased once after initialization
+<a href=#231 id=231 data-nosnippet>231</a>                // of the running sum.
+<a href=#232 id=232 data-nosnippet>232</a>                // Then, the final assignment of double-and-add was made on row + offset + 1.
+<a href=#233 id=233 data-nosnippet>233</a>                // Outside of incomplete addition, we must account for these offset increases by adding
+<a href=#234 id=234 data-nosnippet>234</a>                // 2 to the incomplete addition length.
+<a href=#235 id=235 data-nosnippet>235</a>                </span><span class="macro">assert!</span>(INCOMPLETE_LO_RANGE.len() &gt;= INCOMPLETE_HI_RANGE.len());
+<a href=#236 id=236 data-nosnippet>236</a>                <span class="kw">let </span>offset = offset + INCOMPLETE_LO_RANGE.len() + <span class="number">2</span>;
+<a href=#237 id=237 data-nosnippet>237</a>
+<a href=#238 id=238 data-nosnippet>238</a>                <span class="comment">// Complete addition
+<a href=#239 id=239 data-nosnippet>239</a>                </span><span class="kw">let </span>(acc, zs_complete) = {
+<a href=#240 id=240 data-nosnippet>240</a>                    <span class="kw">let </span>z = zs_incomplete_lo.last().expect(<span class="string">"should not be empty"</span>);
+<a href=#241 id=241 data-nosnippet>241</a>                    <span class="comment">// Bits used in complete addition. k_{3} to k_{1} inclusive
+<a href=#242 id=242 data-nosnippet>242</a>                    // The LSB k_{0} is handled separately.
+<a href=#243 id=243 data-nosnippet>243</a>                    </span><span class="kw">let </span>bits_complete = <span class="kw-2">&amp;</span>bits[COMPLETE_RANGE];
+<a href=#244 id=244 data-nosnippet>244</a>                    <span class="self">self</span>.complete_config.assign_region(
+<a href=#245 id=245 data-nosnippet>245</a>                        <span class="kw-2">&amp;mut </span>region,
+<a href=#246 id=246 data-nosnippet>246</a>                        offset,
+<a href=#247 id=247 data-nosnippet>247</a>                        bits_complete,
+<a href=#248 id=248 data-nosnippet>248</a>                        <span class="kw-2">&amp;</span>base_point,
+<a href=#249 id=249 data-nosnippet>249</a>                        x_a,
+<a href=#250 id=250 data-nosnippet>250</a>                        y_a,
+<a href=#251 id=251 data-nosnippet>251</a>                        z.clone(),
+<a href=#252 id=252 data-nosnippet>252</a>                    )<span class="question-mark">?
+<a href=#253 id=253 data-nosnippet>253</a>                </span>};
 <a href=#254 id=254 data-nosnippet>254</a>
-<a href=#255 id=255 data-nosnippet>255</a>                <span class="comment">// Process the least significant bit
-<a href=#256 id=256 data-nosnippet>256</a>                </span><span class="kw">let </span>z_1 = zs_complete.last().unwrap().clone();
-<a href=#257 id=257 data-nosnippet>257</a>                <span class="kw">let </span>(result, z_0) = <span class="self">self</span>.process_lsb(<span class="kw-2">&amp;mut </span>region, offset, base, acc, z_1, lsb)<span class="question-mark">?</span>;
-<a href=#258 id=258 data-nosnippet>258</a>
-<a href=#259 id=259 data-nosnippet>259</a>                <span class="attr">#[cfg(test)]
-<a href=#260 id=260 data-nosnippet>260</a>                </span><span class="comment">// Check that the correct multiple is obtained.
-<a href=#261 id=261 data-nosnippet>261</a>                </span>{
-<a href=#262 id=262 data-nosnippet>262</a>                    <span class="kw">use </span>group::Curve;
-<a href=#263 id=263 data-nosnippet>263</a>
-<a href=#264 id=264 data-nosnippet>264</a>                    <span class="kw">let </span>base = base.point();
-<a href=#265 id=265 data-nosnippet>265</a>                    <span class="kw">let </span>alpha = alpha
-<a href=#266 id=266 data-nosnippet>266</a>                        .value()
-<a href=#267 id=267 data-nosnippet>267</a>                        .map(|alpha| pallas::Scalar::from_repr(alpha.to_repr()).unwrap());
-<a href=#268 id=268 data-nosnippet>268</a>                    <span class="kw">let </span>real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
-<a href=#269 id=269 data-nosnippet>269</a>                    <span class="kw">let </span>result = result.point();
-<a href=#270 id=270 data-nosnippet>270</a>
-<a href=#271 id=271 data-nosnippet>271</a>                    real_mul
-<a href=#272 id=272 data-nosnippet>272</a>                        .zip(result)
-<a href=#273 id=273 data-nosnippet>273</a>                        .assert_if_known(|(real_mul, result)| <span class="kw-2">&amp;</span>real_mul.to_affine() == result);
-<a href=#274 id=274 data-nosnippet>274</a>                }
-<a href=#275 id=275 data-nosnippet>275</a>
-<a href=#276 id=276 data-nosnippet>276</a>                <span class="kw">let </span>zs = {
-<a href=#277 id=277 data-nosnippet>277</a>                    <span class="kw">let </span><span class="kw-2">mut </span>zs = std::iter::empty()
-<a href=#278 id=278 data-nosnippet>278</a>                        .chain(<span class="prelude-val">Some</span>(z_init))
-<a href=#279 id=279 data-nosnippet>279</a>                        .chain(zs_incomplete_hi.into_iter())
-<a href=#280 id=280 data-nosnippet>280</a>                        .chain(zs_incomplete_lo.into_iter())
-<a href=#281 id=281 data-nosnippet>281</a>                        .chain(zs_complete.into_iter())
-<a href=#282 id=282 data-nosnippet>282</a>                        .chain(<span class="prelude-val">Some</span>(z_0))
-<a href=#283 id=283 data-nosnippet>283</a>                        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-<a href=#284 id=284 data-nosnippet>284</a>                    <span class="macro">assert_eq!</span>(zs.len(), pallas::Scalar::NUM_BITS <span class="kw">as </span>usize + <span class="number">1</span>);
-<a href=#285 id=285 data-nosnippet>285</a>
-<a href=#286 id=286 data-nosnippet>286</a>                    <span class="comment">// This reverses zs to give us [z_0, z_1, ..., z_{254}, z_{255}].
-<a href=#287 id=287 data-nosnippet>287</a>                    </span>zs.reverse();
-<a href=#288 id=288 data-nosnippet>288</a>                    zs
-<a href=#289 id=289 data-nosnippet>289</a>                };
-<a href=#290 id=290 data-nosnippet>290</a>
-<a href=#291 id=291 data-nosnippet>291</a>                <span class="prelude-val">Ok</span>((result, zs))
-<a href=#292 id=292 data-nosnippet>292</a>            },
-<a href=#293 id=293 data-nosnippet>293</a>        )<span class="question-mark">?</span>;
-<a href=#294 id=294 data-nosnippet>294</a>
-<a href=#295 id=295 data-nosnippet>295</a>        <span class="self">self</span>.overflow_config.overflow_check(
-<a href=#296 id=296 data-nosnippet>296</a>            layouter.namespace(|| <span class="string">"overflow check"</span>),
-<a href=#297 id=297 data-nosnippet>297</a>            alpha.clone(),
-<a href=#298 id=298 data-nosnippet>298</a>            <span class="kw-2">&amp;</span>zs,
-<a href=#299 id=299 data-nosnippet>299</a>        )<span class="question-mark">?</span>;
-<a href=#300 id=300 data-nosnippet>300</a>
-<a href=#301 id=301 data-nosnippet>301</a>        <span class="prelude-val">Ok</span>((result, ScalarVar::BaseFieldElem(alpha)))
-<a href=#302 id=302 data-nosnippet>302</a>    }
+<a href=#255 id=255 data-nosnippet>255</a>                <span class="comment">// Each iteration of the complete addition uses two rows.
+<a href=#256 id=256 data-nosnippet>256</a>                </span><span class="kw">let </span>offset = offset + COMPLETE_RANGE.len() * <span class="number">2</span>;
+<a href=#257 id=257 data-nosnippet>257</a>
+<a href=#258 id=258 data-nosnippet>258</a>                <span class="comment">// Process the least significant bit
+<a href=#259 id=259 data-nosnippet>259</a>                </span><span class="kw">let </span>z_1 = zs_complete.last().unwrap().clone();
+<a href=#260 id=260 data-nosnippet>260</a>                <span class="kw">let </span>(result, z_0) = <span class="self">self</span>.process_lsb(<span class="kw-2">&amp;mut </span>region, offset, base, acc, z_1, lsb)<span class="question-mark">?</span>;
+<a href=#261 id=261 data-nosnippet>261</a>
+<a href=#262 id=262 data-nosnippet>262</a>                <span class="attr">#[cfg(test)]
+<a href=#263 id=263 data-nosnippet>263</a>                </span><span class="comment">// Check that the correct multiple is obtained.
+<a href=#264 id=264 data-nosnippet>264</a>                </span>{
+<a href=#265 id=265 data-nosnippet>265</a>                    <span class="kw">use </span>group::Curve;
+<a href=#266 id=266 data-nosnippet>266</a>
+<a href=#267 id=267 data-nosnippet>267</a>                    <span class="kw">let </span>base = base.point();
+<a href=#268 id=268 data-nosnippet>268</a>                    <span class="kw">let </span>alpha = alpha
+<a href=#269 id=269 data-nosnippet>269</a>                        .value()
+<a href=#270 id=270 data-nosnippet>270</a>                        .map(|alpha| pallas::Scalar::from_repr(alpha.to_repr()).unwrap());
+<a href=#271 id=271 data-nosnippet>271</a>                    <span class="kw">let </span>real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
+<a href=#272 id=272 data-nosnippet>272</a>                    <span class="kw">let </span>result = result.point();
+<a href=#273 id=273 data-nosnippet>273</a>
+<a href=#274 id=274 data-nosnippet>274</a>                    real_mul
+<a href=#275 id=275 data-nosnippet>275</a>                        .zip(result)
+<a href=#276 id=276 data-nosnippet>276</a>                        .assert_if_known(|(real_mul, result)| <span class="kw-2">&amp;</span>real_mul.to_affine() == result);
+<a href=#277 id=277 data-nosnippet>277</a>                }
+<a href=#278 id=278 data-nosnippet>278</a>
+<a href=#279 id=279 data-nosnippet>279</a>                <span class="kw">let </span>zs = {
+<a href=#280 id=280 data-nosnippet>280</a>                    <span class="kw">let </span><span class="kw-2">mut </span>zs = std::iter::empty()
+<a href=#281 id=281 data-nosnippet>281</a>                        .chain(<span class="prelude-val">Some</span>(z_init))
+<a href=#282 id=282 data-nosnippet>282</a>                        .chain(zs_incomplete_hi)
+<a href=#283 id=283 data-nosnippet>283</a>                        .chain(zs_incomplete_lo)
+<a href=#284 id=284 data-nosnippet>284</a>                        .chain(zs_complete)
+<a href=#285 id=285 data-nosnippet>285</a>                        .chain(<span class="prelude-val">Some</span>(z_0))
+<a href=#286 id=286 data-nosnippet>286</a>                        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+<a href=#287 id=287 data-nosnippet>287</a>                    <span class="macro">assert_eq!</span>(zs.len(), pallas::Scalar::NUM_BITS <span class="kw">as </span>usize + <span class="number">1</span>);
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a>                    <span class="comment">// This reverses zs to give us [z_0, z_1, ..., z_{254}, z_{255}].
+<a href=#290 id=290 data-nosnippet>290</a>                    </span>zs.reverse();
+<a href=#291 id=291 data-nosnippet>291</a>                    zs
+<a href=#292 id=292 data-nosnippet>292</a>                };
+<a href=#293 id=293 data-nosnippet>293</a>
+<a href=#294 id=294 data-nosnippet>294</a>                <span class="prelude-val">Ok</span>((result, zs))
+<a href=#295 id=295 data-nosnippet>295</a>            },
+<a href=#296 id=296 data-nosnippet>296</a>        )<span class="question-mark">?</span>;
+<a href=#297 id=297 data-nosnippet>297</a>
+<a href=#298 id=298 data-nosnippet>298</a>        <span class="self">self</span>.overflow_config.overflow_check(
+<a href=#299 id=299 data-nosnippet>299</a>            layouter.namespace(|| <span class="string">"overflow check"</span>),
+<a href=#300 id=300 data-nosnippet>300</a>            alpha.clone(),
+<a href=#301 id=301 data-nosnippet>301</a>            <span class="kw-2">&amp;</span>zs,
+<a href=#302 id=302 data-nosnippet>302</a>        )<span class="question-mark">?</span>;
 <a href=#303 id=303 data-nosnippet>303</a>
-<a href=#304 id=304 data-nosnippet>304</a>    <span class="doccomment">/// Processes the final scalar bit `k_0`.
-<a href=#305 id=305 data-nosnippet>305</a>    ///
-<a href=#306 id=306 data-nosnippet>306</a>    /// Assumptions for this sub-region:
-<a href=#307 id=307 data-nosnippet>307</a>    /// - `acc_x` and `acc_y` are assigned in row `offset` by the previous complete
-<a href=#308 id=308 data-nosnippet>308</a>    ///   addition. They will be copied into themselves.
-<a href=#309 id=309 data-nosnippet>309</a>    /// - `z_1 is assigned in row `offset` by the mul::complete region assignment. We only
-<a href=#310 id=310 data-nosnippet>310</a>    ///   use its value here.
-<a href=#311 id=311 data-nosnippet>311</a>    ///
-<a href=#312 id=312 data-nosnippet>312</a>    /// `x_p` and `y_p` are assigned here, and then copied into themselves by the complete
-<a href=#313 id=313 data-nosnippet>313</a>    /// addition subregion.
+<a href=#304 id=304 data-nosnippet>304</a>        <span class="prelude-val">Ok</span>((result, ScalarVar::BaseFieldElem(alpha)))
+<a href=#305 id=305 data-nosnippet>305</a>    }
+<a href=#306 id=306 data-nosnippet>306</a>
+<a href=#307 id=307 data-nosnippet>307</a>    <span class="doccomment">/// Processes the final scalar bit `k_0`.
+<a href=#308 id=308 data-nosnippet>308</a>    ///
+<a href=#309 id=309 data-nosnippet>309</a>    /// Assumptions for this sub-region:
+<a href=#310 id=310 data-nosnippet>310</a>    /// - `acc_x` and `acc_y` are assigned in row `offset` by the previous complete
+<a href=#311 id=311 data-nosnippet>311</a>    ///   addition. They will be copied into themselves.
+<a href=#312 id=312 data-nosnippet>312</a>    /// - `z_1 is assigned in row `offset` by the mul::complete region assignment. We only
+<a href=#313 id=313 data-nosnippet>313</a>    ///   use its value here.
 <a href=#314 id=314 data-nosnippet>314</a>    ///
-<a href=#315 id=315 data-nosnippet>315</a>    /// ```text
-<a href=#316 id=316 data-nosnippet>316</a>    /// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 | q_mul_lsb = 1
-<a href=#317 id=317 data-nosnippet>317</a>    /// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 |
-<a href=#318 id=318 data-nosnippet>318</a>    /// ```
-<a href=#319 id=319 data-nosnippet>319</a>    ///
-<a href=#320 id=320 data-nosnippet>320</a>    /// [Specification](https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial).
-<a href=#321 id=321 data-nosnippet>321</a>    </span><span class="kw">fn </span>process_lsb(
-<a href=#322 id=322 data-nosnippet>322</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#323 id=323 data-nosnippet>323</a>        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">'_</span>, pallas::Base&gt;,
-<a href=#324 id=324 data-nosnippet>324</a>        offset: usize,
-<a href=#325 id=325 data-nosnippet>325</a>        base: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
-<a href=#326 id=326 data-nosnippet>326</a>        acc: EccPoint,
-<a href=#327 id=327 data-nosnippet>327</a>        z_1: Z&lt;pallas::Base&gt;,
-<a href=#328 id=328 data-nosnippet>328</a>        lsb: Value&lt;bool&gt;,
-<a href=#329 id=329 data-nosnippet>329</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(EccPoint, Z&lt;pallas::Base&gt;), Error&gt; {
-<a href=#330 id=330 data-nosnippet>330</a>        <span class="comment">// Enforce switching logic on LSB using a custom gate
-<a href=#331 id=331 data-nosnippet>331</a>        </span><span class="self">self</span>.q_mul_lsb.enable(region, offset)<span class="question-mark">?</span>;
-<a href=#332 id=332 data-nosnippet>332</a>
-<a href=#333 id=333 data-nosnippet>333</a>        <span class="comment">// z_1 has been assigned at (z_complete, offset).
-<a href=#334 id=334 data-nosnippet>334</a>        // Assign z_0 = 2⋅z_1 + k_0
-<a href=#335 id=335 data-nosnippet>335</a>        </span><span class="kw">let </span>z_0 = {
-<a href=#336 id=336 data-nosnippet>336</a>            <span class="kw">let </span>z_0_val = z_1.value().zip(lsb).map(|(z_1, lsb)| {
-<a href=#337 id=337 data-nosnippet>337</a>                <span class="kw">let </span>lsb = pallas::Base::from(lsb <span class="kw">as </span>u64);
-<a href=#338 id=338 data-nosnippet>338</a>                z_1 * pallas::Base::from(<span class="number">2</span>) + lsb
-<a href=#339 id=339 data-nosnippet>339</a>            });
-<a href=#340 id=340 data-nosnippet>340</a>            <span class="kw">let </span>z_0_cell = region.assign_advice(
-<a href=#341 id=341 data-nosnippet>341</a>                || <span class="string">"z_0"</span>,
-<a href=#342 id=342 data-nosnippet>342</a>                <span class="self">self</span>.complete_config.z_complete,
-<a href=#343 id=343 data-nosnippet>343</a>                offset + <span class="number">1</span>,
-<a href=#344 id=344 data-nosnippet>344</a>                || z_0_val,
-<a href=#345 id=345 data-nosnippet>345</a>            )<span class="question-mark">?</span>;
-<a href=#346 id=346 data-nosnippet>346</a>
-<a href=#347 id=347 data-nosnippet>347</a>            Z(z_0_cell)
-<a href=#348 id=348 data-nosnippet>348</a>        };
+<a href=#315 id=315 data-nosnippet>315</a>    /// `x_p` and `y_p` are assigned here, and then copied into themselves by the complete
+<a href=#316 id=316 data-nosnippet>316</a>    /// addition subregion.
+<a href=#317 id=317 data-nosnippet>317</a>    ///
+<a href=#318 id=318 data-nosnippet>318</a>    /// ```text
+<a href=#319 id=319 data-nosnippet>319</a>    /// | x_p  | y_p  | acc_x | acc_y | complete addition  | z_1 | q_mul_lsb = 1
+<a href=#320 id=320 data-nosnippet>320</a>    /// |base_x|base_y| res_x | res_y |   |   |    |   |   | z_0 |
+<a href=#321 id=321 data-nosnippet>321</a>    /// ```
+<a href=#322 id=322 data-nosnippet>322</a>    ///
+<a href=#323 id=323 data-nosnippet>323</a>    /// [Specification](https://p.z.cash/halo2-0.1:ecc-var-mul-lsb-gate?partial).
+<a href=#324 id=324 data-nosnippet>324</a>    </span><span class="kw">fn </span>process_lsb(
+<a href=#325 id=325 data-nosnippet>325</a>        <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#326 id=326 data-nosnippet>326</a>        region: <span class="kw-2">&amp;mut </span>Region&lt;<span class="lifetime">'_</span>, pallas::Base&gt;,
+<a href=#327 id=327 data-nosnippet>327</a>        offset: usize,
+<a href=#328 id=328 data-nosnippet>328</a>        base: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
+<a href=#329 id=329 data-nosnippet>329</a>        acc: EccPoint,
+<a href=#330 id=330 data-nosnippet>330</a>        z_1: Z&lt;pallas::Base&gt;,
+<a href=#331 id=331 data-nosnippet>331</a>        lsb: Value&lt;bool&gt;,
+<a href=#332 id=332 data-nosnippet>332</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(EccPoint, Z&lt;pallas::Base&gt;), Error&gt; {
+<a href=#333 id=333 data-nosnippet>333</a>        <span class="comment">// Enforce switching logic on LSB using a custom gate
+<a href=#334 id=334 data-nosnippet>334</a>        </span><span class="self">self</span>.q_mul_lsb.enable(region, offset)<span class="question-mark">?</span>;
+<a href=#335 id=335 data-nosnippet>335</a>
+<a href=#336 id=336 data-nosnippet>336</a>        <span class="comment">// z_1 has been assigned at (z_complete, offset).
+<a href=#337 id=337 data-nosnippet>337</a>        // Assign z_0 = 2⋅z_1 + k_0
+<a href=#338 id=338 data-nosnippet>338</a>        </span><span class="kw">let </span>z_0 = {
+<a href=#339 id=339 data-nosnippet>339</a>            <span class="kw">let </span>z_0_val = z_1.value().zip(lsb).map(|(z_1, lsb)| {
+<a href=#340 id=340 data-nosnippet>340</a>                <span class="kw">let </span>lsb = pallas::Base::from(lsb <span class="kw">as </span>u64);
+<a href=#341 id=341 data-nosnippet>341</a>                z_1 * pallas::Base::from(<span class="number">2</span>) + lsb
+<a href=#342 id=342 data-nosnippet>342</a>            });
+<a href=#343 id=343 data-nosnippet>343</a>            <span class="kw">let </span>z_0_cell = region.assign_advice(
+<a href=#344 id=344 data-nosnippet>344</a>                || <span class="string">"z_0"</span>,
+<a href=#345 id=345 data-nosnippet>345</a>                <span class="self">self</span>.complete_config.z_complete,
+<a href=#346 id=346 data-nosnippet>346</a>                offset + <span class="number">1</span>,
+<a href=#347 id=347 data-nosnippet>347</a>                || z_0_val,
+<a href=#348 id=348 data-nosnippet>348</a>            )<span class="question-mark">?</span>;
 <a href=#349 id=349 data-nosnippet>349</a>
-<a href=#350 id=350 data-nosnippet>350</a>        <span class="comment">// Copy in `base_x`, `base_y` to use in the LSB gate
-<a href=#351 id=351 data-nosnippet>351</a>        </span>base.x()
-<a href=#352 id=352 data-nosnippet>352</a>            .copy_advice(|| <span class="string">"copy base_x"</span>, region, <span class="self">self</span>.add_config.x_p, offset + <span class="number">1</span>)<span class="question-mark">?</span>;
-<a href=#353 id=353 data-nosnippet>353</a>        base.y()
-<a href=#354 id=354 data-nosnippet>354</a>            .copy_advice(|| <span class="string">"copy base_y"</span>, region, <span class="self">self</span>.add_config.y_p, offset + <span class="number">1</span>)<span class="question-mark">?</span>;
-<a href=#355 id=355 data-nosnippet>355</a>
-<a href=#356 id=356 data-nosnippet>356</a>        <span class="comment">// If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
-<a href=#357 id=357 data-nosnippet>357</a>        </span><span class="kw">let </span>x = lsb.and_then(|lsb| {
-<a href=#358 id=358 data-nosnippet>358</a>            <span class="kw">if </span>!lsb {
-<a href=#359 id=359 data-nosnippet>359</a>                base.x.value().cloned()
-<a href=#360 id=360 data-nosnippet>360</a>            } <span class="kw">else </span>{
-<a href=#361 id=361 data-nosnippet>361</a>                Value::known(Assigned::Zero)
-<a href=#362 id=362 data-nosnippet>362</a>            }
-<a href=#363 id=363 data-nosnippet>363</a>        });
-<a href=#364 id=364 data-nosnippet>364</a>
-<a href=#365 id=365 data-nosnippet>365</a>        <span class="kw">let </span>y = lsb.and_then(|lsb| {
-<a href=#366 id=366 data-nosnippet>366</a>            <span class="kw">if </span>!lsb {
-<a href=#367 id=367 data-nosnippet>367</a>                -base.y.value()
-<a href=#368 id=368 data-nosnippet>368</a>            } <span class="kw">else </span>{
-<a href=#369 id=369 data-nosnippet>369</a>                Value::known(Assigned::Zero)
-<a href=#370 id=370 data-nosnippet>370</a>            }
-<a href=#371 id=371 data-nosnippet>371</a>        });
-<a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a>        <span class="kw">let </span>x_cell = region.assign_advice(|| <span class="string">"x"</span>, <span class="self">self</span>.add_config.x_p, offset, || x)<span class="question-mark">?</span>;
-<a href=#374 id=374 data-nosnippet>374</a>        <span class="kw">let </span>y_cell = region.assign_advice(|| <span class="string">"y"</span>, <span class="self">self</span>.add_config.y_p, offset, || y)<span class="question-mark">?</span>;
+<a href=#350 id=350 data-nosnippet>350</a>            Z(z_0_cell)
+<a href=#351 id=351 data-nosnippet>351</a>        };
+<a href=#352 id=352 data-nosnippet>352</a>
+<a href=#353 id=353 data-nosnippet>353</a>        <span class="comment">// Copy in `base_x`, `base_y` to use in the LSB gate
+<a href=#354 id=354 data-nosnippet>354</a>        </span>base.x()
+<a href=#355 id=355 data-nosnippet>355</a>            .copy_advice(|| <span class="string">"copy base_x"</span>, region, <span class="self">self</span>.add_config.x_p, offset + <span class="number">1</span>)<span class="question-mark">?</span>;
+<a href=#356 id=356 data-nosnippet>356</a>        base.y()
+<a href=#357 id=357 data-nosnippet>357</a>            .copy_advice(|| <span class="string">"copy base_y"</span>, region, <span class="self">self</span>.add_config.y_p, offset + <span class="number">1</span>)<span class="question-mark">?</span>;
+<a href=#358 id=358 data-nosnippet>358</a>
+<a href=#359 id=359 data-nosnippet>359</a>        <span class="comment">// If `lsb` is 0, return `Acc + (-P)`. If `lsb` is 1, simply return `Acc + 0`.
+<a href=#360 id=360 data-nosnippet>360</a>        </span><span class="kw">let </span>x = lsb.and_then(|lsb| {
+<a href=#361 id=361 data-nosnippet>361</a>            <span class="kw">if </span>!lsb {
+<a href=#362 id=362 data-nosnippet>362</a>                base.x.value().cloned()
+<a href=#363 id=363 data-nosnippet>363</a>            } <span class="kw">else </span>{
+<a href=#364 id=364 data-nosnippet>364</a>                Value::known(Assigned::Zero)
+<a href=#365 id=365 data-nosnippet>365</a>            }
+<a href=#366 id=366 data-nosnippet>366</a>        });
+<a href=#367 id=367 data-nosnippet>367</a>
+<a href=#368 id=368 data-nosnippet>368</a>        <span class="kw">let </span>y = lsb.and_then(|lsb| {
+<a href=#369 id=369 data-nosnippet>369</a>            <span class="kw">if </span>!lsb {
+<a href=#370 id=370 data-nosnippet>370</a>                -base.y.value()
+<a href=#371 id=371 data-nosnippet>371</a>            } <span class="kw">else </span>{
+<a href=#372 id=372 data-nosnippet>372</a>                Value::known(Assigned::Zero)
+<a href=#373 id=373 data-nosnippet>373</a>            }
+<a href=#374 id=374 data-nosnippet>374</a>        });
 <a href=#375 id=375 data-nosnippet>375</a>
-<a href=#376 id=376 data-nosnippet>376</a>        <span class="kw">let </span>p = EccPoint::from_coordinates_unchecked(x_cell, y_cell);
-<a href=#377 id=377 data-nosnippet>377</a>
-<a href=#378 id=378 data-nosnippet>378</a>        <span class="comment">// Return the result of the final complete addition as `[scalar]B`
-<a href=#379 id=379 data-nosnippet>379</a>        </span><span class="kw">let </span>result = <span class="self">self</span>.add_config.assign_region(<span class="kw-2">&amp;</span>p, <span class="kw-2">&amp;</span>acc, offset, region)<span class="question-mark">?</span>;
+<a href=#376 id=376 data-nosnippet>376</a>        <span class="kw">let </span>x_cell = region.assign_advice(|| <span class="string">"x"</span>, <span class="self">self</span>.add_config.x_p, offset, || x)<span class="question-mark">?</span>;
+<a href=#377 id=377 data-nosnippet>377</a>        <span class="kw">let </span>y_cell = region.assign_advice(|| <span class="string">"y"</span>, <span class="self">self</span>.add_config.y_p, offset, || y)<span class="question-mark">?</span>;
+<a href=#378 id=378 data-nosnippet>378</a>
+<a href=#379 id=379 data-nosnippet>379</a>        <span class="kw">let </span>p = EccPoint::from_coordinates_unchecked(x_cell, y_cell);
 <a href=#380 id=380 data-nosnippet>380</a>
-<a href=#381 id=381 data-nosnippet>381</a>        <span class="prelude-val">Ok</span>((result, z_0))
-<a href=#382 id=382 data-nosnippet>382</a>    }
-<a href=#383 id=383 data-nosnippet>383</a>}
-<a href=#384 id=384 data-nosnippet>384</a>
-<a href=#385 id=385 data-nosnippet>385</a><span class="attr">#[derive(Clone, Debug)]
-<a href=#386 id=386 data-nosnippet>386</a></span><span class="comment">// `x`-coordinate of the accumulator.
-<a href=#387 id=387 data-nosnippet>387</a></span><span class="kw">struct </span>X&lt;F: Field&gt;(AssignedCell&lt;Assigned&lt;F&gt;, F&gt;);
-<a href=#388 id=388 data-nosnippet>388</a><span class="kw">impl</span>&lt;F: Field&gt; Deref <span class="kw">for </span>X&lt;F&gt; {
-<a href=#389 id=389 data-nosnippet>389</a>    <span class="kw">type </span>Target = AssignedCell&lt;Assigned&lt;F&gt;, F&gt;;
-<a href=#390 id=390 data-nosnippet>390</a>
-<a href=#391 id=391 data-nosnippet>391</a>    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
-<a href=#392 id=392 data-nosnippet>392</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
-<a href=#393 id=393 data-nosnippet>393</a>    </span>}
-<a href=#394 id=394 data-nosnippet>394</a>}
-<a href=#395 id=395 data-nosnippet>395</a>
-<a href=#396 id=396 data-nosnippet>396</a><span class="attr">#[derive(Clone, Debug)]
-<a href=#397 id=397 data-nosnippet>397</a></span><span class="comment">// `y`-coordinate of the accumulator.
-<a href=#398 id=398 data-nosnippet>398</a></span><span class="kw">struct </span>Y&lt;F: Field&gt;(AssignedCell&lt;Assigned&lt;F&gt;, F&gt;);
-<a href=#399 id=399 data-nosnippet>399</a><span class="kw">impl</span>&lt;F: Field&gt; Deref <span class="kw">for </span>Y&lt;F&gt; {
-<a href=#400 id=400 data-nosnippet>400</a>    <span class="kw">type </span>Target = AssignedCell&lt;Assigned&lt;F&gt;, F&gt;;
-<a href=#401 id=401 data-nosnippet>401</a>
-<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
-<a href=#403 id=403 data-nosnippet>403</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
-<a href=#404 id=404 data-nosnippet>404</a>    </span>}
-<a href=#405 id=405 data-nosnippet>405</a>}
-<a href=#406 id=406 data-nosnippet>406</a>
-<a href=#407 id=407 data-nosnippet>407</a><span class="attr">#[derive(Clone, Debug)]
-<a href=#408 id=408 data-nosnippet>408</a></span><span class="comment">// Cumulative sum `z` used to decompose the scalar.
-<a href=#409 id=409 data-nosnippet>409</a></span><span class="kw">struct </span>Z&lt;F: Field&gt;(AssignedCell&lt;F, F&gt;);
-<a href=#410 id=410 data-nosnippet>410</a><span class="kw">impl</span>&lt;F: Field&gt; Deref <span class="kw">for </span>Z&lt;F&gt; {
-<a href=#411 id=411 data-nosnippet>411</a>    <span class="kw">type </span>Target = AssignedCell&lt;F, F&gt;;
-<a href=#412 id=412 data-nosnippet>412</a>
-<a href=#413 id=413 data-nosnippet>413</a>    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
-<a href=#414 id=414 data-nosnippet>414</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
-<a href=#415 id=415 data-nosnippet>415</a>    </span>}
-<a href=#416 id=416 data-nosnippet>416</a>}
-<a href=#417 id=417 data-nosnippet>417</a>
-<a href=#418 id=418 data-nosnippet>418</a><span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
-<a href=#419 id=419 data-nosnippet>419</a></span><span class="attr">#[allow(clippy::assign_op_pattern)]
-<a href=#420 id=420 data-nosnippet>420</a>#[allow(clippy::ptr_offset_with_cast)]
-<a href=#421 id=421 data-nosnippet>421</a></span><span class="kw">fn </span>decompose_for_scalar_mul(scalar: Value&lt;<span class="kw-2">&amp;</span>pallas::Base&gt;) -&gt; Vec&lt;Value&lt;bool&gt;&gt; {
-<a href=#422 id=422 data-nosnippet>422</a>    <span class="macro">construct_uint!</span> {
-<a href=#423 id=423 data-nosnippet>423</a>        <span class="kw">struct </span>U256(<span class="number">4</span>);
-<a href=#424 id=424 data-nosnippet>424</a>    }
-<a href=#425 id=425 data-nosnippet>425</a>
-<a href=#426 id=426 data-nosnippet>426</a>    <span class="kw">let </span>bitstring = scalar.map(|scalar| {
-<a href=#427 id=427 data-nosnippet>427</a>        <span class="comment">// We use `k = scalar + t_q` in the double-and-add algorithm, where
-<a href=#428 id=428 data-nosnippet>428</a>        // the scalar field `F_q = 2^254 + t_q`.
-<a href=#429 id=429 data-nosnippet>429</a>        // Note that the addition `scalar + t_q` is not reduced.
-<a href=#430 id=430 data-nosnippet>430</a>        //
-<a href=#431 id=431 data-nosnippet>431</a>        </span><span class="kw">let </span>scalar = U256::from_little_endian(<span class="kw-2">&amp;</span>scalar.to_repr());
-<a href=#432 id=432 data-nosnippet>432</a>        <span class="kw">let </span>t_q = U256::from_little_endian(<span class="kw-2">&amp;</span>T_Q.to_le_bytes());
-<a href=#433 id=433 data-nosnippet>433</a>        <span class="kw">let </span>k = scalar + t_q;
-<a href=#434 id=434 data-nosnippet>434</a>
-<a href=#435 id=435 data-nosnippet>435</a>        <span class="comment">// Little-endian bit representation of `k`.
-<a href=#436 id=436 data-nosnippet>436</a>        </span><span class="kw">let </span>bitstring = {
-<a href=#437 id=437 data-nosnippet>437</a>            <span class="kw">let </span><span class="kw-2">mut </span>le_bytes = [<span class="number">0u8</span>; <span class="number">32</span>];
-<a href=#438 id=438 data-nosnippet>438</a>            k.to_little_endian(<span class="kw-2">&amp;mut </span>le_bytes);
-<a href=#439 id=439 data-nosnippet>439</a>            le_bytes
-<a href=#440 id=440 data-nosnippet>440</a>                .into_iter()
-<a href=#441 id=441 data-nosnippet>441</a>                .flat_map(|byte| (<span class="number">0</span>..<span class="number">8</span>).map(<span class="kw">move </span>|shift| (byte &gt;&gt; shift) % <span class="number">2 </span>== <span class="number">1</span>))
-<a href=#442 id=442 data-nosnippet>442</a>        };
-<a href=#443 id=443 data-nosnippet>443</a>
-<a href=#444 id=444 data-nosnippet>444</a>        <span class="comment">// Take the first 255 bits.
-<a href=#445 id=445 data-nosnippet>445</a>        </span>bitstring
-<a href=#446 id=446 data-nosnippet>446</a>            .take(pallas::Scalar::NUM_BITS <span class="kw">as </span>usize)
-<a href=#447 id=447 data-nosnippet>447</a>            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
-<a href=#448 id=448 data-nosnippet>448</a>    });
-<a href=#449 id=449 data-nosnippet>449</a>
-<a href=#450 id=450 data-nosnippet>450</a>    <span class="comment">// Transpose.
-<a href=#451 id=451 data-nosnippet>451</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>bitstring = bitstring.transpose_vec(pallas::Scalar::NUM_BITS <span class="kw">as </span>usize);
-<a href=#452 id=452 data-nosnippet>452</a>    <span class="comment">// Reverse to get the big-endian bit representation.
-<a href=#453 id=453 data-nosnippet>453</a>    </span>bitstring.reverse();
-<a href=#454 id=454 data-nosnippet>454</a>    bitstring
-<a href=#455 id=455 data-nosnippet>455</a>}
-<a href=#456 id=456 data-nosnippet>456</a>
-<a href=#457 id=457 data-nosnippet>457</a><span class="attr">#[cfg(test)]
-<a href=#458 id=458 data-nosnippet>458</a></span><span class="kw">pub mod </span>tests {
-<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">use </span>group::{
-<a href=#460 id=460 data-nosnippet>460</a>        ff::{Field, PrimeField},
-<a href=#461 id=461 data-nosnippet>461</a>        Curve,
-<a href=#462 id=462 data-nosnippet>462</a>    };
-<a href=#463 id=463 data-nosnippet>463</a>    <span class="kw">use </span>halo2_proofs::{
-<a href=#464 id=464 data-nosnippet>464</a>        circuit::{Chip, Layouter, Value},
-<a href=#465 id=465 data-nosnippet>465</a>        plonk::Error,
+<a href=#381 id=381 data-nosnippet>381</a>        <span class="comment">// Return the result of the final complete addition as `[scalar]B`
+<a href=#382 id=382 data-nosnippet>382</a>        </span><span class="kw">let </span>result = <span class="self">self</span>.add_config.assign_region(<span class="kw-2">&amp;</span>p, <span class="kw-2">&amp;</span>acc, offset, region)<span class="question-mark">?</span>;
+<a href=#383 id=383 data-nosnippet>383</a>
+<a href=#384 id=384 data-nosnippet>384</a>        <span class="prelude-val">Ok</span>((result, z_0))
+<a href=#385 id=385 data-nosnippet>385</a>    }
+<a href=#386 id=386 data-nosnippet>386</a>}
+<a href=#387 id=387 data-nosnippet>387</a>
+<a href=#388 id=388 data-nosnippet>388</a><span class="attr">#[derive(Clone, Debug)]
+<a href=#389 id=389 data-nosnippet>389</a></span><span class="comment">// `x`-coordinate of the accumulator.
+<a href=#390 id=390 data-nosnippet>390</a></span><span class="kw">struct </span>X&lt;F: Field&gt;(AssignedCell&lt;Assigned&lt;F&gt;, F&gt;);
+<a href=#391 id=391 data-nosnippet>391</a><span class="kw">impl</span>&lt;F: Field&gt; Deref <span class="kw">for </span>X&lt;F&gt; {
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">type </span>Target = AssignedCell&lt;Assigned&lt;F&gt;, F&gt;;
+<a href=#393 id=393 data-nosnippet>393</a>
+<a href=#394 id=394 data-nosnippet>394</a>    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+<a href=#395 id=395 data-nosnippet>395</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+<a href=#396 id=396 data-nosnippet>396</a>    </span>}
+<a href=#397 id=397 data-nosnippet>397</a>}
+<a href=#398 id=398 data-nosnippet>398</a>
+<a href=#399 id=399 data-nosnippet>399</a><span class="attr">#[derive(Clone, Debug)]
+<a href=#400 id=400 data-nosnippet>400</a></span><span class="comment">// `y`-coordinate of the accumulator.
+<a href=#401 id=401 data-nosnippet>401</a></span><span class="kw">struct </span>Y&lt;F: Field&gt;(AssignedCell&lt;Assigned&lt;F&gt;, F&gt;);
+<a href=#402 id=402 data-nosnippet>402</a><span class="kw">impl</span>&lt;F: Field&gt; Deref <span class="kw">for </span>Y&lt;F&gt; {
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">type </span>Target = AssignedCell&lt;Assigned&lt;F&gt;, F&gt;;
+<a href=#404 id=404 data-nosnippet>404</a>
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+<a href=#406 id=406 data-nosnippet>406</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+<a href=#407 id=407 data-nosnippet>407</a>    </span>}
+<a href=#408 id=408 data-nosnippet>408</a>}
+<a href=#409 id=409 data-nosnippet>409</a>
+<a href=#410 id=410 data-nosnippet>410</a><span class="attr">#[derive(Clone, Debug)]
+<a href=#411 id=411 data-nosnippet>411</a></span><span class="comment">// Cumulative sum `z` used to decompose the scalar.
+<a href=#412 id=412 data-nosnippet>412</a></span><span class="kw">struct </span>Z&lt;F: Field&gt;(AssignedCell&lt;F, F&gt;);
+<a href=#413 id=413 data-nosnippet>413</a><span class="kw">impl</span>&lt;F: Field&gt; Deref <span class="kw">for </span>Z&lt;F&gt; {
+<a href=#414 id=414 data-nosnippet>414</a>    <span class="kw">type </span>Target = AssignedCell&lt;F, F&gt;;
+<a href=#415 id=415 data-nosnippet>415</a>
+<a href=#416 id=416 data-nosnippet>416</a>    <span class="kw">fn </span>deref(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="self">Self</span>::Target {
+<a href=#417 id=417 data-nosnippet>417</a>        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0
+<a href=#418 id=418 data-nosnippet>418</a>    </span>}
+<a href=#419 id=419 data-nosnippet>419</a>}
+<a href=#420 id=420 data-nosnippet>420</a>
+<a href=#421 id=421 data-nosnippet>421</a><span class="comment">// https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
+<a href=#422 id=422 data-nosnippet>422</a></span><span class="attr">#[allow(clippy::assign_op_pattern)]
+<a href=#423 id=423 data-nosnippet>423</a>#[allow(clippy::ptr_offset_with_cast)]
+<a href=#424 id=424 data-nosnippet>424</a>#[allow(clippy::manual_div_ceil)]
+<a href=#425 id=425 data-nosnippet>425</a></span><span class="kw">fn </span>decompose_for_scalar_mul(scalar: Value&lt;<span class="kw-2">&amp;</span>pallas::Base&gt;) -&gt; Vec&lt;Value&lt;bool&gt;&gt; {
+<a href=#426 id=426 data-nosnippet>426</a>    <span class="macro">construct_uint!</span> {
+<a href=#427 id=427 data-nosnippet>427</a>        <span class="kw">struct </span>U256(<span class="number">4</span>);
+<a href=#428 id=428 data-nosnippet>428</a>    }
+<a href=#429 id=429 data-nosnippet>429</a>
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">let </span>bitstring = scalar.map(|scalar| {
+<a href=#431 id=431 data-nosnippet>431</a>        <span class="comment">// We use `k = scalar + t_q` in the double-and-add algorithm, where
+<a href=#432 id=432 data-nosnippet>432</a>        // the scalar field `F_q = 2^254 + t_q`.
+<a href=#433 id=433 data-nosnippet>433</a>        // Note that the addition `scalar + t_q` is not reduced.
+<a href=#434 id=434 data-nosnippet>434</a>        //
+<a href=#435 id=435 data-nosnippet>435</a>        </span><span class="kw">let </span>scalar = U256::from_little_endian(<span class="kw-2">&amp;</span>scalar.to_repr());
+<a href=#436 id=436 data-nosnippet>436</a>        <span class="kw">let </span>t_q = U256::from_little_endian(<span class="kw-2">&amp;</span>T_Q.to_le_bytes());
+<a href=#437 id=437 data-nosnippet>437</a>        <span class="kw">let </span>k = scalar + t_q;
+<a href=#438 id=438 data-nosnippet>438</a>
+<a href=#439 id=439 data-nosnippet>439</a>        <span class="comment">// Little-endian bit representation of `k`.
+<a href=#440 id=440 data-nosnippet>440</a>        </span><span class="kw">let </span>bitstring = {
+<a href=#441 id=441 data-nosnippet>441</a>            <span class="kw">let </span><span class="kw-2">mut </span>le_bytes = [<span class="number">0u8</span>; <span class="number">32</span>];
+<a href=#442 id=442 data-nosnippet>442</a>            k.to_little_endian(<span class="kw-2">&amp;mut </span>le_bytes);
+<a href=#443 id=443 data-nosnippet>443</a>            le_bytes
+<a href=#444 id=444 data-nosnippet>444</a>                .into_iter()
+<a href=#445 id=445 data-nosnippet>445</a>                .flat_map(|byte| (<span class="number">0</span>..<span class="number">8</span>).map(<span class="kw">move </span>|shift| (byte &gt;&gt; shift) % <span class="number">2 </span>== <span class="number">1</span>))
+<a href=#446 id=446 data-nosnippet>446</a>        };
+<a href=#447 id=447 data-nosnippet>447</a>
+<a href=#448 id=448 data-nosnippet>448</a>        <span class="comment">// Take the first 255 bits.
+<a href=#449 id=449 data-nosnippet>449</a>        </span>bitstring
+<a href=#450 id=450 data-nosnippet>450</a>            .take(pallas::Scalar::NUM_BITS <span class="kw">as </span>usize)
+<a href=#451 id=451 data-nosnippet>451</a>            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#452 id=452 data-nosnippet>452</a>    });
+<a href=#453 id=453 data-nosnippet>453</a>
+<a href=#454 id=454 data-nosnippet>454</a>    <span class="comment">// Transpose.
+<a href=#455 id=455 data-nosnippet>455</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>bitstring = bitstring.transpose_vec(pallas::Scalar::NUM_BITS <span class="kw">as </span>usize);
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="comment">// Reverse to get the big-endian bit representation.
+<a href=#457 id=457 data-nosnippet>457</a>    </span>bitstring.reverse();
+<a href=#458 id=458 data-nosnippet>458</a>    bitstring
+<a href=#459 id=459 data-nosnippet>459</a>}
+<a href=#460 id=460 data-nosnippet>460</a>
+<a href=#461 id=461 data-nosnippet>461</a><span class="attr">#[cfg(test)]
+<a href=#462 id=462 data-nosnippet>462</a></span><span class="kw">pub mod </span>tests {
+<a href=#463 id=463 data-nosnippet>463</a>    <span class="kw">use </span>group::{
+<a href=#464 id=464 data-nosnippet>464</a>        ff::{Field, PrimeField},
+<a href=#465 id=465 data-nosnippet>465</a>        Curve,
 <a href=#466 id=466 data-nosnippet>466</a>    };
-<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">use </span>pasta_curves::pallas;
-<a href=#468 id=468 data-nosnippet>468</a>    <span class="kw">use </span>rand::rngs::OsRng;
-<a href=#469 id=469 data-nosnippet>469</a>
-<a href=#470 id=470 data-nosnippet>470</a>    <span class="kw">use crate</span>::{
-<a href=#471 id=471 data-nosnippet>471</a>        ecc::{
-<a href=#472 id=472 data-nosnippet>472</a>            chip::{EccChip, EccPoint},
-<a href=#473 id=473 data-nosnippet>473</a>            tests::TestFixedBases,
-<a href=#474 id=474 data-nosnippet>474</a>            EccInstructions, NonIdentityPoint, Point, ScalarVar,
-<a href=#475 id=475 data-nosnippet>475</a>        },
-<a href=#476 id=476 data-nosnippet>476</a>        utilities::{lookup_range_check::PallasLookupRangeCheck, UtilitiesInstructions},
-<a href=#477 id=477 data-nosnippet>477</a>    };
-<a href=#478 id=478 data-nosnippet>478</a>
-<a href=#479 id=479 data-nosnippet>479</a>    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>test_mul&lt;Lookup: PallasLookupRangeCheck&gt;(
-<a href=#480 id=480 data-nosnippet>480</a>        chip: EccChip&lt;TestFixedBases, Lookup&gt;,
-<a href=#481 id=481 data-nosnippet>481</a>        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
-<a href=#482 id=482 data-nosnippet>482</a>        p: <span class="kw-2">&amp;</span>NonIdentityPoint&lt;pallas::Affine, EccChip&lt;TestFixedBases, Lookup&gt;&gt;,
-<a href=#483 id=483 data-nosnippet>483</a>        p_val: pallas::Affine,
-<a href=#484 id=484 data-nosnippet>484</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-<a href=#485 id=485 data-nosnippet>485</a>        <span class="kw">let </span>column = chip.config().advices[<span class="number">0</span>];
-<a href=#486 id=486 data-nosnippet>486</a>
-<a href=#487 id=487 data-nosnippet>487</a>        <span class="kw">fn </span>constrain_equal_non_id&lt;
-<a href=#488 id=488 data-nosnippet>488</a>            EccChip: EccInstructions&lt;pallas::Affine, Point = EccPoint&gt; + Clone + Eq + std::fmt::Debug,
-<a href=#489 id=489 data-nosnippet>489</a>        &gt;(
-<a href=#490 id=490 data-nosnippet>490</a>            chip: EccChip,
-<a href=#491 id=491 data-nosnippet>491</a>            <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
-<a href=#492 id=492 data-nosnippet>492</a>            base_val: pallas::Affine,
-<a href=#493 id=493 data-nosnippet>493</a>            scalar_val: pallas::Base,
-<a href=#494 id=494 data-nosnippet>494</a>            result: Point&lt;pallas::Affine, EccChip&gt;,
-<a href=#495 id=495 data-nosnippet>495</a>        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-<a href=#496 id=496 data-nosnippet>496</a>            <span class="comment">// Move scalar from base field into scalar field (which always fits
-<a href=#497 id=497 data-nosnippet>497</a>            // for Pallas).
-<a href=#498 id=498 data-nosnippet>498</a>            </span><span class="kw">let </span>scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
-<a href=#499 id=499 data-nosnippet>499</a>            <span class="kw">let </span>expected = NonIdentityPoint::new(
-<a href=#500 id=500 data-nosnippet>500</a>                chip,
-<a href=#501 id=501 data-nosnippet>501</a>                layouter.namespace(|| <span class="string">"expected point"</span>),
-<a href=#502 id=502 data-nosnippet>502</a>                Value::known((base_val * scalar).to_affine()),
-<a href=#503 id=503 data-nosnippet>503</a>            )<span class="question-mark">?</span>;
-<a href=#504 id=504 data-nosnippet>504</a>            result.constrain_equal(layouter.namespace(|| <span class="string">"constrain result"</span>), <span class="kw-2">&amp;</span>expected)
-<a href=#505 id=505 data-nosnippet>505</a>        }
-<a href=#506 id=506 data-nosnippet>506</a>
-<a href=#507 id=507 data-nosnippet>507</a>        <span class="comment">// [a]B
-<a href=#508 id=508 data-nosnippet>508</a>        </span>{
-<a href=#509 id=509 data-nosnippet>509</a>            <span class="kw">let </span>scalar_val = pallas::Base::random(OsRng);
-<a href=#510 id=510 data-nosnippet>510</a>            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
-<a href=#511 id=511 data-nosnippet>511</a>                <span class="kw">let </span>scalar = chip.load_private(
-<a href=#512 id=512 data-nosnippet>512</a>                    layouter.namespace(|| <span class="string">"random scalar"</span>),
-<a href=#513 id=513 data-nosnippet>513</a>                    column,
-<a href=#514 id=514 data-nosnippet>514</a>                    Value::known(scalar_val),
-<a href=#515 id=515 data-nosnippet>515</a>                )<span class="question-mark">?</span>;
-<a href=#516 id=516 data-nosnippet>516</a>                <span class="kw">let </span>scalar = ScalarVar::from_base(
-<a href=#517 id=517 data-nosnippet>517</a>                    chip.clone(),
-<a href=#518 id=518 data-nosnippet>518</a>                    layouter.namespace(|| <span class="string">"ScalarVar from_base"</span>),
-<a href=#519 id=519 data-nosnippet>519</a>                    <span class="kw-2">&amp;</span>scalar,
-<a href=#520 id=520 data-nosnippet>520</a>                )<span class="question-mark">?</span>;
-<a href=#521 id=521 data-nosnippet>521</a>                p.mul(layouter.namespace(|| <span class="string">"random [a]B"</span>), scalar)<span class="question-mark">?
-<a href=#522 id=522 data-nosnippet>522</a>            </span>};
-<a href=#523 id=523 data-nosnippet>523</a>            constrain_equal_non_id(
-<a href=#524 id=524 data-nosnippet>524</a>                chip.clone(),
-<a href=#525 id=525 data-nosnippet>525</a>                layouter.namespace(|| <span class="string">"random [a]B"</span>),
-<a href=#526 id=526 data-nosnippet>526</a>                p_val,
-<a href=#527 id=527 data-nosnippet>527</a>                scalar_val,
-<a href=#528 id=528 data-nosnippet>528</a>                result,
-<a href=#529 id=529 data-nosnippet>529</a>            )<span class="question-mark">?</span>;
-<a href=#530 id=530 data-nosnippet>530</a>        }
-<a href=#531 id=531 data-nosnippet>531</a>
-<a href=#532 id=532 data-nosnippet>532</a>        <span class="comment">// [0]B should return (0,0) since variable-base scalar multiplication
-<a href=#533 id=533 data-nosnippet>533</a>        // uses complete addition for the final bits of the scalar.
-<a href=#534 id=534 data-nosnippet>534</a>        </span>{
-<a href=#535 id=535 data-nosnippet>535</a>            <span class="kw">let </span>scalar_val = pallas::Base::zero();
-<a href=#536 id=536 data-nosnippet>536</a>            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
-<a href=#537 id=537 data-nosnippet>537</a>                <span class="kw">let </span>scalar = chip.load_private(
-<a href=#538 id=538 data-nosnippet>538</a>                    layouter.namespace(|| <span class="string">"zero"</span>),
-<a href=#539 id=539 data-nosnippet>539</a>                    column,
-<a href=#540 id=540 data-nosnippet>540</a>                    Value::known(scalar_val),
-<a href=#541 id=541 data-nosnippet>541</a>                )<span class="question-mark">?</span>;
-<a href=#542 id=542 data-nosnippet>542</a>                <span class="kw">let </span>scalar = ScalarVar::from_base(
-<a href=#543 id=543 data-nosnippet>543</a>                    chip.clone(),
-<a href=#544 id=544 data-nosnippet>544</a>                    layouter.namespace(|| <span class="string">"ScalarVar from_base"</span>),
-<a href=#545 id=545 data-nosnippet>545</a>                    <span class="kw-2">&amp;</span>scalar,
-<a href=#546 id=546 data-nosnippet>546</a>                )<span class="question-mark">?</span>;
-<a href=#547 id=547 data-nosnippet>547</a>                p.mul(layouter.namespace(|| <span class="string">"[0]B"</span>), scalar)<span class="question-mark">?
-<a href=#548 id=548 data-nosnippet>548</a>            </span>};
-<a href=#549 id=549 data-nosnippet>549</a>            result
-<a href=#550 id=550 data-nosnippet>550</a>                .inner()
-<a href=#551 id=551 data-nosnippet>551</a>                .is_identity()
-<a href=#552 id=552 data-nosnippet>552</a>                .assert_if_known(|is_identity| <span class="kw-2">*</span>is_identity);
-<a href=#553 id=553 data-nosnippet>553</a>        }
-<a href=#554 id=554 data-nosnippet>554</a>
-<a href=#555 id=555 data-nosnippet>555</a>        <span class="comment">// [-1]B (the largest possible base field element)
-<a href=#556 id=556 data-nosnippet>556</a>        </span>{
-<a href=#557 id=557 data-nosnippet>557</a>            <span class="kw">let </span>scalar_val = -pallas::Base::one();
-<a href=#558 id=558 data-nosnippet>558</a>            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
-<a href=#559 id=559 data-nosnippet>559</a>                <span class="kw">let </span>scalar = chip.load_private(
-<a href=#560 id=560 data-nosnippet>560</a>                    layouter.namespace(|| <span class="string">"-1"</span>),
-<a href=#561 id=561 data-nosnippet>561</a>                    column,
-<a href=#562 id=562 data-nosnippet>562</a>                    Value::known(scalar_val),
-<a href=#563 id=563 data-nosnippet>563</a>                )<span class="question-mark">?</span>;
-<a href=#564 id=564 data-nosnippet>564</a>                <span class="kw">let </span>scalar = ScalarVar::from_base(
-<a href=#565 id=565 data-nosnippet>565</a>                    chip.clone(),
-<a href=#566 id=566 data-nosnippet>566</a>                    layouter.namespace(|| <span class="string">"ScalarVar from_base"</span>),
-<a href=#567 id=567 data-nosnippet>567</a>                    <span class="kw-2">&amp;</span>scalar,
-<a href=#568 id=568 data-nosnippet>568</a>                )<span class="question-mark">?</span>;
-<a href=#569 id=569 data-nosnippet>569</a>                p.mul(layouter.namespace(|| <span class="string">"[-1]B"</span>), scalar)<span class="question-mark">?
-<a href=#570 id=570 data-nosnippet>570</a>            </span>};
-<a href=#571 id=571 data-nosnippet>571</a>            constrain_equal_non_id(
-<a href=#572 id=572 data-nosnippet>572</a>                chip,
-<a href=#573 id=573 data-nosnippet>573</a>                layouter.namespace(|| <span class="string">"[-1]B"</span>),
-<a href=#574 id=574 data-nosnippet>574</a>                p_val,
-<a href=#575 id=575 data-nosnippet>575</a>                scalar_val,
-<a href=#576 id=576 data-nosnippet>576</a>                result,
-<a href=#577 id=577 data-nosnippet>577</a>            )<span class="question-mark">?</span>;
-<a href=#578 id=578 data-nosnippet>578</a>        }
-<a href=#579 id=579 data-nosnippet>579</a>
-<a href=#580 id=580 data-nosnippet>580</a>        <span class="prelude-val">Ok</span>(())
-<a href=#581 id=581 data-nosnippet>581</a>    }
-<a href=#582 id=582 data-nosnippet>582</a>}
+<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">use </span>halo2_proofs::{
+<a href=#468 id=468 data-nosnippet>468</a>        circuit::{Chip, Layouter, Value},
+<a href=#469 id=469 data-nosnippet>469</a>        plonk::Error,
+<a href=#470 id=470 data-nosnippet>470</a>    };
+<a href=#471 id=471 data-nosnippet>471</a>    <span class="kw">use </span>pasta_curves::pallas;
+<a href=#472 id=472 data-nosnippet>472</a>    <span class="kw">use </span>rand::{rand_core::UnwrapErr, rngs::SysRng};
+<a href=#473 id=473 data-nosnippet>473</a>
+<a href=#474 id=474 data-nosnippet>474</a>    <span class="kw">use crate</span>::{
+<a href=#475 id=475 data-nosnippet>475</a>        ecc::{
+<a href=#476 id=476 data-nosnippet>476</a>            chip::{EccChip, EccPoint},
+<a href=#477 id=477 data-nosnippet>477</a>            tests::TestFixedBases,
+<a href=#478 id=478 data-nosnippet>478</a>            EccInstructions, NonIdentityPoint, Point, ScalarVar,
+<a href=#479 id=479 data-nosnippet>479</a>        },
+<a href=#480 id=480 data-nosnippet>480</a>        utilities::{lookup_range_check::PallasLookupRangeCheck, UtilitiesInstructions},
+<a href=#481 id=481 data-nosnippet>481</a>    };
+<a href=#482 id=482 data-nosnippet>482</a>
+<a href=#483 id=483 data-nosnippet>483</a>    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>test_mul&lt;Lookup: PallasLookupRangeCheck&gt;(
+<a href=#484 id=484 data-nosnippet>484</a>        chip: EccChip&lt;TestFixedBases, Lookup&gt;,
+<a href=#485 id=485 data-nosnippet>485</a>        <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+<a href=#486 id=486 data-nosnippet>486</a>        p: <span class="kw-2">&amp;</span>NonIdentityPoint&lt;pallas::Affine, EccChip&lt;TestFixedBases, Lookup&gt;&gt;,
+<a href=#487 id=487 data-nosnippet>487</a>        p_val: pallas::Affine,
+<a href=#488 id=488 data-nosnippet>488</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#489 id=489 data-nosnippet>489</a>        <span class="kw">let </span>column = chip.config().advices[<span class="number">0</span>];
+<a href=#490 id=490 data-nosnippet>490</a>
+<a href=#491 id=491 data-nosnippet>491</a>        <span class="kw">fn </span>constrain_equal_non_id&lt;
+<a href=#492 id=492 data-nosnippet>492</a>            EccChip: EccInstructions&lt;pallas::Affine, Point = EccPoint&gt; + Clone + Eq + std::fmt::Debug,
+<a href=#493 id=493 data-nosnippet>493</a>        &gt;(
+<a href=#494 id=494 data-nosnippet>494</a>            chip: EccChip,
+<a href=#495 id=495 data-nosnippet>495</a>            <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+<a href=#496 id=496 data-nosnippet>496</a>            base_val: pallas::Affine,
+<a href=#497 id=497 data-nosnippet>497</a>            scalar_val: pallas::Base,
+<a href=#498 id=498 data-nosnippet>498</a>            result: Point&lt;pallas::Affine, EccChip&gt;,
+<a href=#499 id=499 data-nosnippet>499</a>        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#500 id=500 data-nosnippet>500</a>            <span class="comment">// Move scalar from base field into scalar field (which always fits
+<a href=#501 id=501 data-nosnippet>501</a>            // for Pallas).
+<a href=#502 id=502 data-nosnippet>502</a>            </span><span class="kw">let </span>scalar = pallas::Scalar::from_repr(scalar_val.to_repr()).unwrap();
+<a href=#503 id=503 data-nosnippet>503</a>            <span class="kw">let </span>expected = NonIdentityPoint::new(
+<a href=#504 id=504 data-nosnippet>504</a>                chip,
+<a href=#505 id=505 data-nosnippet>505</a>                layouter.namespace(|| <span class="string">"expected point"</span>),
+<a href=#506 id=506 data-nosnippet>506</a>                Value::known((base_val * scalar).to_affine()),
+<a href=#507 id=507 data-nosnippet>507</a>            )<span class="question-mark">?</span>;
+<a href=#508 id=508 data-nosnippet>508</a>            result.constrain_equal(layouter.namespace(|| <span class="string">"constrain result"</span>), <span class="kw-2">&amp;</span>expected)
+<a href=#509 id=509 data-nosnippet>509</a>        }
+<a href=#510 id=510 data-nosnippet>510</a>
+<a href=#511 id=511 data-nosnippet>511</a>        <span class="comment">// [a]B
+<a href=#512 id=512 data-nosnippet>512</a>        </span>{
+<a href=#513 id=513 data-nosnippet>513</a>            <span class="kw">let </span>scalar_val = pallas::Base::random(<span class="kw-2">&amp;mut </span>UnwrapErr(SysRng));
+<a href=#514 id=514 data-nosnippet>514</a>            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
+<a href=#515 id=515 data-nosnippet>515</a>                <span class="kw">let </span>scalar = chip.load_private(
+<a href=#516 id=516 data-nosnippet>516</a>                    layouter.namespace(|| <span class="string">"random scalar"</span>),
+<a href=#517 id=517 data-nosnippet>517</a>                    column,
+<a href=#518 id=518 data-nosnippet>518</a>                    Value::known(scalar_val),
+<a href=#519 id=519 data-nosnippet>519</a>                )<span class="question-mark">?</span>;
+<a href=#520 id=520 data-nosnippet>520</a>                <span class="kw">let </span>scalar = ScalarVar::from_base(
+<a href=#521 id=521 data-nosnippet>521</a>                    chip.clone(),
+<a href=#522 id=522 data-nosnippet>522</a>                    layouter.namespace(|| <span class="string">"ScalarVar from_base"</span>),
+<a href=#523 id=523 data-nosnippet>523</a>                    <span class="kw-2">&amp;</span>scalar,
+<a href=#524 id=524 data-nosnippet>524</a>                )<span class="question-mark">?</span>;
+<a href=#525 id=525 data-nosnippet>525</a>                p.mul(layouter.namespace(|| <span class="string">"random [a]B"</span>), scalar)<span class="question-mark">?
+<a href=#526 id=526 data-nosnippet>526</a>            </span>};
+<a href=#527 id=527 data-nosnippet>527</a>            constrain_equal_non_id(
+<a href=#528 id=528 data-nosnippet>528</a>                chip.clone(),
+<a href=#529 id=529 data-nosnippet>529</a>                layouter.namespace(|| <span class="string">"random [a]B"</span>),
+<a href=#530 id=530 data-nosnippet>530</a>                p_val,
+<a href=#531 id=531 data-nosnippet>531</a>                scalar_val,
+<a href=#532 id=532 data-nosnippet>532</a>                result,
+<a href=#533 id=533 data-nosnippet>533</a>            )<span class="question-mark">?</span>;
+<a href=#534 id=534 data-nosnippet>534</a>        }
+<a href=#535 id=535 data-nosnippet>535</a>
+<a href=#536 id=536 data-nosnippet>536</a>        <span class="comment">// [0]B should return (0,0) since variable-base scalar multiplication
+<a href=#537 id=537 data-nosnippet>537</a>        // uses complete addition for the final bits of the scalar.
+<a href=#538 id=538 data-nosnippet>538</a>        </span>{
+<a href=#539 id=539 data-nosnippet>539</a>            <span class="kw">let </span>scalar_val = pallas::Base::zero();
+<a href=#540 id=540 data-nosnippet>540</a>            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
+<a href=#541 id=541 data-nosnippet>541</a>                <span class="kw">let </span>scalar = chip.load_private(
+<a href=#542 id=542 data-nosnippet>542</a>                    layouter.namespace(|| <span class="string">"zero"</span>),
+<a href=#543 id=543 data-nosnippet>543</a>                    column,
+<a href=#544 id=544 data-nosnippet>544</a>                    Value::known(scalar_val),
+<a href=#545 id=545 data-nosnippet>545</a>                )<span class="question-mark">?</span>;
+<a href=#546 id=546 data-nosnippet>546</a>                <span class="kw">let </span>scalar = ScalarVar::from_base(
+<a href=#547 id=547 data-nosnippet>547</a>                    chip.clone(),
+<a href=#548 id=548 data-nosnippet>548</a>                    layouter.namespace(|| <span class="string">"ScalarVar from_base"</span>),
+<a href=#549 id=549 data-nosnippet>549</a>                    <span class="kw-2">&amp;</span>scalar,
+<a href=#550 id=550 data-nosnippet>550</a>                )<span class="question-mark">?</span>;
+<a href=#551 id=551 data-nosnippet>551</a>                p.mul(layouter.namespace(|| <span class="string">"[0]B"</span>), scalar)<span class="question-mark">?
+<a href=#552 id=552 data-nosnippet>552</a>            </span>};
+<a href=#553 id=553 data-nosnippet>553</a>            result
+<a href=#554 id=554 data-nosnippet>554</a>                .inner()
+<a href=#555 id=555 data-nosnippet>555</a>                .is_identity()
+<a href=#556 id=556 data-nosnippet>556</a>                .assert_if_known(|is_identity| <span class="kw-2">*</span>is_identity);
+<a href=#557 id=557 data-nosnippet>557</a>        }
+<a href=#558 id=558 data-nosnippet>558</a>
+<a href=#559 id=559 data-nosnippet>559</a>        <span class="comment">// [-1]B (the largest possible base field element)
+<a href=#560 id=560 data-nosnippet>560</a>        </span>{
+<a href=#561 id=561 data-nosnippet>561</a>            <span class="kw">let </span>scalar_val = -pallas::Base::one();
+<a href=#562 id=562 data-nosnippet>562</a>            <span class="kw">let </span>(result, <span class="kw">_</span>) = {
+<a href=#563 id=563 data-nosnippet>563</a>                <span class="kw">let </span>scalar = chip.load_private(
+<a href=#564 id=564 data-nosnippet>564</a>                    layouter.namespace(|| <span class="string">"-1"</span>),
+<a href=#565 id=565 data-nosnippet>565</a>                    column,
+<a href=#566 id=566 data-nosnippet>566</a>                    Value::known(scalar_val),
+<a href=#567 id=567 data-nosnippet>567</a>                )<span class="question-mark">?</span>;
+<a href=#568 id=568 data-nosnippet>568</a>                <span class="kw">let </span>scalar = ScalarVar::from_base(
+<a href=#569 id=569 data-nosnippet>569</a>                    chip.clone(),
+<a href=#570 id=570 data-nosnippet>570</a>                    layouter.namespace(|| <span class="string">"ScalarVar from_base"</span>),
+<a href=#571 id=571 data-nosnippet>571</a>                    <span class="kw-2">&amp;</span>scalar,
+<a href=#572 id=572 data-nosnippet>572</a>                )<span class="question-mark">?</span>;
+<a href=#573 id=573 data-nosnippet>573</a>                p.mul(layouter.namespace(|| <span class="string">"[-1]B"</span>), scalar)<span class="question-mark">?
+<a href=#574 id=574 data-nosnippet>574</a>            </span>};
+<a href=#575 id=575 data-nosnippet>575</a>            constrain_equal_non_id(
+<a href=#576 id=576 data-nosnippet>576</a>                chip,
+<a href=#577 id=577 data-nosnippet>577</a>                layouter.namespace(|| <span class="string">"[-1]B"</span>),
+<a href=#578 id=578 data-nosnippet>578</a>                p_val,
+<a href=#579 id=579 data-nosnippet>579</a>                scalar_val,
+<a href=#580 id=580 data-nosnippet>580</a>                result,
+<a href=#581 id=581 data-nosnippet>581</a>            )<span class="question-mark">?</span>;
+<a href=#582 id=582 data-nosnippet>582</a>        }
+<a href=#583 id=583 data-nosnippet>583</a>
+<a href=#584 id=584 data-nosnippet>584</a>        <span class="prelude-val">Ok</span>(())
+<a href=#585 id=585 data-nosnippet>585</a>    }
+<a href=#586 id=586 data-nosnippet>586</a>
+<a href=#587 id=587 data-nosnippet>587</a>    <span class="doccomment">/// Test for the variable-base scalar-mul base-anchoring fix.
+<a href=#588 id=588 data-nosnippet>588</a>    ///
+<a href=#589 id=589 data-nosnippet>589</a>    /// This drives the real `Circuit::configure` + `FloorPlanner::synthesize` (so
+<a href=#590 id=590 data-nosnippet>590</a>    /// that the production `mul::Config` / `incomplete::Config::double_and_add` runs)
+<a href=#591 id=591 data-nosnippet>591</a>    /// through a copy-recording `Assignment`, and asserts that the fixed circuit
+<a href=#592 id=592 data-nosnippet>592</a>    /// emits extra copy (equality) constraints relative to the insecure one. The
+<a href=#593 id=593 data-nosnippet>593</a>    /// extra constraints are exactly the base anchors — `base.{x,y}` copied into the
+<a href=#594 id=594 data-nosnippet>594</a>    /// incomplete-addition `x_p`/`y_p` columns. If the anchor is removed, the two
+<a href=#595 id=595 data-nosnippet>595</a>    /// circuits emit identical copies and this fails. Copies are structural, so the
+<a href=#596 id=596 data-nosnippet>596</a>    /// witness is left unknown (no malicious-witness construction needed).
+<a href=#597 id=597 data-nosnippet>597</a>    </span><span class="kw">mod </span>base_anchoring {
+<a href=#598 id=598 data-nosnippet>598</a>        <span class="kw">use crate</span>::{
+<a href=#599 id=599 data-nosnippet>599</a>            ecc::{
+<a href=#600 id=600 data-nosnippet>600</a>                chip::{EccChip, EccConfig},
+<a href=#601 id=601 data-nosnippet>601</a>                tests::TestFixedBases,
+<a href=#602 id=602 data-nosnippet>602</a>                CircuitVersion, NonIdentityPoint, ScalarVar,
+<a href=#603 id=603 data-nosnippet>603</a>            },
+<a href=#604 id=604 data-nosnippet>604</a>            utilities::{
+<a href=#605 id=605 data-nosnippet>605</a>                lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheckConfig},
+<a href=#606 id=606 data-nosnippet>606</a>                UtilitiesInstructions,
+<a href=#607 id=607 data-nosnippet>607</a>            },
+<a href=#608 id=608 data-nosnippet>608</a>        };
+<a href=#609 id=609 data-nosnippet>609</a>        <span class="kw">use </span>group::{Curve, Group};
+<a href=#610 id=610 data-nosnippet>610</a>        <span class="kw">use </span>halo2_proofs::{
+<a href=#611 id=611 data-nosnippet>611</a>            circuit::{Layouter, SimpleFloorPlanner, Value},
+<a href=#612 id=612 data-nosnippet>612</a>            plonk::{
+<a href=#613 id=613 data-nosnippet>613</a>                Advice, Any, Assigned, Assignment, Circuit, Column, ConstraintSystem, Error, Fixed,
+<a href=#614 id=614 data-nosnippet>614</a>                FloorPlanner, Instance, Selector,
+<a href=#615 id=615 data-nosnippet>615</a>            },
+<a href=#616 id=616 data-nosnippet>616</a>        };
+<a href=#617 id=617 data-nosnippet>617</a>        <span class="kw">use </span>pasta_curves::pallas;
+<a href=#618 id=618 data-nosnippet>618</a>        <span class="kw">use </span>std::collections::BTreeSet;
+<a href=#619 id=619 data-nosnippet>619</a>
+<a href=#620 id=620 data-nosnippet>620</a>        <span class="doccomment">/// An `Assignment` that records the copy constraints and selector enables, so a test
+<a href=#621 id=621 data-nosnippet>621</a>        /// can inspect both which equality constraints and at which rows they were emitted.
+<a href=#622 id=622 data-nosnippet>622</a>        </span><span class="attr">#[derive(Default)]
+<a href=#623 id=623 data-nosnippet>623</a>        </span><span class="kw">struct </span>CopyRecorder {
+<a href=#624 id=624 data-nosnippet>624</a>            copies: Vec&lt;(Column&lt;Any&gt;, usize, Column&lt;Any&gt;, usize)&gt;,
+<a href=#625 id=625 data-nosnippet>625</a>            selectors: Vec&lt;(Selector, usize)&gt;,
+<a href=#626 id=626 data-nosnippet>626</a>        }
+<a href=#627 id=627 data-nosnippet>627</a>
+<a href=#628 id=628 data-nosnippet>628</a>        <span class="kw">impl </span>Assignment&lt;pallas::Base&gt; <span class="kw">for </span>CopyRecorder {
+<a href=#629 id=629 data-nosnippet>629</a>            <span class="kw">fn </span>enter_region&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: N)
+<a href=#630 id=630 data-nosnippet>630</a>            <span class="kw">where
+<a href=#631 id=631 data-nosnippet>631</a>                </span>NR: Into&lt;String&gt;,
+<a href=#632 id=632 data-nosnippet>632</a>                N: FnOnce() -&gt; NR,
+<a href=#633 id=633 data-nosnippet>633</a>            {
+<a href=#634 id=634 data-nosnippet>634</a>            }
+<a href=#635 id=635 data-nosnippet>635</a>            <span class="kw">fn </span>exit_region(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {}
+<a href=#636 id=636 data-nosnippet>636</a>            <span class="kw">fn </span>enable_selector&lt;A, AR&gt;(
+<a href=#637 id=637 data-nosnippet>637</a>                <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#638 id=638 data-nosnippet>638</a>                <span class="kw">_</span>: A,
+<a href=#639 id=639 data-nosnippet>639</a>                selector: <span class="kw-2">&amp;</span>Selector,
+<a href=#640 id=640 data-nosnippet>640</a>                row: usize,
+<a href=#641 id=641 data-nosnippet>641</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+<a href=#642 id=642 data-nosnippet>642</a>            <span class="kw">where
+<a href=#643 id=643 data-nosnippet>643</a>                </span>A: FnOnce() -&gt; AR,
+<a href=#644 id=644 data-nosnippet>644</a>                AR: Into&lt;String&gt;,
+<a href=#645 id=645 data-nosnippet>645</a>            {
+<a href=#646 id=646 data-nosnippet>646</a>                <span class="self">self</span>.selectors.push((<span class="kw-2">*</span>selector, row));
+<a href=#647 id=647 data-nosnippet>647</a>                <span class="prelude-val">Ok</span>(())
+<a href=#648 id=648 data-nosnippet>648</a>            }
+<a href=#649 id=649 data-nosnippet>649</a>            <span class="kw">fn </span>query_instance(
+<a href=#650 id=650 data-nosnippet>650</a>                <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#651 id=651 data-nosnippet>651</a>                <span class="kw">_</span>: Column&lt;Instance&gt;,
+<a href=#652 id=652 data-nosnippet>652</a>                <span class="kw">_</span>: usize,
+<a href=#653 id=653 data-nosnippet>653</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;Value&lt;pallas::Base&gt;, Error&gt; {
+<a href=#654 id=654 data-nosnippet>654</a>                <span class="prelude-val">Ok</span>(Value::unknown())
+<a href=#655 id=655 data-nosnippet>655</a>            }
+<a href=#656 id=656 data-nosnippet>656</a>            <span class="kw">fn </span>assign_advice&lt;V, VR, A, AR&gt;(
+<a href=#657 id=657 data-nosnippet>657</a>                <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#658 id=658 data-nosnippet>658</a>                <span class="kw">_</span>: A,
+<a href=#659 id=659 data-nosnippet>659</a>                <span class="kw">_</span>: Column&lt;Advice&gt;,
+<a href=#660 id=660 data-nosnippet>660</a>                <span class="kw">_</span>: usize,
+<a href=#661 id=661 data-nosnippet>661</a>                <span class="kw">_</span>: V,
+<a href=#662 id=662 data-nosnippet>662</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+<a href=#663 id=663 data-nosnippet>663</a>            <span class="kw">where
+<a href=#664 id=664 data-nosnippet>664</a>                </span>V: FnOnce() -&gt; Value&lt;VR&gt;,
+<a href=#665 id=665 data-nosnippet>665</a>                VR: Into&lt;Assigned&lt;pallas::Base&gt;&gt;,
+<a href=#666 id=666 data-nosnippet>666</a>                A: FnOnce() -&gt; AR,
+<a href=#667 id=667 data-nosnippet>667</a>                AR: Into&lt;String&gt;,
+<a href=#668 id=668 data-nosnippet>668</a>            {
+<a href=#669 id=669 data-nosnippet>669</a>                <span class="prelude-val">Ok</span>(())
+<a href=#670 id=670 data-nosnippet>670</a>            }
+<a href=#671 id=671 data-nosnippet>671</a>            <span class="kw">fn </span>assign_fixed&lt;V, VR, A, AR&gt;(
+<a href=#672 id=672 data-nosnippet>672</a>                <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#673 id=673 data-nosnippet>673</a>                <span class="kw">_</span>: A,
+<a href=#674 id=674 data-nosnippet>674</a>                <span class="kw">_</span>: Column&lt;Fixed&gt;,
+<a href=#675 id=675 data-nosnippet>675</a>                <span class="kw">_</span>: usize,
+<a href=#676 id=676 data-nosnippet>676</a>                <span class="kw">_</span>: V,
+<a href=#677 id=677 data-nosnippet>677</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt;
+<a href=#678 id=678 data-nosnippet>678</a>            <span class="kw">where
+<a href=#679 id=679 data-nosnippet>679</a>                </span>V: FnOnce() -&gt; Value&lt;VR&gt;,
+<a href=#680 id=680 data-nosnippet>680</a>                VR: Into&lt;Assigned&lt;pallas::Base&gt;&gt;,
+<a href=#681 id=681 data-nosnippet>681</a>                A: FnOnce() -&gt; AR,
+<a href=#682 id=682 data-nosnippet>682</a>                AR: Into&lt;String&gt;,
+<a href=#683 id=683 data-nosnippet>683</a>            {
+<a href=#684 id=684 data-nosnippet>684</a>                <span class="prelude-val">Ok</span>(())
+<a href=#685 id=685 data-nosnippet>685</a>            }
+<a href=#686 id=686 data-nosnippet>686</a>            <span class="kw">fn </span>copy(
+<a href=#687 id=687 data-nosnippet>687</a>                <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#688 id=688 data-nosnippet>688</a>                left_column: Column&lt;Any&gt;,
+<a href=#689 id=689 data-nosnippet>689</a>                left_row: usize,
+<a href=#690 id=690 data-nosnippet>690</a>                right_column: Column&lt;Any&gt;,
+<a href=#691 id=691 data-nosnippet>691</a>                right_row: usize,
+<a href=#692 id=692 data-nosnippet>692</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#693 id=693 data-nosnippet>693</a>                <span class="self">self</span>.copies
+<a href=#694 id=694 data-nosnippet>694</a>                    .push((left_column, left_row, right_column, right_row));
+<a href=#695 id=695 data-nosnippet>695</a>                <span class="prelude-val">Ok</span>(())
+<a href=#696 id=696 data-nosnippet>696</a>            }
+<a href=#697 id=697 data-nosnippet>697</a>            <span class="kw">fn </span>fill_from_row(
+<a href=#698 id=698 data-nosnippet>698</a>                <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#699 id=699 data-nosnippet>699</a>                <span class="kw">_</span>: Column&lt;Fixed&gt;,
+<a href=#700 id=700 data-nosnippet>700</a>                <span class="kw">_</span>: usize,
+<a href=#701 id=701 data-nosnippet>701</a>                <span class="kw">_</span>: Value&lt;Assigned&lt;pallas::Base&gt;&gt;,
+<a href=#702 id=702 data-nosnippet>702</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#703 id=703 data-nosnippet>703</a>                <span class="prelude-val">Ok</span>(())
+<a href=#704 id=704 data-nosnippet>704</a>            }
+<a href=#705 id=705 data-nosnippet>705</a>            <span class="kw">fn </span>push_namespace&lt;NR, N&gt;(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: N)
+<a href=#706 id=706 data-nosnippet>706</a>            <span class="kw">where
+<a href=#707 id=707 data-nosnippet>707</a>                </span>NR: Into&lt;String&gt;,
+<a href=#708 id=708 data-nosnippet>708</a>                N: FnOnce() -&gt; NR,
+<a href=#709 id=709 data-nosnippet>709</a>            {
+<a href=#710 id=710 data-nosnippet>710</a>            }
+<a href=#711 id=711 data-nosnippet>711</a>            <span class="kw">fn </span>pop_namespace(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw">_</span>: <span class="prelude-ty">Option</span>&lt;String&gt;) {}
+<a href=#712 id=712 data-nosnippet>712</a>        }
+<a href=#713 id=713 data-nosnippet>713</a>
+<a href=#714 id=714 data-nosnippet>714</a>        <span class="doccomment">/// Minimal circuit that performs a single variable-base scalar multiplication.
+<a href=#715 id=715 data-nosnippet>715</a>        </span><span class="kw">struct </span>MulCircuit {
+<a href=#716 id=716 data-nosnippet>716</a>            circuit_version: CircuitVersion,
+<a href=#717 id=717 data-nosnippet>717</a>        }
+<a href=#718 id=718 data-nosnippet>718</a>
+<a href=#719 id=719 data-nosnippet>719</a>        <span class="attr">#[derive(Clone)]
+<a href=#720 id=720 data-nosnippet>720</a>        </span><span class="kw">struct </span>MulConfig {
+<a href=#721 id=721 data-nosnippet>721</a>            ecc: EccConfig&lt;TestFixedBases&gt;,
+<a href=#722 id=722 data-nosnippet>722</a>            constants: Column&lt;Fixed&gt;,
+<a href=#723 id=723 data-nosnippet>723</a>        }
+<a href=#724 id=724 data-nosnippet>724</a>
+<a href=#725 id=725 data-nosnippet>725</a>        <span class="kw">impl </span>Circuit&lt;pallas::Base&gt; <span class="kw">for </span>MulCircuit {
+<a href=#726 id=726 data-nosnippet>726</a>            <span class="kw">type </span>Config = MulConfig;
+<a href=#727 id=727 data-nosnippet>727</a>            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
+<a href=#728 id=728 data-nosnippet>728</a>
+<a href=#729 id=729 data-nosnippet>729</a>            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+<a href=#730 id=730 data-nosnippet>730</a>                MulCircuit {
+<a href=#731 id=731 data-nosnippet>731</a>                    circuit_version: <span class="self">self</span>.circuit_version,
+<a href=#732 id=732 data-nosnippet>732</a>                }
+<a href=#733 id=733 data-nosnippet>733</a>            }
+<a href=#734 id=734 data-nosnippet>734</a>
+<a href=#735 id=735 data-nosnippet>735</a>            <span class="kw">fn </span>configure(meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;pallas::Base&gt;) -&gt; MulConfig {
+<a href=#736 id=736 data-nosnippet>736</a>                <span class="kw">let </span>advices = [
+<a href=#737 id=737 data-nosnippet>737</a>                    meta.advice_column(),
+<a href=#738 id=738 data-nosnippet>738</a>                    meta.advice_column(),
+<a href=#739 id=739 data-nosnippet>739</a>                    meta.advice_column(),
+<a href=#740 id=740 data-nosnippet>740</a>                    meta.advice_column(),
+<a href=#741 id=741 data-nosnippet>741</a>                    meta.advice_column(),
+<a href=#742 id=742 data-nosnippet>742</a>                    meta.advice_column(),
+<a href=#743 id=743 data-nosnippet>743</a>                    meta.advice_column(),
+<a href=#744 id=744 data-nosnippet>744</a>                    meta.advice_column(),
+<a href=#745 id=745 data-nosnippet>745</a>                    meta.advice_column(),
+<a href=#746 id=746 data-nosnippet>746</a>                    meta.advice_column(),
+<a href=#747 id=747 data-nosnippet>747</a>                ];
+<a href=#748 id=748 data-nosnippet>748</a>                <span class="kw">let </span>lookup_table = meta.lookup_table_column();
+<a href=#749 id=749 data-nosnippet>749</a>                <span class="kw">let </span>lagrange_coeffs = [
+<a href=#750 id=750 data-nosnippet>750</a>                    meta.fixed_column(),
+<a href=#751 id=751 data-nosnippet>751</a>                    meta.fixed_column(),
+<a href=#752 id=752 data-nosnippet>752</a>                    meta.fixed_column(),
+<a href=#753 id=753 data-nosnippet>753</a>                    meta.fixed_column(),
+<a href=#754 id=754 data-nosnippet>754</a>                    meta.fixed_column(),
+<a href=#755 id=755 data-nosnippet>755</a>                    meta.fixed_column(),
+<a href=#756 id=756 data-nosnippet>756</a>                    meta.fixed_column(),
+<a href=#757 id=757 data-nosnippet>757</a>                    meta.fixed_column(),
+<a href=#758 id=758 data-nosnippet>758</a>                ];
+<a href=#759 id=759 data-nosnippet>759</a>                <span class="kw">let </span>constants = meta.fixed_column();
+<a href=#760 id=760 data-nosnippet>760</a>                meta.enable_constant(constants);
+<a href=#761 id=761 data-nosnippet>761</a>                <span class="kw">let </span>range_check =
+<a href=#762 id=762 data-nosnippet>762</a>                    PallasLookupRangeCheckConfig::configure(meta, advices[<span class="number">9</span>], lookup_table);
+<a href=#763 id=763 data-nosnippet>763</a>                <span class="kw">let </span>ecc = EccChip::&lt;TestFixedBases&gt;::configure(
+<a href=#764 id=764 data-nosnippet>764</a>                    meta,
+<a href=#765 id=765 data-nosnippet>765</a>                    advices,
+<a href=#766 id=766 data-nosnippet>766</a>                    lagrange_coeffs,
+<a href=#767 id=767 data-nosnippet>767</a>                    range_check,
+<a href=#768 id=768 data-nosnippet>768</a>                );
+<a href=#769 id=769 data-nosnippet>769</a>                MulConfig { ecc, constants }
+<a href=#770 id=770 data-nosnippet>770</a>            }
+<a href=#771 id=771 data-nosnippet>771</a>
+<a href=#772 id=772 data-nosnippet>772</a>            <span class="kw">fn </span>synthesize(
+<a href=#773 id=773 data-nosnippet>773</a>                <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#774 id=774 data-nosnippet>774</a>                config: MulConfig,
+<a href=#775 id=775 data-nosnippet>775</a>                <span class="kw-2">mut </span>layouter: <span class="kw">impl </span>Layouter&lt;pallas::Base&gt;,
+<a href=#776 id=776 data-nosnippet>776</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#777 id=777 data-nosnippet>777</a>                <span class="kw">let </span>chip = EccChip::construct(config.ecc.clone(), <span class="self">self</span>.circuit_version);
+<a href=#778 id=778 data-nosnippet>778</a>                <span class="kw">let </span>base = NonIdentityPoint::new(
+<a href=#779 id=779 data-nosnippet>779</a>                    chip.clone(),
+<a href=#780 id=780 data-nosnippet>780</a>                    layouter.namespace(|| <span class="string">"base"</span>),
+<a href=#781 id=781 data-nosnippet>781</a>                    Value::known(pallas::Point::generator().to_affine()),
+<a href=#782 id=782 data-nosnippet>782</a>                )<span class="question-mark">?</span>;
+<a href=#783 id=783 data-nosnippet>783</a>                <span class="kw">let </span>scalar = chip.load_private(
+<a href=#784 id=784 data-nosnippet>784</a>                    layouter.namespace(|| <span class="string">"scalar"</span>),
+<a href=#785 id=785 data-nosnippet>785</a>                    config.ecc.advices[<span class="number">0</span>],
+<a href=#786 id=786 data-nosnippet>786</a>                    Value::known(pallas::Base::from(<span class="number">7</span>)),
+<a href=#787 id=787 data-nosnippet>787</a>                )<span class="question-mark">?</span>;
+<a href=#788 id=788 data-nosnippet>788</a>                <span class="kw">let </span>scalar =
+<a href=#789 id=789 data-nosnippet>789</a>                    ScalarVar::from_base(chip, layouter.namespace(|| <span class="string">"scalar var"</span>), <span class="kw-2">&amp;</span>scalar)<span class="question-mark">?</span>;
+<a href=#790 id=790 data-nosnippet>790</a>                base.mul(layouter.namespace(|| <span class="string">"[scalar] base"</span>), scalar)<span class="question-mark">?</span>;
+<a href=#791 id=791 data-nosnippet>791</a>                <span class="prelude-val">Ok</span>(())
+<a href=#792 id=792 data-nosnippet>792</a>            }
+<a href=#793 id=793 data-nosnippet>793</a>        }
+<a href=#794 id=794 data-nosnippet>794</a>
+<a href=#795 id=795 data-nosnippet>795</a>        <span class="kw">type </span>Copy = (Column&lt;Any&gt;, usize, Column&lt;Any&gt;, usize);
+<a href=#796 id=796 data-nosnippet>796</a>
+<a href=#797 id=797 data-nosnippet>797</a>        <span class="doccomment">/// Synthesizes `MulCircuit` for the given version through a [`CopyRecorder`].
+<a href=#798 id=798 data-nosnippet>798</a>        </span><span class="kw">fn </span>record(circuit_version: CircuitVersion) -&gt; CopyRecorder {
+<a href=#799 id=799 data-nosnippet>799</a>            <span class="kw">let </span>circuit = MulCircuit { circuit_version };
+<a href=#800 id=800 data-nosnippet>800</a>            <span class="kw">let </span><span class="kw-2">mut </span>cs = ConstraintSystem::&lt;pallas::Base&gt;::default();
+<a href=#801 id=801 data-nosnippet>801</a>            <span class="kw">let </span>config = MulCircuit::configure(<span class="kw-2">&amp;mut </span>cs);
+<a href=#802 id=802 data-nosnippet>802</a>            <span class="kw">let </span>constants = <span class="macro">vec!</span>[config.constants];
+<a href=#803 id=803 data-nosnippet>803</a>            <span class="kw">let </span><span class="kw-2">mut </span>recorder = CopyRecorder::default();
+<a href=#804 id=804 data-nosnippet>804</a>            &lt;MulCircuit <span class="kw">as </span>Circuit&lt;pallas::Base&gt;&gt;::FloorPlanner::synthesize(
+<a href=#805 id=805 data-nosnippet>805</a>                <span class="kw-2">&amp;mut </span>recorder,
+<a href=#806 id=806 data-nosnippet>806</a>                <span class="kw-2">&amp;</span>circuit,
+<a href=#807 id=807 data-nosnippet>807</a>                config,
+<a href=#808 id=808 data-nosnippet>808</a>                constants,
+<a href=#809 id=809 data-nosnippet>809</a>            )
+<a href=#810 id=810 data-nosnippet>810</a>            .expect(<span class="string">"synthesis should succeed"</span>);
+<a href=#811 id=811 data-nosnippet>811</a>            recorder
+<a href=#812 id=812 data-nosnippet>812</a>        }
+<a href=#813 id=813 data-nosnippet>813</a>
+<a href=#814 id=814 data-nosnippet>814</a>        <span class="attr">#[test]
+<a href=#815 id=815 data-nosnippet>815</a>        </span><span class="kw">fn </span>fixed_circuit_anchors_incomplete_base() {
+<a href=#816 id=816 data-nosnippet>816</a>            <span class="kw">let </span>insecure: BTreeSet&lt;Copy&gt; = record(CircuitVersion::InsecureUnanchoredBase)
+<a href=#817 id=817 data-nosnippet>817</a>                .copies
+<a href=#818 id=818 data-nosnippet>818</a>                .into_iter()
+<a href=#819 id=819 data-nosnippet>819</a>                .collect();
+<a href=#820 id=820 data-nosnippet>820</a>            <span class="kw">let </span>fixed_recorder = record(CircuitVersion::AnchoredBase);
+<a href=#821 id=821 data-nosnippet>821</a>            <span class="kw">let </span>fixed: BTreeSet&lt;Copy&gt; = fixed_recorder.copies.iter().cloned().collect();
+<a href=#822 id=822 data-nosnippet>822</a>
+<a href=#823 id=823 data-nosnippet>823</a>            <span class="comment">// The fix only adds copy constraints; it changes no layout. So every copy the
+<a href=#824 id=824 data-nosnippet>824</a>            // insecure circuit emits must still be present in the fixed circuit.
+<a href=#825 id=825 data-nosnippet>825</a>            </span><span class="macro">assert!</span>(
+<a href=#826 id=826 data-nosnippet>826</a>                insecure.is_subset(<span class="kw-2">&amp;</span>fixed),
+<a href=#827 id=827 data-nosnippet>827</a>                <span class="string">"the fixed circuit must retain every copy constraint of the insecure circuit"
+<a href=#828 id=828 data-nosnippet>828</a>            </span>);
+<a href=#829 id=829 data-nosnippet>829</a>
+<a href=#830 id=830 data-nosnippet>830</a>            <span class="comment">// `configure` is deterministic, so this config's columns/selectors match the run.
+<a href=#831 id=831 data-nosnippet>831</a>            </span><span class="kw">let </span>config = MulCircuit::configure(<span class="kw-2">&amp;mut </span>ConstraintSystem::default());
+<a href=#832 id=832 data-nosnippet>832</a>            <span class="kw">let </span>mul = <span class="kw-2">&amp;</span>config.ecc.mul;
+<a href=#833 id=833 data-nosnippet>833</a>            <span class="kw">let </span>x_p = Column::&lt;Any&gt;::from(mul.hi_config.double_and_add.x_p);
+<a href=#834 id=834 data-nosnippet>834</a>            <span class="kw">let </span>y_p = Column::&lt;Any&gt;::from(mul.hi_config.y_p);
+<a href=#835 id=835 data-nosnippet>835</a>
+<a href=#836 id=836 data-nosnippet>836</a>            <span class="comment">// The anchor must sit on the first incomplete-addition row — the row where the
+<a href=#837 id=837 data-nosnippet>837</a>            // `(x_p, y_p)`-constancy gate `q_mul_2` first fires — so that constancy propagates
+<a href=#838 id=838 data-nosnippet>838</a>            // the base to every subsequent incomplete row. (Anchoring one row earlier, on the
+<a href=#839 id=839 data-nosnippet>839</a>            // `q_mul_1` doubling row, would not be reached by the constancy chain.)
+<a href=#840 id=840 data-nosnippet>840</a>            </span><span class="kw">let </span>first_incomplete_row = fixed_recorder
+<a href=#841 id=841 data-nosnippet>841</a>                .selectors
+<a href=#842 id=842 data-nosnippet>842</a>                .iter()
+<a href=#843 id=843 data-nosnippet>843</a>                .filter(|(s, <span class="kw">_</span>)| <span class="kw-2">*</span>s == mul.hi_config.q_mul_2)
+<a href=#844 id=844 data-nosnippet>844</a>                .map(|<span class="kw-2">&amp;</span>(<span class="kw">_</span>, row)| row)
+<a href=#845 id=845 data-nosnippet>845</a>                .min()
+<a href=#846 id=846 data-nosnippet>846</a>                .expect(<span class="string">"q_mul_2 must be enabled"</span>);
+<a href=#847 id=847 data-nosnippet>847</a>
+<a href=#848 id=848 data-nosnippet>848</a>            <span class="comment">// The `hi` and `lo` halves share the `x_p`/`y_p` columns (see `Config::configure`) and
+<a href=#849 id=849 data-nosnippet>849</a>            // anchor at the same offset, so the four `copy_advice` calls collapse to exactly two
+<a href=#850 id=850 data-nosnippet>850</a>            // new equality constraints. Each is recorded as `(dst_col, dst_row, src_col, src_row)`:
+<a href=#851 id=851 data-nosnippet>851</a>            // the `copy_advice` writes the anchored cell at `(x_p|y_p, first_incomplete_row)` and
+<a href=#852 id=852 data-nosnippet>852</a>            // equates it to the source base coordinate, which this circuit witnesses in the same
+<a href=#853 id=853 data-nosnippet>853</a>            // column at row 0.
+<a href=#854 id=854 data-nosnippet>854</a>            </span><span class="kw">let </span>extra: BTreeSet&lt;Copy&gt; = fixed.difference(<span class="kw-2">&amp;</span>insecure).cloned().collect();
+<a href=#855 id=855 data-nosnippet>855</a>            <span class="macro">assert_eq!</span>(
+<a href=#856 id=856 data-nosnippet>856</a>                extra,
+<a href=#857 id=857 data-nosnippet>857</a>                [
+<a href=#858 id=858 data-nosnippet>858</a>                    (x_p, first_incomplete_row, x_p, <span class="number">0</span>),
+<a href=#859 id=859 data-nosnippet>859</a>                    (y_p, first_incomplete_row, y_p, <span class="number">0</span>),
+<a href=#860 id=860 data-nosnippet>860</a>                ]
+<a href=#861 id=861 data-nosnippet>861</a>                .into_iter()
+<a href=#862 id=862 data-nosnippet>862</a>                .collect()
+<a href=#863 id=863 data-nosnippet>863</a>            );
+<a href=#864 id=864 data-nosnippet>864</a>        }
+<a href=#865 id=865 data-nosnippet>865</a>    }
+<a href=#866 id=866 data-nosnippet>866</a>}
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/commitment.rs`."><title>commitment.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/commitment.rs`."><title>commitment.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/poly/</div>commitment.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! This module contains an implementation of the polynomial commitment scheme
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/poly/</div>commitment.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! This module contains an implementation of the polynomial commitment scheme
 <a href=#2 id=2 data-nosnippet>2</a>//! described in the [Halo][halo] paper.
 <a href=#3 id=3 data-nosnippet>3</a>//!
 <a href=#4 id=4 data-nosnippet>4</a>//! [halo]: https://eprint.iacr.org/2019/1021
@@ -23,7 +23,7 @@
 <a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::helpers::CurveRead;
 <a href=#9 id=9 data-nosnippet>9</a>
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>ff::{Field, PrimeField};
-<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>group::{prime::PrimeCurveAffine, Curve, Group};
+<a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>group::{Curve, Group};
 <a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>std::ops::{Add, AddAssign, Mul, MulAssign};
 <a href=#13 id=13 data-nosnippet>13</a>
 <a href=#14 id=14 data-nosnippet>14</a><span class="kw">mod </span>msm;
@@ -89,7 +89,7 @@
 <a href=#74 id=74 data-nosnippet>74</a>
 <a href=#75 id=75 data-nosnippet>75</a>        <span class="comment">// Let's evaluate all of the Lagrange basis polynomials
 <a href=#76 id=76 data-nosnippet>76</a>        // using an inverse FFT.
-<a href=#77 id=77 data-nosnippet>77</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>alpha_inv = &lt;&lt;C <span class="kw">as </span>PrimeCurveAffine&gt;::Curve <span class="kw">as </span>Group&gt;::Scalar::ROOT_OF_UNITY_INV;
+<a href=#77 id=77 data-nosnippet>77</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>alpha_inv = &lt;&lt;C <span class="kw">as </span>group::CurveAffine&gt;::Curve <span class="kw">as </span>Group&gt;::Scalar::ROOT_OF_UNITY_INV;
 <a href=#78 id=78 data-nosnippet>78</a>        <span class="kw">for _ in </span>k..C::Scalar::S {
 <a href=#79 id=79 data-nosnippet>79</a>            alpha_inv = alpha_inv.square();
 <a href=#80 id=80 data-nosnippet>80</a>        }
@@ -166,7 +166,7 @@
 <a href=#151 id=151 data-nosnippet>151</a>
 <a href=#152 id=152 data-nosnippet>152</a>    <span class="doccomment">/// Generates an empty multiscalar multiplication struct using the
 <a href=#153 id=153 data-nosnippet>153</a>    /// appropriate params.
-<a href=#154 id=154 data-nosnippet>154</a>    </span><span class="kw">pub fn </span>empty_msm(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MSM&lt;C&gt; {
+<a href=#154 id=154 data-nosnippet>154</a>    </span><span class="kw">pub fn </span>empty_msm(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MSM&lt;<span class="lifetime">'_</span>, C&gt; {
 <a href=#155 id=155 data-nosnippet>155</a>        MSM::new(<span class="self">self</span>)
 <a href=#156 id=156 data-nosnippet>156</a>    }
 <a href=#157 id=157 data-nosnippet>157</a>
@@ -274,122 +274,125 @@
 <a href=#259 id=259 data-nosnippet>259</a></span><span class="kw">fn </span>test_commit_lagrange_epaffine() {
 <a href=#260 id=260 data-nosnippet>260</a>    <span class="kw">const </span>K: u32 = <span class="number">6</span>;
 <a href=#261 id=261 data-nosnippet>261</a>
-<a href=#262 id=262 data-nosnippet>262</a>    <span class="kw">use </span>rand_core::OsRng;
-<a href=#263 id=263 data-nosnippet>263</a>
-<a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EpAffine, Fq};
-<a href=#265 id=265 data-nosnippet>265</a>    <span class="kw">let </span>params = Params::&lt;EpAffine&gt;::new(K);
-<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">let </span>domain = <span class="kw">super</span>::EvaluationDomain::new(<span class="number">1</span>, K);
-<a href=#267 id=267 data-nosnippet>267</a>
-<a href=#268 id=268 data-nosnippet>268</a>    <span class="kw">let </span><span class="kw-2">mut </span>a = domain.empty_lagrange();
-<a href=#269 id=269 data-nosnippet>269</a>
-<a href=#270 id=270 data-nosnippet>270</a>    <span class="kw">for </span>(i, a) <span class="kw">in </span>a.iter_mut().enumerate() {
-<a href=#271 id=271 data-nosnippet>271</a>        <span class="kw-2">*</span>a = Fq::from(i <span class="kw">as </span>u64);
-<a href=#272 id=272 data-nosnippet>272</a>    }
-<a href=#273 id=273 data-nosnippet>273</a>
-<a href=#274 id=274 data-nosnippet>274</a>    <span class="kw">let </span>b = domain.lagrange_to_coeff(a.clone());
-<a href=#275 id=275 data-nosnippet>275</a>
-<a href=#276 id=276 data-nosnippet>276</a>    <span class="kw">let </span>alpha = Blind(Fq::random(OsRng));
-<a href=#277 id=277 data-nosnippet>277</a>
-<a href=#278 id=278 data-nosnippet>278</a>    <span class="macro">assert_eq!</span>(params.commit(<span class="kw-2">&amp;</span>b, alpha), params.commit_lagrange(<span class="kw-2">&amp;</span>a, alpha));
-<a href=#279 id=279 data-nosnippet>279</a>}
-<a href=#280 id=280 data-nosnippet>280</a>
-<a href=#281 id=281 data-nosnippet>281</a><span class="attr">#[test]
-<a href=#282 id=282 data-nosnippet>282</a></span><span class="kw">fn </span>test_commit_lagrange_eqaffine() {
-<a href=#283 id=283 data-nosnippet>283</a>    <span class="kw">const </span>K: u32 = <span class="number">6</span>;
-<a href=#284 id=284 data-nosnippet>284</a>
-<a href=#285 id=285 data-nosnippet>285</a>    <span class="kw">use </span>rand_core::OsRng;
-<a href=#286 id=286 data-nosnippet>286</a>
-<a href=#287 id=287 data-nosnippet>287</a>    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EqAffine, Fp};
-<a href=#288 id=288 data-nosnippet>288</a>    <span class="kw">let </span>params = Params::&lt;EqAffine&gt;::new(K);
-<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">let </span>domain = <span class="kw">super</span>::EvaluationDomain::new(<span class="number">1</span>, K);
-<a href=#290 id=290 data-nosnippet>290</a>
-<a href=#291 id=291 data-nosnippet>291</a>    <span class="kw">let </span><span class="kw-2">mut </span>a = domain.empty_lagrange();
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="kw">use </span>rand::rngs::SysRng;
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="kw">use </span>rand_core::UnwrapErr;
+<a href=#264 id=264 data-nosnippet>264</a>
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EpAffine, Fq};
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">let </span>params = Params::&lt;EpAffine&gt;::new(K);
+<a href=#267 id=267 data-nosnippet>267</a>    <span class="kw">let </span>domain = <span class="kw">super</span>::EvaluationDomain::new(<span class="number">1</span>, K);
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">let </span><span class="kw-2">mut </span>a = domain.empty_lagrange();
+<a href=#270 id=270 data-nosnippet>270</a>
+<a href=#271 id=271 data-nosnippet>271</a>    <span class="kw">for </span>(i, a) <span class="kw">in </span>a.iter_mut().enumerate() {
+<a href=#272 id=272 data-nosnippet>272</a>        <span class="kw-2">*</span>a = Fq::from(i <span class="kw">as </span>u64);
+<a href=#273 id=273 data-nosnippet>273</a>    }
+<a href=#274 id=274 data-nosnippet>274</a>
+<a href=#275 id=275 data-nosnippet>275</a>    <span class="kw">let </span>b = domain.lagrange_to_coeff(a.clone());
+<a href=#276 id=276 data-nosnippet>276</a>
+<a href=#277 id=277 data-nosnippet>277</a>    <span class="kw">let </span>alpha = Blind(Fq::random(<span class="kw-2">&amp;mut </span>UnwrapErr(SysRng)));
+<a href=#278 id=278 data-nosnippet>278</a>
+<a href=#279 id=279 data-nosnippet>279</a>    <span class="macro">assert_eq!</span>(params.commit(<span class="kw-2">&amp;</span>b, alpha), params.commit_lagrange(<span class="kw-2">&amp;</span>a, alpha));
+<a href=#280 id=280 data-nosnippet>280</a>}
+<a href=#281 id=281 data-nosnippet>281</a>
+<a href=#282 id=282 data-nosnippet>282</a><span class="attr">#[test]
+<a href=#283 id=283 data-nosnippet>283</a></span><span class="kw">fn </span>test_commit_lagrange_eqaffine() {
+<a href=#284 id=284 data-nosnippet>284</a>    <span class="kw">const </span>K: u32 = <span class="number">6</span>;
+<a href=#285 id=285 data-nosnippet>285</a>
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">use </span>rand::rngs::SysRng;
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="kw">use </span>rand_core::UnwrapErr;
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EqAffine, Fp};
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="kw">let </span>params = Params::&lt;EqAffine&gt;::new(K);
+<a href=#291 id=291 data-nosnippet>291</a>    <span class="kw">let </span>domain = <span class="kw">super</span>::EvaluationDomain::new(<span class="number">1</span>, K);
 <a href=#292 id=292 data-nosnippet>292</a>
-<a href=#293 id=293 data-nosnippet>293</a>    <span class="kw">for </span>(i, a) <span class="kw">in </span>a.iter_mut().enumerate() {
-<a href=#294 id=294 data-nosnippet>294</a>        <span class="kw-2">*</span>a = Fp::from(i <span class="kw">as </span>u64);
-<a href=#295 id=295 data-nosnippet>295</a>    }
-<a href=#296 id=296 data-nosnippet>296</a>
-<a href=#297 id=297 data-nosnippet>297</a>    <span class="kw">let </span>b = domain.lagrange_to_coeff(a.clone());
+<a href=#293 id=293 data-nosnippet>293</a>    <span class="kw">let </span><span class="kw-2">mut </span>a = domain.empty_lagrange();
+<a href=#294 id=294 data-nosnippet>294</a>
+<a href=#295 id=295 data-nosnippet>295</a>    <span class="kw">for </span>(i, a) <span class="kw">in </span>a.iter_mut().enumerate() {
+<a href=#296 id=296 data-nosnippet>296</a>        <span class="kw-2">*</span>a = Fp::from(i <span class="kw">as </span>u64);
+<a href=#297 id=297 data-nosnippet>297</a>    }
 <a href=#298 id=298 data-nosnippet>298</a>
-<a href=#299 id=299 data-nosnippet>299</a>    <span class="kw">let </span>alpha = Blind(Fp::random(OsRng));
+<a href=#299 id=299 data-nosnippet>299</a>    <span class="kw">let </span>b = domain.lagrange_to_coeff(a.clone());
 <a href=#300 id=300 data-nosnippet>300</a>
-<a href=#301 id=301 data-nosnippet>301</a>    <span class="macro">assert_eq!</span>(params.commit(<span class="kw-2">&amp;</span>b, alpha), params.commit_lagrange(<span class="kw-2">&amp;</span>a, alpha));
-<a href=#302 id=302 data-nosnippet>302</a>}
-<a href=#303 id=303 data-nosnippet>303</a>
-<a href=#304 id=304 data-nosnippet>304</a><span class="attr">#[test]
-<a href=#305 id=305 data-nosnippet>305</a></span><span class="kw">fn </span>test_opening_proof() {
-<a href=#306 id=306 data-nosnippet>306</a>    <span class="kw">const </span>K: u32 = <span class="number">6</span>;
-<a href=#307 id=307 data-nosnippet>307</a>
-<a href=#308 id=308 data-nosnippet>308</a>    <span class="kw">use </span>ff::Field;
-<a href=#309 id=309 data-nosnippet>309</a>    <span class="kw">use </span>rand_core::OsRng;
-<a href=#310 id=310 data-nosnippet>310</a>
-<a href=#311 id=311 data-nosnippet>311</a>    <span class="kw">use super</span>::{
-<a href=#312 id=312 data-nosnippet>312</a>        commitment::{Blind, Params},
-<a href=#313 id=313 data-nosnippet>313</a>        EvaluationDomain,
-<a href=#314 id=314 data-nosnippet>314</a>    };
-<a href=#315 id=315 data-nosnippet>315</a>    <span class="kw">use </span><span class="kw">crate</span>::arithmetic::eval_polynomial;
-<a href=#316 id=316 data-nosnippet>316</a>    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EpAffine, Fq};
-<a href=#317 id=317 data-nosnippet>317</a>    <span class="kw">use </span><span class="kw">crate</span>::transcript::{
-<a href=#318 id=318 data-nosnippet>318</a>        Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
-<a href=#319 id=319 data-nosnippet>319</a>    };
-<a href=#320 id=320 data-nosnippet>320</a>
-<a href=#321 id=321 data-nosnippet>321</a>    <span class="kw">let </span>rng = OsRng;
-<a href=#322 id=322 data-nosnippet>322</a>
-<a href=#323 id=323 data-nosnippet>323</a>    <span class="kw">let </span>params = Params::&lt;EpAffine&gt;::new(K);
-<a href=#324 id=324 data-nosnippet>324</a>    <span class="kw">let </span><span class="kw-2">mut </span>params_buffer = <span class="macro">vec!</span>[];
-<a href=#325 id=325 data-nosnippet>325</a>    params.write(<span class="kw-2">&amp;mut </span>params_buffer).unwrap();
-<a href=#326 id=326 data-nosnippet>326</a>    <span class="kw">let </span>params: Params&lt;EpAffine&gt; = Params::read::&lt;<span class="kw">_</span>&gt;(<span class="kw-2">&amp;mut &amp;</span>params_buffer[..]).unwrap();
-<a href=#327 id=327 data-nosnippet>327</a>
-<a href=#328 id=328 data-nosnippet>328</a>    <span class="kw">let </span>domain = EvaluationDomain::new(<span class="number">1</span>, K);
-<a href=#329 id=329 data-nosnippet>329</a>
-<a href=#330 id=330 data-nosnippet>330</a>    <span class="kw">let </span><span class="kw-2">mut </span>px = domain.empty_coeff();
-<a href=#331 id=331 data-nosnippet>331</a>
-<a href=#332 id=332 data-nosnippet>332</a>    <span class="kw">for </span>(i, a) <span class="kw">in </span>px.iter_mut().enumerate() {
-<a href=#333 id=333 data-nosnippet>333</a>        <span class="kw-2">*</span>a = Fq::from(i <span class="kw">as </span>u64);
-<a href=#334 id=334 data-nosnippet>334</a>    }
-<a href=#335 id=335 data-nosnippet>335</a>
-<a href=#336 id=336 data-nosnippet>336</a>    <span class="kw">let </span>blind = Blind(Fq::random(rng));
-<a href=#337 id=337 data-nosnippet>337</a>
-<a href=#338 id=338 data-nosnippet>338</a>    <span class="kw">let </span>p = params.commit(<span class="kw-2">&amp;</span>px, blind).to_affine();
-<a href=#339 id=339 data-nosnippet>339</a>
-<a href=#340 id=340 data-nosnippet>340</a>    <span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bWrite::&lt;Vec&lt;u8&gt;, EpAffine, Challenge255&lt;EpAffine&gt;&gt;::init(<span class="macro">vec!</span>[]);
-<a href=#341 id=341 data-nosnippet>341</a>    transcript.write_point(p).unwrap();
-<a href=#342 id=342 data-nosnippet>342</a>    <span class="kw">let </span>x = transcript.squeeze_challenge_scalar::&lt;()&gt;();
-<a href=#343 id=343 data-nosnippet>343</a>    <span class="comment">// Evaluate the polynomial
-<a href=#344 id=344 data-nosnippet>344</a>    </span><span class="kw">let </span>v = eval_polynomial(<span class="kw-2">&amp;</span>px, <span class="kw-2">*</span>x);
-<a href=#345 id=345 data-nosnippet>345</a>    transcript.write_scalar(v).unwrap();
-<a href=#346 id=346 data-nosnippet>346</a>
-<a href=#347 id=347 data-nosnippet>347</a>    <span class="kw">let </span>(proof, ch_prover) = {
-<a href=#348 id=348 data-nosnippet>348</a>        create_proof(<span class="kw-2">&amp;</span>params, rng, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">&amp;</span>px, blind, <span class="kw-2">*</span>x).unwrap();
-<a href=#349 id=349 data-nosnippet>349</a>        <span class="kw">let </span>ch_prover = transcript.squeeze_challenge();
-<a href=#350 id=350 data-nosnippet>350</a>        (transcript.finalize(), ch_prover)
-<a href=#351 id=351 data-nosnippet>351</a>    };
-<a href=#352 id=352 data-nosnippet>352</a>
-<a href=#353 id=353 data-nosnippet>353</a>    <span class="comment">// Verify the opening proof
-<a href=#354 id=354 data-nosnippet>354</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bRead::&lt;<span class="kw-2">&amp;</span>[u8], EpAffine, Challenge255&lt;EpAffine&gt;&gt;::init(<span class="kw-2">&amp;</span>proof[..]);
-<a href=#355 id=355 data-nosnippet>355</a>    <span class="kw">let </span>p_prime = transcript.read_point().unwrap();
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="macro">assert_eq!</span>(p, p_prime);
-<a href=#357 id=357 data-nosnippet>357</a>    <span class="kw">let </span>x_prime = transcript.squeeze_challenge_scalar::&lt;()&gt;();
-<a href=#358 id=358 data-nosnippet>358</a>    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>x, <span class="kw-2">*</span>x_prime);
-<a href=#359 id=359 data-nosnippet>359</a>    <span class="kw">let </span>v_prime = transcript.read_scalar().unwrap();
-<a href=#360 id=360 data-nosnippet>360</a>    <span class="macro">assert_eq!</span>(v, v_prime);
-<a href=#361 id=361 data-nosnippet>361</a>
-<a href=#362 id=362 data-nosnippet>362</a>    <span class="kw">let </span><span class="kw-2">mut </span>commitment_msm = params.empty_msm();
-<a href=#363 id=363 data-nosnippet>363</a>    commitment_msm.append_term(Field::ONE, p);
-<a href=#364 id=364 data-nosnippet>364</a>    <span class="kw">let </span>guard = verify_proof(<span class="kw-2">&amp;</span>params, commitment_msm, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">*</span>x, v).unwrap();
-<a href=#365 id=365 data-nosnippet>365</a>    <span class="kw">let </span>ch_verifier = transcript.squeeze_challenge();
-<a href=#366 id=366 data-nosnippet>366</a>    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>ch_prover, <span class="kw-2">*</span>ch_verifier);
-<a href=#367 id=367 data-nosnippet>367</a>
-<a href=#368 id=368 data-nosnippet>368</a>    <span class="comment">// Test guard behavior prior to checking another proof
-<a href=#369 id=369 data-nosnippet>369</a>    </span>{
-<a href=#370 id=370 data-nosnippet>370</a>        <span class="comment">// Test use_challenges()
-<a href=#371 id=371 data-nosnippet>371</a>        </span><span class="kw">let </span>msm_challenges = guard.clone().use_challenges();
-<a href=#372 id=372 data-nosnippet>372</a>        <span class="macro">assert!</span>(msm_challenges.eval());
-<a href=#373 id=373 data-nosnippet>373</a>
-<a href=#374 id=374 data-nosnippet>374</a>        <span class="comment">// Test use_g()
-<a href=#375 id=375 data-nosnippet>375</a>        </span><span class="kw">let </span>g = guard.compute_g();
-<a href=#376 id=376 data-nosnippet>376</a>        <span class="kw">let </span>(msm_g, _accumulator) = guard.clone().use_g(g);
-<a href=#377 id=377 data-nosnippet>377</a>        <span class="macro">assert!</span>(msm_g.eval());
-<a href=#378 id=378 data-nosnippet>378</a>    }
-<a href=#379 id=379 data-nosnippet>379</a>}
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="kw">let </span>alpha = Blind(Fp::random(<span class="kw-2">&amp;mut </span>UnwrapErr(SysRng)));
+<a href=#302 id=302 data-nosnippet>302</a>
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="macro">assert_eq!</span>(params.commit(<span class="kw-2">&amp;</span>b, alpha), params.commit_lagrange(<span class="kw-2">&amp;</span>a, alpha));
+<a href=#304 id=304 data-nosnippet>304</a>}
+<a href=#305 id=305 data-nosnippet>305</a>
+<a href=#306 id=306 data-nosnippet>306</a><span class="attr">#[test]
+<a href=#307 id=307 data-nosnippet>307</a></span><span class="kw">fn </span>test_opening_proof() {
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="kw">const </span>K: u32 = <span class="number">6</span>;
+<a href=#309 id=309 data-nosnippet>309</a>
+<a href=#310 id=310 data-nosnippet>310</a>    <span class="kw">use </span>ff::Field;
+<a href=#311 id=311 data-nosnippet>311</a>    <span class="kw">use </span>rand::rngs::SysRng;
+<a href=#312 id=312 data-nosnippet>312</a>    <span class="kw">use </span>rand_core::UnwrapErr;
+<a href=#313 id=313 data-nosnippet>313</a>
+<a href=#314 id=314 data-nosnippet>314</a>    <span class="kw">use super</span>::{
+<a href=#315 id=315 data-nosnippet>315</a>        commitment::{Blind, Params},
+<a href=#316 id=316 data-nosnippet>316</a>        EvaluationDomain,
+<a href=#317 id=317 data-nosnippet>317</a>    };
+<a href=#318 id=318 data-nosnippet>318</a>    <span class="kw">use </span><span class="kw">crate</span>::arithmetic::eval_polynomial;
+<a href=#319 id=319 data-nosnippet>319</a>    <span class="kw">use </span><span class="kw">crate</span>::pasta::{EpAffine, Fq};
+<a href=#320 id=320 data-nosnippet>320</a>    <span class="kw">use </span><span class="kw">crate</span>::transcript::{
+<a href=#321 id=321 data-nosnippet>321</a>        Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
+<a href=#322 id=322 data-nosnippet>322</a>    };
+<a href=#323 id=323 data-nosnippet>323</a>
+<a href=#324 id=324 data-nosnippet>324</a>    <span class="kw">let </span><span class="kw-2">mut </span>rng = UnwrapErr(SysRng);
+<a href=#325 id=325 data-nosnippet>325</a>
+<a href=#326 id=326 data-nosnippet>326</a>    <span class="kw">let </span>params = Params::&lt;EpAffine&gt;::new(K);
+<a href=#327 id=327 data-nosnippet>327</a>    <span class="kw">let </span><span class="kw-2">mut </span>params_buffer = <span class="macro">vec!</span>[];
+<a href=#328 id=328 data-nosnippet>328</a>    params.write(<span class="kw-2">&amp;mut </span>params_buffer).unwrap();
+<a href=#329 id=329 data-nosnippet>329</a>    <span class="kw">let </span>params: Params&lt;EpAffine&gt; = Params::read::&lt;<span class="kw">_</span>&gt;(<span class="kw-2">&amp;mut &amp;</span>params_buffer[..]).unwrap();
+<a href=#330 id=330 data-nosnippet>330</a>
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">let </span>domain = EvaluationDomain::new(<span class="number">1</span>, K);
+<a href=#332 id=332 data-nosnippet>332</a>
+<a href=#333 id=333 data-nosnippet>333</a>    <span class="kw">let </span><span class="kw-2">mut </span>px = domain.empty_coeff();
+<a href=#334 id=334 data-nosnippet>334</a>
+<a href=#335 id=335 data-nosnippet>335</a>    <span class="kw">for </span>(i, a) <span class="kw">in </span>px.iter_mut().enumerate() {
+<a href=#336 id=336 data-nosnippet>336</a>        <span class="kw-2">*</span>a = Fq::from(i <span class="kw">as </span>u64);
+<a href=#337 id=337 data-nosnippet>337</a>    }
+<a href=#338 id=338 data-nosnippet>338</a>
+<a href=#339 id=339 data-nosnippet>339</a>    <span class="kw">let </span>blind = Blind(Fq::random(<span class="kw-2">&amp;mut </span>rng));
+<a href=#340 id=340 data-nosnippet>340</a>
+<a href=#341 id=341 data-nosnippet>341</a>    <span class="kw">let </span>p = params.commit(<span class="kw-2">&amp;</span>px, blind).to_affine();
+<a href=#342 id=342 data-nosnippet>342</a>
+<a href=#343 id=343 data-nosnippet>343</a>    <span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bWrite::&lt;Vec&lt;u8&gt;, EpAffine, Challenge255&lt;EpAffine&gt;&gt;::init(<span class="macro">vec!</span>[]);
+<a href=#344 id=344 data-nosnippet>344</a>    transcript.write_point(p).unwrap();
+<a href=#345 id=345 data-nosnippet>345</a>    <span class="kw">let </span>x = transcript.squeeze_challenge_scalar::&lt;()&gt;();
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="comment">// Evaluate the polynomial
+<a href=#347 id=347 data-nosnippet>347</a>    </span><span class="kw">let </span>v = eval_polynomial(<span class="kw-2">&amp;</span>px, <span class="kw-2">*</span>x);
+<a href=#348 id=348 data-nosnippet>348</a>    transcript.write_scalar(v).unwrap();
+<a href=#349 id=349 data-nosnippet>349</a>
+<a href=#350 id=350 data-nosnippet>350</a>    <span class="kw">let </span>(proof, ch_prover) = {
+<a href=#351 id=351 data-nosnippet>351</a>        create_proof(<span class="kw-2">&amp;</span>params, rng, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">&amp;</span>px, blind, <span class="kw-2">*</span>x).unwrap();
+<a href=#352 id=352 data-nosnippet>352</a>        <span class="kw">let </span>ch_prover = transcript.squeeze_challenge();
+<a href=#353 id=353 data-nosnippet>353</a>        (transcript.finalize(), ch_prover)
+<a href=#354 id=354 data-nosnippet>354</a>    };
+<a href=#355 id=355 data-nosnippet>355</a>
+<a href=#356 id=356 data-nosnippet>356</a>    <span class="comment">// Verify the opening proof
+<a href=#357 id=357 data-nosnippet>357</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bRead::&lt;<span class="kw-2">&amp;</span>[u8], EpAffine, Challenge255&lt;EpAffine&gt;&gt;::init(<span class="kw-2">&amp;</span>proof[..]);
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="kw">let </span>p_prime = transcript.read_point().unwrap();
+<a href=#359 id=359 data-nosnippet>359</a>    <span class="macro">assert_eq!</span>(p, p_prime);
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="kw">let </span>x_prime = transcript.squeeze_challenge_scalar::&lt;()&gt;();
+<a href=#361 id=361 data-nosnippet>361</a>    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>x, <span class="kw-2">*</span>x_prime);
+<a href=#362 id=362 data-nosnippet>362</a>    <span class="kw">let </span>v_prime = transcript.read_scalar().unwrap();
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="macro">assert_eq!</span>(v, v_prime);
+<a href=#364 id=364 data-nosnippet>364</a>
+<a href=#365 id=365 data-nosnippet>365</a>    <span class="kw">let </span><span class="kw-2">mut </span>commitment_msm = params.empty_msm();
+<a href=#366 id=366 data-nosnippet>366</a>    commitment_msm.append_term(Field::ONE, p);
+<a href=#367 id=367 data-nosnippet>367</a>    <span class="kw">let </span>guard = verify_proof(<span class="kw-2">&amp;</span>params, commitment_msm, <span class="kw-2">&amp;mut </span>transcript, <span class="kw-2">*</span>x, v).unwrap();
+<a href=#368 id=368 data-nosnippet>368</a>    <span class="kw">let </span>ch_verifier = transcript.squeeze_challenge();
+<a href=#369 id=369 data-nosnippet>369</a>    <span class="macro">assert_eq!</span>(<span class="kw-2">*</span>ch_prover, <span class="kw-2">*</span>ch_verifier);
+<a href=#370 id=370 data-nosnippet>370</a>
+<a href=#371 id=371 data-nosnippet>371</a>    <span class="comment">// Test guard behavior prior to checking another proof
+<a href=#372 id=372 data-nosnippet>372</a>    </span>{
+<a href=#373 id=373 data-nosnippet>373</a>        <span class="comment">// Test use_challenges()
+<a href=#374 id=374 data-nosnippet>374</a>        </span><span class="kw">let </span>msm_challenges = guard.clone().use_challenges();
+<a href=#375 id=375 data-nosnippet>375</a>        <span class="macro">assert!</span>(msm_challenges.eval());
+<a href=#376 id=376 data-nosnippet>376</a>
+<a href=#377 id=377 data-nosnippet>377</a>        <span class="comment">// Test use_g()
+<a href=#378 id=378 data-nosnippet>378</a>        </span><span class="kw">let </span>g = guard.compute_g();
+<a href=#379 id=379 data-nosnippet>379</a>        <span class="kw">let </span>(msm_g, _accumulator) = guard.clone().use_g(g);
+<a href=#380 id=380 data-nosnippet>380</a>        <span class="macro">assert!</span>(msm_g.eval());
+<a href=#381 id=381 data-nosnippet>381</a>    }
+<a href=#382 id=382 data-nosnippet>382</a>}
 </code></pre></div></section></main></body></html>

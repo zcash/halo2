@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/evaluator.rs`."><title>evaluator.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/evaluator.rs`."><title>evaluator.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/poly/</div>evaluator.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/poly/</div>evaluator.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::{
 <a href=#2 id=2 data-nosnippet>2</a>    cmp, fmt,
 <a href=#3 id=3 data-nosnippet>3</a>    hash::{Hash, Hasher},
 <a href=#4 id=4 data-nosnippet>4</a>    marker::PhantomData,
@@ -41,10 +41,10 @@
 <a href=#26 id=26 data-nosnippet>26</a>    <span class="comment">// Calculate the ideal chunk size for the desired throughput. We use ceiling
 <a href=#27 id=27 data-nosnippet>27</a>    // division to ensure the minimum chunk size is 1.
 <a href=#28 id=28 data-nosnippet>28</a>    //     chunk_size = ceil(poly_len / num_chunks)
-<a href=#29 id=29 data-nosnippet>29</a>    </span><span class="kw">let </span>chunk_size = (poly_len + num_chunks - <span class="number">1</span>) / num_chunks;
+<a href=#29 id=29 data-nosnippet>29</a>    </span><span class="kw">let </span>chunk_size = poly_len.div_ceil(num_chunks);
 <a href=#30 id=30 data-nosnippet>30</a>    <span class="comment">// Now re-calculate num_chunks from the actual chunk size.
 <a href=#31 id=31 data-nosnippet>31</a>    //     num_chunks = ceil(poly_len / chunk_size)
-<a href=#32 id=32 data-nosnippet>32</a>    </span><span class="kw">let </span>num_chunks = (poly_len + chunk_size - <span class="number">1</span>) / chunk_size;
+<a href=#32 id=32 data-nosnippet>32</a>    </span><span class="kw">let </span>num_chunks = poly_len.div_ceil(chunk_size);
 <a href=#33 id=33 data-nosnippet>33</a>
 <a href=#34 id=34 data-nosnippet>34</a>    (chunk_size, num_chunks)
 <a href=#35 id=35 data-nosnippet>35</a>}
@@ -90,7 +90,7 @@
 <a href=#75 id=75 data-nosnippet>75</a>        AstLeaf {
 <a href=#76 id=76 data-nosnippet>76</a>            index: <span class="self">self</span>.index,
 <a href=#77 id=77 data-nosnippet>77</a>            rotation,
-<a href=#78 id=78 data-nosnippet>78</a>            _evaluator: PhantomData::default(),
+<a href=#78 id=78 data-nosnippet>78</a>            _evaluator: PhantomData,
 <a href=#79 id=79 data-nosnippet>79</a>        }
 <a href=#80 id=80 data-nosnippet>80</a>    }
 <a href=#81 id=81 data-nosnippet>81</a>}
@@ -136,7 +136,7 @@
 <a href=#121 id=121 data-nosnippet>121</a>        AstLeaf {
 <a href=#122 id=122 data-nosnippet>122</a>            index,
 <a href=#123 id=123 data-nosnippet>123</a>            rotation: Rotation::cur(),
-<a href=#124 id=124 data-nosnippet>124</a>            _evaluator: PhantomData::default(),
+<a href=#124 id=124 data-nosnippet>124</a>            _evaluator: PhantomData,
 <a href=#125 id=125 data-nosnippet>125</a>        }
 <a href=#126 id=126 data-nosnippet>126</a>    }
 <a href=#127 id=127 data-nosnippet>127</a>
@@ -656,7 +656,7 @@
 <a href=#641 id=641 data-nosnippet>641</a>                <span class="kw">return</span>;
 <a href=#642 id=642 data-nosnippet>642</a>            }
 <a href=#643 id=643 data-nosnippet>643</a>        };
-<a href=#644 id=644 data-nosnippet>644</a>        <span class="macro">eprintln!</span>(<span class="string">"Testing short-chunk regression with k = {}"</span>, k);
+<a href=#644 id=644 data-nosnippet>644</a>        <span class="macro">eprintln!</span>(<span class="string">"Testing short-chunk regression with k = {k}"</span>);
 <a href=#645 id=645 data-nosnippet>645</a>
 <a href=#646 id=646 data-nosnippet>646</a>        <span class="kw">fn </span>test_case&lt;E: Copy + Send + Sync, B: BasisOps&gt;(
 <a href=#647 id=647 data-nosnippet>647</a>            k: u32,

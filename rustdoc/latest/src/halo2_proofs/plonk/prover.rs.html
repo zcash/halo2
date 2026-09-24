@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/plonk/prover.rs`."><title>prover.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/plonk/prover.rs`."><title>prover.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,9 +13,9 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/plonk/</div>prover.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>ff::Field;
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/plonk/</div>prover.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>ff::Field;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>group::Curve;
-<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>rand_core::RngCore;
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>rand_core::Rng;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::iter;
 <a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span>std::ops::RangeTo;
 <a href=#6 id=6 data-nosnippet>6</a>
@@ -50,7 +50,7 @@
 <a href=#35 id=35 data-nosnippet>35</a></span><span class="kw">pub fn </span>create_proof&lt;
 <a href=#36 id=36 data-nosnippet>36</a>    C: CurveAffine,
 <a href=#37 id=37 data-nosnippet>37</a>    E: EncodedChallenge&lt;C&gt;,
-<a href=#38 id=38 data-nosnippet>38</a>    R: RngCore,
+<a href=#38 id=38 data-nosnippet>38</a>    R: Rng,
 <a href=#39 id=39 data-nosnippet>39</a>    T: TranscriptWrite&lt;C, E&gt;,
 <a href=#40 id=40 data-nosnippet>40</a>    ConcreteCircuit: Circuit&lt;C::Scalar&gt;,
 <a href=#41 id=41 data-nosnippet>41</a>&gt;(
@@ -558,8 +558,8 @@
 <a href=#543 id=543 data-nosnippet>543</a>    <span class="kw">let </span>expressions = advice_cosets
 <a href=#544 id=544 data-nosnippet>544</a>        .iter()
 <a href=#545 id=545 data-nosnippet>545</a>        .zip(instance_cosets.iter())
-<a href=#546 id=546 data-nosnippet>546</a>        .zip(permutation_expressions.into_iter())
-<a href=#547 id=547 data-nosnippet>547</a>        .zip(lookup_expressions.into_iter())
+<a href=#546 id=546 data-nosnippet>546</a>        .zip(permutation_expressions)
+<a href=#547 id=547 data-nosnippet>547</a>        .zip(lookup_expressions)
 <a href=#548 id=548 data-nosnippet>548</a>        .flat_map(
 <a href=#549 id=549 data-nosnippet>549</a>            |(((advice_cosets, instance_cosets), permutation_expressions), lookup_expressions)| {
 <a href=#550 id=550 data-nosnippet>550</a>                <span class="kw">let </span>fixed_cosets = <span class="kw-2">&amp;</span>fixed_cosets;
@@ -593,7 +593,7 @@
 <a href=#578 id=578 data-nosnippet>578</a>                        })
 <a href=#579 id=579 data-nosnippet>579</a>                    }))
 <a href=#580 id=580 data-nosnippet>580</a>                    <span class="comment">// Permutation constraints, if any.
-<a href=#581 id=581 data-nosnippet>581</a>                    </span>.chain(permutation_expressions.into_iter())
+<a href=#581 id=581 data-nosnippet>581</a>                    </span>.chain(permutation_expressions)
 <a href=#582 id=582 data-nosnippet>582</a>                    <span class="comment">// Lookup constraints, if any.
 <a href=#583 id=583 data-nosnippet>583</a>                    </span>.chain(lookup_expressions.into_iter().flatten())
 <a href=#584 id=584 data-nosnippet>584</a>            },
@@ -611,7 +611,7 @@
 <a href=#596 id=596 data-nosnippet>596</a>    )<span class="question-mark">?</span>;
 <a href=#597 id=597 data-nosnippet>597</a>
 <a href=#598 id=598 data-nosnippet>598</a>    <span class="kw">let </span>x: ChallengeX&lt;<span class="kw">_</span>&gt; = transcript.squeeze_challenge_scalar();
-<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw">let </span>xn = x.pow(<span class="kw-2">&amp;</span>[params.n, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
+<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw">let </span>xn = x.pow([params.n, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>]);
 <a href=#600 id=600 data-nosnippet>600</a>
 <a href=#601 id=601 data-nosnippet>601</a>    <span class="comment">// Compute and hash instance evals for each circuit instance
 <a href=#602 id=602 data-nosnippet>602</a>    </span><span class="kw">for </span>instance <span class="kw">in </span>instance.iter() {
@@ -719,7 +719,7 @@
 <a href=#704 id=704 data-nosnippet>704</a>                        }),
 <a href=#705 id=705 data-nosnippet>705</a>                )
 <a href=#706 id=706 data-nosnippet>706</a>                .chain(permutation.open(pk, x))
-<a href=#707 id=707 data-nosnippet>707</a>                .chain(lookups.iter().flat_map(<span class="kw">move </span>|p| p.open(pk, x)).into_iter())
+<a href=#707 id=707 data-nosnippet>707</a>                .chain(lookups.iter().flat_map(<span class="kw">move </span>|p| p.open(pk, x)))
 <a href=#708 id=708 data-nosnippet>708</a>        })
 <a href=#709 id=709 data-nosnippet>709</a>        .chain(
 <a href=#710 id=710 data-nosnippet>710</a>            pk.vk
@@ -747,56 +747,57 @@
 <a href=#732 id=732 data-nosnippet>732</a>        transcript::{Blake2bWrite, Challenge255},
 <a href=#733 id=733 data-nosnippet>733</a>    };
 <a href=#734 id=734 data-nosnippet>734</a>    <span class="kw">use </span>pasta_curves::EqAffine;
-<a href=#735 id=735 data-nosnippet>735</a>    <span class="kw">use </span>rand_core::OsRng;
-<a href=#736 id=736 data-nosnippet>736</a>
-<a href=#737 id=737 data-nosnippet>737</a>    <span class="attr">#[derive(Clone, Copy)]
-<a href=#738 id=738 data-nosnippet>738</a>    </span><span class="kw">struct </span>MyCircuit;
-<a href=#739 id=739 data-nosnippet>739</a>
-<a href=#740 id=740 data-nosnippet>740</a>    <span class="kw">impl</span>&lt;F: Field&gt; Circuit&lt;F&gt; <span class="kw">for </span>MyCircuit {
-<a href=#741 id=741 data-nosnippet>741</a>        <span class="kw">type </span>Config = ();
-<a href=#742 id=742 data-nosnippet>742</a>
-<a href=#743 id=743 data-nosnippet>743</a>        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
-<a href=#744 id=744 data-nosnippet>744</a>
-<a href=#745 id=745 data-nosnippet>745</a>        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-<a href=#746 id=746 data-nosnippet>746</a>            <span class="kw-2">*</span><span class="self">self
-<a href=#747 id=747 data-nosnippet>747</a>        </span>}
-<a href=#748 id=748 data-nosnippet>748</a>
-<a href=#749 id=749 data-nosnippet>749</a>        <span class="kw">fn </span>configure(_meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;) -&gt; <span class="self">Self</span>::Config {}
-<a href=#750 id=750 data-nosnippet>750</a>
-<a href=#751 id=751 data-nosnippet>751</a>        <span class="kw">fn </span>synthesize(
-<a href=#752 id=752 data-nosnippet>752</a>            <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#753 id=753 data-nosnippet>753</a>            _config: <span class="self">Self</span>::Config,
-<a href=#754 id=754 data-nosnippet>754</a>            _layouter: <span class="kw">impl </span><span class="kw">crate</span>::circuit::Layouter&lt;F&gt;,
-<a href=#755 id=755 data-nosnippet>755</a>        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-<a href=#756 id=756 data-nosnippet>756</a>            <span class="prelude-val">Ok</span>(())
-<a href=#757 id=757 data-nosnippet>757</a>        }
-<a href=#758 id=758 data-nosnippet>758</a>    }
-<a href=#759 id=759 data-nosnippet>759</a>
-<a href=#760 id=760 data-nosnippet>760</a>    <span class="kw">let </span>params: Params&lt;EqAffine&gt; = Params::new(<span class="number">3</span>);
-<a href=#761 id=761 data-nosnippet>761</a>    <span class="kw">let </span>vk = keygen_vk(<span class="kw-2">&amp;</span>params, <span class="kw-2">&amp;</span>MyCircuit).expect(<span class="string">"keygen_vk should not fail"</span>);
-<a href=#762 id=762 data-nosnippet>762</a>    <span class="kw">let </span>pk = keygen_pk(<span class="kw-2">&amp;</span>params, vk, <span class="kw-2">&amp;</span>MyCircuit).expect(<span class="string">"keygen_pk should not fail"</span>);
-<a href=#763 id=763 data-nosnippet>763</a>    <span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bWrite::&lt;<span class="kw">_</span>, <span class="kw">_</span>, Challenge255&lt;<span class="kw">_</span>&gt;&gt;::init(<span class="macro">vec!</span>[]);
-<a href=#764 id=764 data-nosnippet>764</a>
-<a href=#765 id=765 data-nosnippet>765</a>    <span class="comment">// Create proof with wrong number of instances
-<a href=#766 id=766 data-nosnippet>766</a>    </span><span class="kw">let </span>proof = create_proof(
-<a href=#767 id=767 data-nosnippet>767</a>        <span class="kw-2">&amp;</span>params,
-<a href=#768 id=768 data-nosnippet>768</a>        <span class="kw-2">&amp;</span>pk,
-<a href=#769 id=769 data-nosnippet>769</a>        <span class="kw-2">&amp;</span>[MyCircuit, MyCircuit],
-<a href=#770 id=770 data-nosnippet>770</a>        <span class="kw-2">&amp;</span>[],
-<a href=#771 id=771 data-nosnippet>771</a>        OsRng,
-<a href=#772 id=772 data-nosnippet>772</a>        <span class="kw-2">&amp;mut </span>transcript,
-<a href=#773 id=773 data-nosnippet>773</a>    );
-<a href=#774 id=774 data-nosnippet>774</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(proof.unwrap_err(), Error::InvalidInstances));
-<a href=#775 id=775 data-nosnippet>775</a>
-<a href=#776 id=776 data-nosnippet>776</a>    <span class="comment">// Create proof with correct number of instances
-<a href=#777 id=777 data-nosnippet>777</a>    </span>create_proof(
-<a href=#778 id=778 data-nosnippet>778</a>        <span class="kw-2">&amp;</span>params,
-<a href=#779 id=779 data-nosnippet>779</a>        <span class="kw-2">&amp;</span>pk,
-<a href=#780 id=780 data-nosnippet>780</a>        <span class="kw-2">&amp;</span>[MyCircuit, MyCircuit],
-<a href=#781 id=781 data-nosnippet>781</a>        <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]],
-<a href=#782 id=782 data-nosnippet>782</a>        OsRng,
-<a href=#783 id=783 data-nosnippet>783</a>        <span class="kw-2">&amp;mut </span>transcript,
-<a href=#784 id=784 data-nosnippet>784</a>    )
-<a href=#785 id=785 data-nosnippet>785</a>    .expect(<span class="string">"proof generation should not fail"</span>);
-<a href=#786 id=786 data-nosnippet>786</a>}
+<a href=#735 id=735 data-nosnippet>735</a>    <span class="kw">use </span>rand::rngs::SysRng;
+<a href=#736 id=736 data-nosnippet>736</a>    <span class="kw">use </span>rand_core::UnwrapErr;
+<a href=#737 id=737 data-nosnippet>737</a>
+<a href=#738 id=738 data-nosnippet>738</a>    <span class="attr">#[derive(Clone, Copy)]
+<a href=#739 id=739 data-nosnippet>739</a>    </span><span class="kw">struct </span>MyCircuit;
+<a href=#740 id=740 data-nosnippet>740</a>
+<a href=#741 id=741 data-nosnippet>741</a>    <span class="kw">impl</span>&lt;F: Field&gt; Circuit&lt;F&gt; <span class="kw">for </span>MyCircuit {
+<a href=#742 id=742 data-nosnippet>742</a>        <span class="kw">type </span>Config = ();
+<a href=#743 id=743 data-nosnippet>743</a>
+<a href=#744 id=744 data-nosnippet>744</a>        <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
+<a href=#745 id=745 data-nosnippet>745</a>
+<a href=#746 id=746 data-nosnippet>746</a>        <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+<a href=#747 id=747 data-nosnippet>747</a>            <span class="kw-2">*</span><span class="self">self
+<a href=#748 id=748 data-nosnippet>748</a>        </span>}
+<a href=#749 id=749 data-nosnippet>749</a>
+<a href=#750 id=750 data-nosnippet>750</a>        <span class="kw">fn </span>configure(_meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;F&gt;) -&gt; <span class="self">Self</span>::Config {}
+<a href=#751 id=751 data-nosnippet>751</a>
+<a href=#752 id=752 data-nosnippet>752</a>        <span class="kw">fn </span>synthesize(
+<a href=#753 id=753 data-nosnippet>753</a>            <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#754 id=754 data-nosnippet>754</a>            _config: <span class="self">Self</span>::Config,
+<a href=#755 id=755 data-nosnippet>755</a>            _layouter: <span class="kw">impl </span><span class="kw">crate</span>::circuit::Layouter&lt;F&gt;,
+<a href=#756 id=756 data-nosnippet>756</a>        ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#757 id=757 data-nosnippet>757</a>            <span class="prelude-val">Ok</span>(())
+<a href=#758 id=758 data-nosnippet>758</a>        }
+<a href=#759 id=759 data-nosnippet>759</a>    }
+<a href=#760 id=760 data-nosnippet>760</a>
+<a href=#761 id=761 data-nosnippet>761</a>    <span class="kw">let </span>params: Params&lt;EqAffine&gt; = Params::new(<span class="number">3</span>);
+<a href=#762 id=762 data-nosnippet>762</a>    <span class="kw">let </span>vk = keygen_vk(<span class="kw-2">&amp;</span>params, <span class="kw-2">&amp;</span>MyCircuit).expect(<span class="string">"keygen_vk should not fail"</span>);
+<a href=#763 id=763 data-nosnippet>763</a>    <span class="kw">let </span>pk = keygen_pk(<span class="kw-2">&amp;</span>params, vk, <span class="kw-2">&amp;</span>MyCircuit).expect(<span class="string">"keygen_pk should not fail"</span>);
+<a href=#764 id=764 data-nosnippet>764</a>    <span class="kw">let </span><span class="kw-2">mut </span>transcript = Blake2bWrite::&lt;<span class="kw">_</span>, <span class="kw">_</span>, Challenge255&lt;<span class="kw">_</span>&gt;&gt;::init(<span class="macro">vec!</span>[]);
+<a href=#765 id=765 data-nosnippet>765</a>
+<a href=#766 id=766 data-nosnippet>766</a>    <span class="comment">// Create proof with wrong number of instances
+<a href=#767 id=767 data-nosnippet>767</a>    </span><span class="kw">let </span>proof = create_proof(
+<a href=#768 id=768 data-nosnippet>768</a>        <span class="kw-2">&amp;</span>params,
+<a href=#769 id=769 data-nosnippet>769</a>        <span class="kw-2">&amp;</span>pk,
+<a href=#770 id=770 data-nosnippet>770</a>        <span class="kw-2">&amp;</span>[MyCircuit, MyCircuit],
+<a href=#771 id=771 data-nosnippet>771</a>        <span class="kw-2">&amp;</span>[],
+<a href=#772 id=772 data-nosnippet>772</a>        UnwrapErr(SysRng),
+<a href=#773 id=773 data-nosnippet>773</a>        <span class="kw-2">&amp;mut </span>transcript,
+<a href=#774 id=774 data-nosnippet>774</a>    );
+<a href=#775 id=775 data-nosnippet>775</a>    <span class="macro">assert!</span>(<span class="macro">matches!</span>(proof.unwrap_err(), Error::InvalidInstances));
+<a href=#776 id=776 data-nosnippet>776</a>
+<a href=#777 id=777 data-nosnippet>777</a>    <span class="comment">// Create proof with correct number of instances
+<a href=#778 id=778 data-nosnippet>778</a>    </span>create_proof(
+<a href=#779 id=779 data-nosnippet>779</a>        <span class="kw-2">&amp;</span>params,
+<a href=#780 id=780 data-nosnippet>780</a>        <span class="kw-2">&amp;</span>pk,
+<a href=#781 id=781 data-nosnippet>781</a>        <span class="kw-2">&amp;</span>[MyCircuit, MyCircuit],
+<a href=#782 id=782 data-nosnippet>782</a>        <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>[], <span class="kw-2">&amp;</span>[]],
+<a href=#783 id=783 data-nosnippet>783</a>        UnwrapErr(SysRng),
+<a href=#784 id=784 data-nosnippet>784</a>        <span class="kw-2">&amp;mut </span>transcript,
+<a href=#785 id=785 data-nosnippet>785</a>    )
+<a href=#786 id=786 data-nosnippet>786</a>    .expect(<span class="string">"proof generation should not fail"</span>);
+<a href=#787 id=787 data-nosnippet>787</a>}
 </code></pre></div></section></main></body></html>

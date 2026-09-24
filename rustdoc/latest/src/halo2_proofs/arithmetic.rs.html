@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/arithmetic.rs`."><title>arithmetic.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/arithmetic.rs`."><title>arithmetic.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/</div>arithmetic.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! This module provides common utilities, traits and structures for group,
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/</div>arithmetic.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! This module provides common utilities, traits and structures for group,
 <a href=#2 id=2 data-nosnippet>2</a>//! field and polynomial arithmetic.
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">pub use </span>ff::Field;
@@ -90,7 +90,7 @@
 <a href=#75 id=75 data-nosnippet>75</a>        <span class="comment">// get segmentation and add coeff to buckets content
 <a href=#76 id=76 data-nosnippet>76</a>        </span><span class="kw">for </span>(coeff, base) <span class="kw">in </span>coeffs.iter().zip(bases.iter()) {
 <a href=#77 id=77 data-nosnippet>77</a>            <span class="kw">let </span>seg = <span class="self">self</span>.get_at::&lt;C::Scalar&gt;(i, <span class="kw-2">&amp;</span>coeff.to_repr());
-<a href=#78 id=78 data-nosnippet>78</a>            <span class="kw">if </span><span class="macro">seg !</span>= <span class="number">0 </span>{
+<a href=#78 id=78 data-nosnippet>78</a>            <span class="kw">if </span>seg != <span class="number">0 </span>{
 <a href=#79 id=79 data-nosnippet>79</a>                <span class="self">self</span>.coeffs[seg - <span class="number">1</span>].add_assign(base);
 <a href=#80 id=80 data-nosnippet>80</a>            }
 <a href=#81 id=81 data-nosnippet>81</a>        }
@@ -403,7 +403,7 @@
 <a href=#388 id=388 data-nosnippet>388</a>            <span class="kw">for </span>x_k <span class="kw">in </span>points
 <a href=#389 id=389 data-nosnippet>389</a>                .iter()
 <a href=#390 id=390 data-nosnippet>390</a>                .enumerate()
-<a href=#391 id=391 data-nosnippet>391</a>                .filter(|<span class="kw-2">&amp;</span>(k, <span class="kw">_</span>)| <span class="macro">k !</span>= j)
+<a href=#391 id=391 data-nosnippet>391</a>                .filter(|<span class="kw-2">&amp;</span>(k, <span class="kw">_</span>)| k != j)
 <a href=#392 id=392 data-nosnippet>392</a>                .map(|a| a.<span class="number">1</span>)
 <a href=#393 id=393 data-nosnippet>393</a>            {
 <a href=#394 id=394 data-nosnippet>394</a>                denom.push(<span class="kw-2">*</span>x_j - x_k);
@@ -421,9 +421,9 @@
 <a href=#406 id=406 data-nosnippet>406</a>            <span class="kw">for </span>(x_k, denom) <span class="kw">in </span>points
 <a href=#407 id=407 data-nosnippet>407</a>                .iter()
 <a href=#408 id=408 data-nosnippet>408</a>                .enumerate()
-<a href=#409 id=409 data-nosnippet>409</a>                .filter(|<span class="kw-2">&amp;</span>(k, <span class="kw">_</span>)| <span class="macro">k !</span>= j)
+<a href=#409 id=409 data-nosnippet>409</a>                .filter(|<span class="kw-2">&amp;</span>(k, <span class="kw">_</span>)| k != j)
 <a href=#410 id=410 data-nosnippet>410</a>                .map(|a| a.<span class="number">1</span>)
-<a href=#411 id=411 data-nosnippet>411</a>                .zip(denoms.into_iter())
+<a href=#411 id=411 data-nosnippet>411</a>                .zip(denoms)
 <a href=#412 id=412 data-nosnippet>412</a>            {
 <a href=#413 id=413 data-nosnippet>413</a>                product.resize(tmp.len() + <span class="number">1</span>, F::ZERO);
 <a href=#414 id=414 data-nosnippet>414</a>                <span class="kw">for </span>((a, b), product) <span class="kw">in </span>tmp
@@ -438,7 +438,7 @@
 <a href=#423 id=423 data-nosnippet>423</a>            }
 <a href=#424 id=424 data-nosnippet>424</a>            <span class="macro">assert_eq!</span>(tmp.len(), points.len());
 <a href=#425 id=425 data-nosnippet>425</a>            <span class="macro">assert_eq!</span>(product.len(), points.len() - <span class="number">1</span>);
-<a href=#426 id=426 data-nosnippet>426</a>            <span class="kw">for </span>(final_coeff, interpolation_coeff) <span class="kw">in </span>final_poly.iter_mut().zip(tmp.into_iter()) {
+<a href=#426 id=426 data-nosnippet>426</a>            <span class="kw">for </span>(final_coeff, interpolation_coeff) <span class="kw">in </span>final_poly.iter_mut().zip(tmp) {
 <a href=#427 id=427 data-nosnippet>427</a>                <span class="kw-2">*</span>final_coeff += interpolation_coeff * eval;
 <a href=#428 id=428 data-nosnippet>428</a>            }
 <a href=#429 id=429 data-nosnippet>429</a>        }
@@ -447,48 +447,52 @@
 <a href=#432 id=432 data-nosnippet>432</a>}
 <a href=#433 id=433 data-nosnippet>433</a>
 <a href=#434 id=434 data-nosnippet>434</a><span class="attr">#[cfg(test)]
-<a href=#435 id=435 data-nosnippet>435</a></span><span class="kw">use </span>rand_core::OsRng;
-<a href=#436 id=436 data-nosnippet>436</a>
-<a href=#437 id=437 data-nosnippet>437</a><span class="attr">#[cfg(test)]
-<a href=#438 id=438 data-nosnippet>438</a></span><span class="kw">use </span><span class="kw">crate</span>::pasta::{Eq, EqAffine, Fp};
-<a href=#439 id=439 data-nosnippet>439</a>
-<a href=#440 id=440 data-nosnippet>440</a><span class="attr">#[test]
-<a href=#441 id=441 data-nosnippet>441</a></span><span class="kw">fn </span>test_multiexp() {
-<a href=#442 id=442 data-nosnippet>442</a>    <span class="kw">let </span>rng = OsRng;
-<a href=#443 id=443 data-nosnippet>443</a>    <span class="kw">let </span>k = <span class="number">8</span>;
-<a href=#444 id=444 data-nosnippet>444</a>
-<a href=#445 id=445 data-nosnippet>445</a>    <span class="kw">let </span>coeffs = (<span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; k)).map(|<span class="kw">_</span>| Fp::random(rng)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-<a href=#446 id=446 data-nosnippet>446</a>    <span class="kw">let </span>bases = (<span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; k))
-<a href=#447 id=447 data-nosnippet>447</a>        .map(|<span class="kw">_</span>| EqAffine::from(Eq::random(rng)))
-<a href=#448 id=448 data-nosnippet>448</a>        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-<a href=#449 id=449 data-nosnippet>449</a>
-<a href=#450 id=450 data-nosnippet>450</a>    <span class="kw">let </span>expected = best_multiexp(<span class="kw-2">&amp;</span>coeffs, <span class="kw-2">&amp;</span>bases);
-<a href=#451 id=451 data-nosnippet>451</a>    <span class="kw">let </span>actual = coeffs
-<a href=#452 id=452 data-nosnippet>452</a>        .iter()
-<a href=#453 id=453 data-nosnippet>453</a>        .zip(bases)
-<a href=#454 id=454 data-nosnippet>454</a>        .map(|(coeff, base)| base * coeff)
-<a href=#455 id=455 data-nosnippet>455</a>        .fold(Eq::identity(), |acc, val| acc + val);
-<a href=#456 id=456 data-nosnippet>456</a>
-<a href=#457 id=457 data-nosnippet>457</a>    <span class="macro">assert_eq!</span>(expected, actual);
-<a href=#458 id=458 data-nosnippet>458</a>}
-<a href=#459 id=459 data-nosnippet>459</a>
-<a href=#460 id=460 data-nosnippet>460</a><span class="attr">#[test]
-<a href=#461 id=461 data-nosnippet>461</a></span><span class="kw">fn </span>test_lagrange_interpolate() {
-<a href=#462 id=462 data-nosnippet>462</a>    <span class="kw">let </span>rng = OsRng;
+<a href=#435 id=435 data-nosnippet>435</a></span><span class="kw">use </span>rand::rngs::SysRng;
+<a href=#436 id=436 data-nosnippet>436</a><span class="attr">#[cfg(test)]
+<a href=#437 id=437 data-nosnippet>437</a></span><span class="kw">use </span>rand_core::UnwrapErr;
+<a href=#438 id=438 data-nosnippet>438</a>
+<a href=#439 id=439 data-nosnippet>439</a><span class="attr">#[cfg(test)]
+<a href=#440 id=440 data-nosnippet>440</a></span><span class="kw">use </span><span class="kw">crate</span>::pasta::{Eq, EqAffine, Fp};
+<a href=#441 id=441 data-nosnippet>441</a>
+<a href=#442 id=442 data-nosnippet>442</a><span class="attr">#[test]
+<a href=#443 id=443 data-nosnippet>443</a></span><span class="kw">fn </span>test_multiexp() {
+<a href=#444 id=444 data-nosnippet>444</a>    <span class="kw">let </span><span class="kw-2">mut </span>rng = UnwrapErr(SysRng);
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="kw">let </span>k = <span class="number">8</span>;
+<a href=#446 id=446 data-nosnippet>446</a>
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="kw">let </span>coeffs = (<span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; k))
+<a href=#448 id=448 data-nosnippet>448</a>        .map(|<span class="kw">_</span>| Fp::random(<span class="kw-2">&amp;mut </span>rng))
+<a href=#449 id=449 data-nosnippet>449</a>        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+<a href=#450 id=450 data-nosnippet>450</a>    <span class="kw">let </span>bases = (<span class="number">0</span>..(<span class="number">1 </span>&lt;&lt; k))
+<a href=#451 id=451 data-nosnippet>451</a>        .map(|<span class="kw">_</span>| EqAffine::from(Eq::random(<span class="kw-2">&amp;mut </span>rng)))
+<a href=#452 id=452 data-nosnippet>452</a>        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+<a href=#453 id=453 data-nosnippet>453</a>
+<a href=#454 id=454 data-nosnippet>454</a>    <span class="kw">let </span>expected = best_multiexp(<span class="kw-2">&amp;</span>coeffs, <span class="kw-2">&amp;</span>bases);
+<a href=#455 id=455 data-nosnippet>455</a>    <span class="kw">let </span>actual = coeffs
+<a href=#456 id=456 data-nosnippet>456</a>        .iter()
+<a href=#457 id=457 data-nosnippet>457</a>        .zip(bases)
+<a href=#458 id=458 data-nosnippet>458</a>        .map(|(coeff, base)| base * coeff)
+<a href=#459 id=459 data-nosnippet>459</a>        .fold(Eq::identity(), |acc, val| acc + val);
+<a href=#460 id=460 data-nosnippet>460</a>
+<a href=#461 id=461 data-nosnippet>461</a>    <span class="macro">assert_eq!</span>(expected, actual);
+<a href=#462 id=462 data-nosnippet>462</a>}
 <a href=#463 id=463 data-nosnippet>463</a>
-<a href=#464 id=464 data-nosnippet>464</a>    <span class="kw">let </span>points = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| Fp::random(rng)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-<a href=#465 id=465 data-nosnippet>465</a>    <span class="kw">let </span>evals = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| Fp::random(rng)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-<a href=#466 id=466 data-nosnippet>466</a>
-<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">for </span>coeffs <span class="kw">in </span><span class="number">0</span>..<span class="number">5 </span>{
-<a href=#468 id=468 data-nosnippet>468</a>        <span class="kw">let </span>points = <span class="kw-2">&amp;</span>points[<span class="number">0</span>..coeffs];
-<a href=#469 id=469 data-nosnippet>469</a>        <span class="kw">let </span>evals = <span class="kw-2">&amp;</span>evals[<span class="number">0</span>..coeffs];
+<a href=#464 id=464 data-nosnippet>464</a><span class="attr">#[test]
+<a href=#465 id=465 data-nosnippet>465</a></span><span class="kw">fn </span>test_lagrange_interpolate() {
+<a href=#466 id=466 data-nosnippet>466</a>    <span class="kw">let </span><span class="kw-2">mut </span>rng = UnwrapErr(SysRng);
+<a href=#467 id=467 data-nosnippet>467</a>
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="kw">let </span>points = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| Fp::random(<span class="kw-2">&amp;mut </span>rng)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+<a href=#469 id=469 data-nosnippet>469</a>    <span class="kw">let </span>evals = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| Fp::random(<span class="kw-2">&amp;mut </span>rng)).collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 <a href=#470 id=470 data-nosnippet>470</a>
-<a href=#471 id=471 data-nosnippet>471</a>        <span class="kw">let </span>poly = lagrange_interpolate(points, evals);
-<a href=#472 id=472 data-nosnippet>472</a>        <span class="macro">assert_eq!</span>(poly.len(), points.len());
-<a href=#473 id=473 data-nosnippet>473</a>
-<a href=#474 id=474 data-nosnippet>474</a>        <span class="kw">for </span>(point, eval) <span class="kw">in </span>points.iter().zip(evals) {
-<a href=#475 id=475 data-nosnippet>475</a>            <span class="macro">assert_eq!</span>(eval_polynomial(<span class="kw-2">&amp;</span>poly, <span class="kw-2">*</span>point), <span class="kw-2">*</span>eval);
-<a href=#476 id=476 data-nosnippet>476</a>        }
-<a href=#477 id=477 data-nosnippet>477</a>    }
-<a href=#478 id=478 data-nosnippet>478</a>}
+<a href=#471 id=471 data-nosnippet>471</a>    <span class="kw">for </span>coeffs <span class="kw">in </span><span class="number">0</span>..<span class="number">5 </span>{
+<a href=#472 id=472 data-nosnippet>472</a>        <span class="kw">let </span>points = <span class="kw-2">&amp;</span>points[<span class="number">0</span>..coeffs];
+<a href=#473 id=473 data-nosnippet>473</a>        <span class="kw">let </span>evals = <span class="kw-2">&amp;</span>evals[<span class="number">0</span>..coeffs];
+<a href=#474 id=474 data-nosnippet>474</a>
+<a href=#475 id=475 data-nosnippet>475</a>        <span class="kw">let </span>poly = lagrange_interpolate(points, evals);
+<a href=#476 id=476 data-nosnippet>476</a>        <span class="macro">assert_eq!</span>(poly.len(), points.len());
+<a href=#477 id=477 data-nosnippet>477</a>
+<a href=#478 id=478 data-nosnippet>478</a>        <span class="kw">for </span>(point, eval) <span class="kw">in </span>points.iter().zip(evals) {
+<a href=#479 id=479 data-nosnippet>479</a>            <span class="macro">assert_eq!</span>(eval_polynomial(<span class="kw-2">&amp;</span>poly, <span class="kw-2">*</span>point), <span class="kw-2">*</span>eval);
+<a href=#480 id=480 data-nosnippet>480</a>        }
+<a href=#481 id=481 data-nosnippet>481</a>    }
+<a href=#482 id=482 data-nosnippet>482</a>}
 </code></pre></div></section></main></body></html>

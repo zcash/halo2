@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/ecc/chip/mul/incomplete.rs`."><title>incomplete.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0-nightly (83e49b75e 2025-12-03)" data-channel="nightly" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../../../static.files/storage-e2aeef58.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_gadgets/src/ecc/chip/mul/incomplete.rs`."><title>incomplete.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="halo2_gadgets" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (6eeff9a52 2026-09-23)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,7 +13,7 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/ecc/chip/mul/</div>incomplete.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::NonIdentityEccPoint;
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_gadgets/ecc/chip/mul/</div>incomplete.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::{CircuitVersion, NonIdentityEccPoint};
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use super</span>::{X, Y, Z};
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::utilities::bool_check;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -247,144 +247,171 @@
 <a href=#232 id=232 data-nosnippet>232</a>        base: <span class="kw-2">&amp;</span>NonIdentityEccPoint,
 <a href=#233 id=233 data-nosnippet>233</a>        bits: <span class="kw-2">&amp;</span>[Value&lt;bool&gt;],
 <a href=#234 id=234 data-nosnippet>234</a>        acc: (X&lt;pallas::Base&gt;, Y&lt;pallas::Base&gt;, Z&lt;pallas::Base&gt;),
-<a href=#235 id=235 data-nosnippet>235</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(X&lt;pallas::Base&gt;, Y&lt;pallas::Base&gt;, Vec&lt;Z&lt;pallas::Base&gt;&gt;), Error&gt; {
-<a href=#236 id=236 data-nosnippet>236</a>        <span class="comment">// Check that we have the correct number of bits for this double-and-add.
-<a href=#237 id=237 data-nosnippet>237</a>        </span><span class="macro">assert_eq!</span>(bits.len(), NUM_BITS);
-<a href=#238 id=238 data-nosnippet>238</a>
-<a href=#239 id=239 data-nosnippet>239</a>        <span class="comment">// Handle exceptional cases
-<a href=#240 id=240 data-nosnippet>240</a>        </span><span class="kw">let </span>(x_p, y_p) = (base.x.value().cloned(), base.y.value().cloned());
-<a href=#241 id=241 data-nosnippet>241</a>        <span class="kw">let </span>(x_a, y_a) = (acc.<span class="number">0</span>.value().cloned(), acc.<span class="number">1</span>.value().cloned());
-<a href=#242 id=242 data-nosnippet>242</a>
-<a href=#243 id=243 data-nosnippet>243</a>        x_a.zip(y_a)
-<a href=#244 id=244 data-nosnippet>244</a>            .zip(x_p.zip(y_p))
-<a href=#245 id=245 data-nosnippet>245</a>            .error_if_known_and(|((x_a, y_a), (x_p, y_p))| {
-<a href=#246 id=246 data-nosnippet>246</a>                <span class="comment">// A is point at infinity
-<a href=#247 id=247 data-nosnippet>247</a>                </span>(x_p.is_zero_vartime() &amp;&amp; y_p.is_zero_vartime())
-<a href=#248 id=248 data-nosnippet>248</a>                <span class="comment">// Q is point at infinity
-<a href=#249 id=249 data-nosnippet>249</a>                </span>|| (x_a.is_zero_vartime() &amp;&amp; y_a.is_zero_vartime())
-<a href=#250 id=250 data-nosnippet>250</a>                <span class="comment">// x_p = x_a
-<a href=#251 id=251 data-nosnippet>251</a>                </span>|| (x_p == x_a)
-<a href=#252 id=252 data-nosnippet>252</a>            })<span class="question-mark">?</span>;
-<a href=#253 id=253 data-nosnippet>253</a>
-<a href=#254 id=254 data-nosnippet>254</a>        <span class="comment">// Set q_mul values
-<a href=#255 id=255 data-nosnippet>255</a>        </span>{
-<a href=#256 id=256 data-nosnippet>256</a>            <span class="comment">// q_mul_1 = 1 on offset 0
-<a href=#257 id=257 data-nosnippet>257</a>            </span><span class="self">self</span>.q_mul_1.enable(region, offset)<span class="question-mark">?</span>;
-<a href=#258 id=258 data-nosnippet>258</a>
-<a href=#259 id=259 data-nosnippet>259</a>            <span class="kw">let </span>offset = offset + <span class="number">1</span>;
-<a href=#260 id=260 data-nosnippet>260</a>            <span class="comment">// q_mul_2 = 1 on all rows after offset 0, excluding the last row.
-<a href=#261 id=261 data-nosnippet>261</a>            </span><span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>..(NUM_BITS - <span class="number">1</span>) {
-<a href=#262 id=262 data-nosnippet>262</a>                <span class="self">self</span>.q_mul_2.enable(region, offset + idx)<span class="question-mark">?</span>;
-<a href=#263 id=263 data-nosnippet>263</a>            }
-<a href=#264 id=264 data-nosnippet>264</a>
-<a href=#265 id=265 data-nosnippet>265</a>            <span class="comment">// q_mul_3 = 1 on the last row.
-<a href=#266 id=266 data-nosnippet>266</a>            </span><span class="self">self</span>.q_mul_3.enable(region, offset + NUM_BITS - <span class="number">1</span>)<span class="question-mark">?</span>;
-<a href=#267 id=267 data-nosnippet>267</a>        }
-<a href=#268 id=268 data-nosnippet>268</a>
-<a href=#269 id=269 data-nosnippet>269</a>        <span class="comment">// Initialise double-and-add
-<a href=#270 id=270 data-nosnippet>270</a>        </span><span class="kw">let </span>(<span class="kw-2">mut </span>x_a, <span class="kw-2">mut </span>y_a, <span class="kw-2">mut </span>z) = {
-<a href=#271 id=271 data-nosnippet>271</a>            <span class="comment">// Initialise the running `z` sum for the scalar bits.
-<a href=#272 id=272 data-nosnippet>272</a>            </span><span class="kw">let </span>z = acc.<span class="number">2</span>.copy_advice(|| <span class="string">"starting z"</span>, region, <span class="self">self</span>.z, offset)<span class="question-mark">?</span>;
-<a href=#273 id=273 data-nosnippet>273</a>
-<a href=#274 id=274 data-nosnippet>274</a>            <span class="comment">// Initialise acc
-<a href=#275 id=275 data-nosnippet>275</a>            </span><span class="kw">let </span>x_a = acc.<span class="number">0</span>.copy_advice(
-<a href=#276 id=276 data-nosnippet>276</a>                || <span class="string">"starting x_a"</span>,
-<a href=#277 id=277 data-nosnippet>277</a>                region,
-<a href=#278 id=278 data-nosnippet>278</a>                <span class="self">self</span>.double_and_add.x_a,
-<a href=#279 id=279 data-nosnippet>279</a>                offset + <span class="number">1</span>,
-<a href=#280 id=280 data-nosnippet>280</a>            )<span class="question-mark">?</span>;
-<a href=#281 id=281 data-nosnippet>281</a>            <span class="kw">let </span>y_a = acc.<span class="number">1</span>.copy_advice(
-<a href=#282 id=282 data-nosnippet>282</a>                || <span class="string">"starting y_a"</span>,
-<a href=#283 id=283 data-nosnippet>283</a>                region,
-<a href=#284 id=284 data-nosnippet>284</a>                <span class="self">self</span>.double_and_add.lambda_1,
-<a href=#285 id=285 data-nosnippet>285</a>                offset,
-<a href=#286 id=286 data-nosnippet>286</a>            )<span class="question-mark">?</span>;
-<a href=#287 id=287 data-nosnippet>287</a>
-<a href=#288 id=288 data-nosnippet>288</a>            (x_a, y_a.value().cloned(), z)
-<a href=#289 id=289 data-nosnippet>289</a>        };
-<a href=#290 id=290 data-nosnippet>290</a>
-<a href=#291 id=291 data-nosnippet>291</a>        <span class="comment">// Increase offset by 1; we used row 0 for initializing `z`.
-<a href=#292 id=292 data-nosnippet>292</a>        </span><span class="kw">let </span>offset = offset + <span class="number">1</span>;
-<a href=#293 id=293 data-nosnippet>293</a>
-<a href=#294 id=294 data-nosnippet>294</a>        <span class="comment">// Initialise vector to store all interstitial `z` running sum values.
-<a href=#295 id=295 data-nosnippet>295</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>zs: Vec&lt;Z&lt;pallas::Base&gt;&gt; = Vec::with_capacity(bits.len());
-<a href=#296 id=296 data-nosnippet>296</a>
-<a href=#297 id=297 data-nosnippet>297</a>        <span class="comment">// Incomplete addition
-<a href=#298 id=298 data-nosnippet>298</a>        </span><span class="kw">for </span>(row, k) <span class="kw">in </span>bits.iter().enumerate() {
-<a href=#299 id=299 data-nosnippet>299</a>            <span class="comment">// z_{i} = 2 * z_{i+1} + k_i
-<a href=#300 id=300 data-nosnippet>300</a>            // https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
-<a href=#301 id=301 data-nosnippet>301</a>            </span><span class="kw">let </span>z_val = z
-<a href=#302 id=302 data-nosnippet>302</a>                .value()
-<a href=#303 id=303 data-nosnippet>303</a>                .zip(k.as_ref())
-<a href=#304 id=304 data-nosnippet>304</a>                .map(|(z_val, k)| pallas::Base::from(<span class="number">2</span>) * z_val + pallas::Base::from(<span class="kw-2">*</span>k <span class="kw">as </span>u64));
-<a href=#305 id=305 data-nosnippet>305</a>            z = region.assign_advice(|| <span class="string">"z"</span>, <span class="self">self</span>.z, row + offset, || z_val)<span class="question-mark">?</span>;
-<a href=#306 id=306 data-nosnippet>306</a>            zs.push(Z(z.clone()));
-<a href=#307 id=307 data-nosnippet>307</a>
-<a href=#308 id=308 data-nosnippet>308</a>            <span class="comment">// Assign `x_p`, `y_p`
-<a href=#309 id=309 data-nosnippet>309</a>            </span>region.assign_advice(|| <span class="string">"x_p"</span>, <span class="self">self</span>.double_and_add.x_p, row + offset, || x_p)<span class="question-mark">?</span>;
-<a href=#310 id=310 data-nosnippet>310</a>            region.assign_advice(|| <span class="string">"y_p"</span>, <span class="self">self</span>.y_p, row + offset, || y_p)<span class="question-mark">?</span>;
-<a href=#311 id=311 data-nosnippet>311</a>
-<a href=#312 id=312 data-nosnippet>312</a>            <span class="comment">// If the bit is set, use `y`; if the bit is not set, use `-y`
-<a href=#313 id=313 data-nosnippet>313</a>            </span><span class="kw">let </span>y_p = y_p
-<a href=#314 id=314 data-nosnippet>314</a>                .zip(k.as_ref())
-<a href=#315 id=315 data-nosnippet>315</a>                .map(|(y_p, k)| <span class="kw">if </span>!k { -y_p } <span class="kw">else </span>{ y_p });
-<a href=#316 id=316 data-nosnippet>316</a>
-<a href=#317 id=317 data-nosnippet>317</a>            <span class="comment">// Compute and assign λ1⋅(x_A − x_P) = y_A − y_P
-<a href=#318 id=318 data-nosnippet>318</a>            </span><span class="kw">let </span>lambda1 = y_a
-<a href=#319 id=319 data-nosnippet>319</a>                .zip(y_p)
-<a href=#320 id=320 data-nosnippet>320</a>                .zip(x_a.value())
-<a href=#321 id=321 data-nosnippet>321</a>                .zip(x_p)
-<a href=#322 id=322 data-nosnippet>322</a>                .map(|(((y_a, y_p), x_a), x_p)| (y_a - y_p) * (x_a - x_p).invert());
-<a href=#323 id=323 data-nosnippet>323</a>            region.assign_advice(
-<a href=#324 id=324 data-nosnippet>324</a>                || <span class="string">"lambda1"</span>,
-<a href=#325 id=325 data-nosnippet>325</a>                <span class="self">self</span>.double_and_add.lambda_1,
-<a href=#326 id=326 data-nosnippet>326</a>                row + offset,
-<a href=#327 id=327 data-nosnippet>327</a>                || lambda1,
-<a href=#328 id=328 data-nosnippet>328</a>            )<span class="question-mark">?</span>;
-<a href=#329 id=329 data-nosnippet>329</a>
-<a href=#330 id=330 data-nosnippet>330</a>            <span class="comment">// x_R = λ1^2 - x_A - x_P
-<a href=#331 id=331 data-nosnippet>331</a>            </span><span class="kw">let </span>x_r = lambda1
-<a href=#332 id=332 data-nosnippet>332</a>                .zip(x_a.value())
-<a href=#333 id=333 data-nosnippet>333</a>                .zip(x_p)
-<a href=#334 id=334 data-nosnippet>334</a>                .map(|((lambda1, x_a), x_p)| lambda1.square() - x_a - x_p);
-<a href=#335 id=335 data-nosnippet>335</a>
-<a href=#336 id=336 data-nosnippet>336</a>            <span class="comment">// λ2 = (2(y_A) / (x_A - x_R)) - λ1
-<a href=#337 id=337 data-nosnippet>337</a>            </span><span class="kw">let </span>lambda2 =
-<a href=#338 id=338 data-nosnippet>338</a>                lambda1
-<a href=#339 id=339 data-nosnippet>339</a>                    .zip(y_a)
-<a href=#340 id=340 data-nosnippet>340</a>                    .zip(x_a.value())
-<a href=#341 id=341 data-nosnippet>341</a>                    .zip(x_r)
-<a href=#342 id=342 data-nosnippet>342</a>                    .map(|(((lambda1, y_a), x_a), x_r)| {
-<a href=#343 id=343 data-nosnippet>343</a>                        y_a * pallas::Base::from(<span class="number">2</span>) * (x_a - x_r).invert() - lambda1
-<a href=#344 id=344 data-nosnippet>344</a>                    });
-<a href=#345 id=345 data-nosnippet>345</a>            region.assign_advice(
-<a href=#346 id=346 data-nosnippet>346</a>                || <span class="string">"lambda2"</span>,
-<a href=#347 id=347 data-nosnippet>347</a>                <span class="self">self</span>.double_and_add.lambda_2,
-<a href=#348 id=348 data-nosnippet>348</a>                row + offset,
-<a href=#349 id=349 data-nosnippet>349</a>                || lambda2,
-<a href=#350 id=350 data-nosnippet>350</a>            )<span class="question-mark">?</span>;
-<a href=#351 id=351 data-nosnippet>351</a>
-<a href=#352 id=352 data-nosnippet>352</a>            <span class="comment">// Compute and assign `x_a` for the next row
-<a href=#353 id=353 data-nosnippet>353</a>            </span><span class="kw">let </span>x_a_new = lambda2.square() - x_a.value() - x_r;
-<a href=#354 id=354 data-nosnippet>354</a>            y_a = lambda2 * (x_a.value() - x_a_new) - y_a;
-<a href=#355 id=355 data-nosnippet>355</a>            <span class="kw">let </span>x_a_val = x_a_new;
-<a href=#356 id=356 data-nosnippet>356</a>            x_a = region.assign_advice(
-<a href=#357 id=357 data-nosnippet>357</a>                || <span class="string">"x_a"</span>,
-<a href=#358 id=358 data-nosnippet>358</a>                <span class="self">self</span>.double_and_add.x_a,
-<a href=#359 id=359 data-nosnippet>359</a>                row + offset + <span class="number">1</span>,
-<a href=#360 id=360 data-nosnippet>360</a>                || x_a_val,
-<a href=#361 id=361 data-nosnippet>361</a>            )<span class="question-mark">?</span>;
-<a href=#362 id=362 data-nosnippet>362</a>        }
-<a href=#363 id=363 data-nosnippet>363</a>
-<a href=#364 id=364 data-nosnippet>364</a>        <span class="comment">// Witness final y_a
-<a href=#365 id=365 data-nosnippet>365</a>        </span><span class="kw">let </span>y_a = region.assign_advice(
-<a href=#366 id=366 data-nosnippet>366</a>            || <span class="string">"y_a"</span>,
-<a href=#367 id=367 data-nosnippet>367</a>            <span class="self">self</span>.double_and_add.lambda_1,
-<a href=#368 id=368 data-nosnippet>368</a>            offset + NUM_BITS,
-<a href=#369 id=369 data-nosnippet>369</a>            || y_a,
-<a href=#370 id=370 data-nosnippet>370</a>        )<span class="question-mark">?</span>;
-<a href=#371 id=371 data-nosnippet>371</a>
-<a href=#372 id=372 data-nosnippet>372</a>        <span class="prelude-val">Ok</span>((X(x_a), Y(y_a), zs))
-<a href=#373 id=373 data-nosnippet>373</a>    }
-<a href=#374 id=374 data-nosnippet>374</a>}
+<a href=#235 id=235 data-nosnippet>235</a>        circuit_version: CircuitVersion,
+<a href=#236 id=236 data-nosnippet>236</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;(X&lt;pallas::Base&gt;, Y&lt;pallas::Base&gt;, Vec&lt;Z&lt;pallas::Base&gt;&gt;), Error&gt; {
+<a href=#237 id=237 data-nosnippet>237</a>        <span class="comment">// Check that we have the correct number of bits for this double-and-add.
+<a href=#238 id=238 data-nosnippet>238</a>        </span><span class="macro">assert_eq!</span>(bits.len(), NUM_BITS);
+<a href=#239 id=239 data-nosnippet>239</a>
+<a href=#240 id=240 data-nosnippet>240</a>        <span class="comment">// Handle exceptional cases
+<a href=#241 id=241 data-nosnippet>241</a>        </span><span class="kw">let </span>(x_p, y_p) = (base.x.value().cloned(), base.y.value().cloned());
+<a href=#242 id=242 data-nosnippet>242</a>        <span class="kw">let </span>(x_a, y_a) = (acc.<span class="number">0</span>.value().cloned(), acc.<span class="number">1</span>.value().cloned());
+<a href=#243 id=243 data-nosnippet>243</a>
+<a href=#244 id=244 data-nosnippet>244</a>        x_a.zip(y_a)
+<a href=#245 id=245 data-nosnippet>245</a>            .zip(x_p.zip(y_p))
+<a href=#246 id=246 data-nosnippet>246</a>            .error_if_known_and(|((x_a, y_a), (x_p, y_p))| {
+<a href=#247 id=247 data-nosnippet>247</a>                <span class="comment">// A is point at infinity
+<a href=#248 id=248 data-nosnippet>248</a>                </span>(x_p.is_zero_vartime() &amp;&amp; y_p.is_zero_vartime())
+<a href=#249 id=249 data-nosnippet>249</a>                <span class="comment">// Q is point at infinity
+<a href=#250 id=250 data-nosnippet>250</a>                </span>|| (x_a.is_zero_vartime() &amp;&amp; y_a.is_zero_vartime())
+<a href=#251 id=251 data-nosnippet>251</a>                <span class="comment">// x_p = x_a
+<a href=#252 id=252 data-nosnippet>252</a>                </span>|| (x_p == x_a)
+<a href=#253 id=253 data-nosnippet>253</a>            })<span class="question-mark">?</span>;
+<a href=#254 id=254 data-nosnippet>254</a>
+<a href=#255 id=255 data-nosnippet>255</a>        <span class="comment">// Set q_mul values
+<a href=#256 id=256 data-nosnippet>256</a>        </span>{
+<a href=#257 id=257 data-nosnippet>257</a>            <span class="comment">// q_mul_1 = 1 on offset 0
+<a href=#258 id=258 data-nosnippet>258</a>            </span><span class="self">self</span>.q_mul_1.enable(region, offset)<span class="question-mark">?</span>;
+<a href=#259 id=259 data-nosnippet>259</a>
+<a href=#260 id=260 data-nosnippet>260</a>            <span class="kw">let </span>offset = offset + <span class="number">1</span>;
+<a href=#261 id=261 data-nosnippet>261</a>            <span class="comment">// q_mul_2 = 1 on all rows after offset 0, excluding the last row.
+<a href=#262 id=262 data-nosnippet>262</a>            </span><span class="kw">for </span>idx <span class="kw">in </span><span class="number">0</span>..(NUM_BITS - <span class="number">1</span>) {
+<a href=#263 id=263 data-nosnippet>263</a>                <span class="self">self</span>.q_mul_2.enable(region, offset + idx)<span class="question-mark">?</span>;
+<a href=#264 id=264 data-nosnippet>264</a>            }
+<a href=#265 id=265 data-nosnippet>265</a>
+<a href=#266 id=266 data-nosnippet>266</a>            <span class="comment">// q_mul_3 = 1 on the last row.
+<a href=#267 id=267 data-nosnippet>267</a>            </span><span class="self">self</span>.q_mul_3.enable(region, offset + NUM_BITS - <span class="number">1</span>)<span class="question-mark">?</span>;
+<a href=#268 id=268 data-nosnippet>268</a>        }
+<a href=#269 id=269 data-nosnippet>269</a>
+<a href=#270 id=270 data-nosnippet>270</a>        <span class="comment">// Initialise double-and-add
+<a href=#271 id=271 data-nosnippet>271</a>        </span><span class="kw">let </span>(<span class="kw-2">mut </span>x_a, <span class="kw-2">mut </span>y_a, <span class="kw-2">mut </span>z) = {
+<a href=#272 id=272 data-nosnippet>272</a>            <span class="comment">// Initialise the running `z` sum for the scalar bits.
+<a href=#273 id=273 data-nosnippet>273</a>            </span><span class="kw">let </span>z = acc.<span class="number">2</span>.copy_advice(|| <span class="string">"starting z"</span>, region, <span class="self">self</span>.z, offset)<span class="question-mark">?</span>;
+<a href=#274 id=274 data-nosnippet>274</a>
+<a href=#275 id=275 data-nosnippet>275</a>            <span class="comment">// Initialise acc
+<a href=#276 id=276 data-nosnippet>276</a>            </span><span class="kw">let </span>x_a = acc.<span class="number">0</span>.copy_advice(
+<a href=#277 id=277 data-nosnippet>277</a>                || <span class="string">"starting x_a"</span>,
+<a href=#278 id=278 data-nosnippet>278</a>                region,
+<a href=#279 id=279 data-nosnippet>279</a>                <span class="self">self</span>.double_and_add.x_a,
+<a href=#280 id=280 data-nosnippet>280</a>                offset + <span class="number">1</span>,
+<a href=#281 id=281 data-nosnippet>281</a>            )<span class="question-mark">?</span>;
+<a href=#282 id=282 data-nosnippet>282</a>            <span class="kw">let </span>y_a = acc.<span class="number">1</span>.copy_advice(
+<a href=#283 id=283 data-nosnippet>283</a>                || <span class="string">"starting y_a"</span>,
+<a href=#284 id=284 data-nosnippet>284</a>                region,
+<a href=#285 id=285 data-nosnippet>285</a>                <span class="self">self</span>.double_and_add.lambda_1,
+<a href=#286 id=286 data-nosnippet>286</a>                offset,
+<a href=#287 id=287 data-nosnippet>287</a>            )<span class="question-mark">?</span>;
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a>            (x_a, y_a.value().cloned(), z)
+<a href=#290 id=290 data-nosnippet>290</a>        };
+<a href=#291 id=291 data-nosnippet>291</a>
+<a href=#292 id=292 data-nosnippet>292</a>        <span class="comment">// Increase offset by 1; we used row 0 for initializing `z`.
+<a href=#293 id=293 data-nosnippet>293</a>        </span><span class="kw">let </span>offset = offset + <span class="number">1</span>;
+<a href=#294 id=294 data-nosnippet>294</a>
+<a href=#295 id=295 data-nosnippet>295</a>        <span class="comment">// Initialise vector to store all interstitial `z` running sum values.
+<a href=#296 id=296 data-nosnippet>296</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>zs: Vec&lt;Z&lt;pallas::Base&gt;&gt; = Vec::with_capacity(bits.len());
+<a href=#297 id=297 data-nosnippet>297</a>
+<a href=#298 id=298 data-nosnippet>298</a>        <span class="comment">// Incomplete addition
+<a href=#299 id=299 data-nosnippet>299</a>        </span><span class="kw">for </span>(row, k) <span class="kw">in </span>bits.iter().enumerate() {
+<a href=#300 id=300 data-nosnippet>300</a>            <span class="comment">// z_{i} = 2 * z_{i+1} + k_i
+<a href=#301 id=301 data-nosnippet>301</a>            // https://p.z.cash/halo2-0.1:ecc-var-mul-witness-scalar?partial
+<a href=#302 id=302 data-nosnippet>302</a>            </span><span class="kw">let </span>z_val = z
+<a href=#303 id=303 data-nosnippet>303</a>                .value()
+<a href=#304 id=304 data-nosnippet>304</a>                .zip(k.as_ref())
+<a href=#305 id=305 data-nosnippet>305</a>                .map(|(z_val, k)| pallas::Base::from(<span class="number">2</span>) * z_val + pallas::Base::from(<span class="kw-2">*</span>k <span class="kw">as </span>u64));
+<a href=#306 id=306 data-nosnippet>306</a>            z = region.assign_advice(|| <span class="string">"z"</span>, <span class="self">self</span>.z, row + offset, || z_val)<span class="question-mark">?</span>;
+<a href=#307 id=307 data-nosnippet>307</a>            zs.push(Z(z.clone()));
+<a href=#308 id=308 data-nosnippet>308</a>
+<a href=#309 id=309 data-nosnippet>309</a>            <span class="comment">// Assign `x_p`, `y_p`.
+<a href=#310 id=310 data-nosnippet>310</a>            //
+<a href=#311 id=311 data-nosnippet>311</a>            // The `q_mul_2` gate only constrains `(x_p, y_p)` to be *constant* across the
+<a href=#312 id=312 data-nosnippet>312</a>            // incomplete-addition rows; it does not by itself tie them to the real `base`.
+<a href=#313 id=313 data-nosnippet>313</a>            // The fixed circuit therefore `copy_advice`s `base` into the first loop row, so
+<a href=#314 id=314 data-nosnippet>314</a>            // the `q_mul_2` constancy propagates the equality to every loop row, forcing the
+<a href=#315 id=315 data-nosnippet>315</a>            // per-iteration base to equal `base`. `InsecureUnanchoredBase` reproduces the prior
+<a href=#316 id=316 data-nosnippet>316</a>            // behaviour (no anchor) and exists only to rebuild the historical verifying key.
+<a href=#317 id=317 data-nosnippet>317</a>            </span><span class="kw">match </span>circuit_version {
+<a href=#318 id=318 data-nosnippet>318</a>                CircuitVersion::AnchoredBase <span class="kw">if </span>row == <span class="number">0 </span>=&gt; {
+<a href=#319 id=319 data-nosnippet>319</a>                    base.x.copy_advice(
+<a href=#320 id=320 data-nosnippet>320</a>                        || <span class="string">"anchor x_p to base"</span>,
+<a href=#321 id=321 data-nosnippet>321</a>                        region,
+<a href=#322 id=322 data-nosnippet>322</a>                        <span class="self">self</span>.double_and_add.x_p,
+<a href=#323 id=323 data-nosnippet>323</a>                        row + offset,
+<a href=#324 id=324 data-nosnippet>324</a>                    )<span class="question-mark">?</span>;
+<a href=#325 id=325 data-nosnippet>325</a>                    base.y
+<a href=#326 id=326 data-nosnippet>326</a>                        .copy_advice(|| <span class="string">"anchor y_p to base"</span>, region, <span class="self">self</span>.y_p, row + offset)<span class="question-mark">?</span>;
+<a href=#327 id=327 data-nosnippet>327</a>                }
+<a href=#328 id=328 data-nosnippet>328</a>                <span class="kw">_ </span>=&gt; {
+<a href=#329 id=329 data-nosnippet>329</a>                    region.assign_advice(
+<a href=#330 id=330 data-nosnippet>330</a>                        || <span class="string">"x_p"</span>,
+<a href=#331 id=331 data-nosnippet>331</a>                        <span class="self">self</span>.double_and_add.x_p,
+<a href=#332 id=332 data-nosnippet>332</a>                        row + offset,
+<a href=#333 id=333 data-nosnippet>333</a>                        || x_p,
+<a href=#334 id=334 data-nosnippet>334</a>                    )<span class="question-mark">?</span>;
+<a href=#335 id=335 data-nosnippet>335</a>                    region.assign_advice(|| <span class="string">"y_p"</span>, <span class="self">self</span>.y_p, row + offset, || y_p)<span class="question-mark">?</span>;
+<a href=#336 id=336 data-nosnippet>336</a>                }
+<a href=#337 id=337 data-nosnippet>337</a>            }
+<a href=#338 id=338 data-nosnippet>338</a>
+<a href=#339 id=339 data-nosnippet>339</a>            <span class="comment">// If the bit is set, use `y`; if the bit is not set, use `-y`
+<a href=#340 id=340 data-nosnippet>340</a>            </span><span class="kw">let </span>y_p = y_p
+<a href=#341 id=341 data-nosnippet>341</a>                .zip(k.as_ref())
+<a href=#342 id=342 data-nosnippet>342</a>                .map(|(y_p, k)| <span class="kw">if </span>!k { -y_p } <span class="kw">else </span>{ y_p });
+<a href=#343 id=343 data-nosnippet>343</a>
+<a href=#344 id=344 data-nosnippet>344</a>            <span class="comment">// Compute and assign λ1⋅(x_A − x_P) = y_A − y_P
+<a href=#345 id=345 data-nosnippet>345</a>            </span><span class="kw">let </span>lambda1 = y_a
+<a href=#346 id=346 data-nosnippet>346</a>                .zip(y_p)
+<a href=#347 id=347 data-nosnippet>347</a>                .zip(x_a.value())
+<a href=#348 id=348 data-nosnippet>348</a>                .zip(x_p)
+<a href=#349 id=349 data-nosnippet>349</a>                .map(|(((y_a, y_p), x_a), x_p)| (y_a - y_p) * (x_a - x_p).invert());
+<a href=#350 id=350 data-nosnippet>350</a>            region.assign_advice(
+<a href=#351 id=351 data-nosnippet>351</a>                || <span class="string">"lambda1"</span>,
+<a href=#352 id=352 data-nosnippet>352</a>                <span class="self">self</span>.double_and_add.lambda_1,
+<a href=#353 id=353 data-nosnippet>353</a>                row + offset,
+<a href=#354 id=354 data-nosnippet>354</a>                || lambda1,
+<a href=#355 id=355 data-nosnippet>355</a>            )<span class="question-mark">?</span>;
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a>            <span class="comment">// x_R = λ1^2 - x_A - x_P
+<a href=#358 id=358 data-nosnippet>358</a>            </span><span class="kw">let </span>x_r = lambda1
+<a href=#359 id=359 data-nosnippet>359</a>                .zip(x_a.value())
+<a href=#360 id=360 data-nosnippet>360</a>                .zip(x_p)
+<a href=#361 id=361 data-nosnippet>361</a>                .map(|((lambda1, x_a), x_p)| lambda1.square() - x_a - x_p);
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a>            <span class="comment">// λ2 = (2(y_A) / (x_A - x_R)) - λ1
+<a href=#364 id=364 data-nosnippet>364</a>            </span><span class="kw">let </span>lambda2 =
+<a href=#365 id=365 data-nosnippet>365</a>                lambda1
+<a href=#366 id=366 data-nosnippet>366</a>                    .zip(y_a)
+<a href=#367 id=367 data-nosnippet>367</a>                    .zip(x_a.value())
+<a href=#368 id=368 data-nosnippet>368</a>                    .zip(x_r)
+<a href=#369 id=369 data-nosnippet>369</a>                    .map(|(((lambda1, y_a), x_a), x_r)| {
+<a href=#370 id=370 data-nosnippet>370</a>                        y_a * pallas::Base::from(<span class="number">2</span>) * (x_a - x_r).invert() - lambda1
+<a href=#371 id=371 data-nosnippet>371</a>                    });
+<a href=#372 id=372 data-nosnippet>372</a>            region.assign_advice(
+<a href=#373 id=373 data-nosnippet>373</a>                || <span class="string">"lambda2"</span>,
+<a href=#374 id=374 data-nosnippet>374</a>                <span class="self">self</span>.double_and_add.lambda_2,
+<a href=#375 id=375 data-nosnippet>375</a>                row + offset,
+<a href=#376 id=376 data-nosnippet>376</a>                || lambda2,
+<a href=#377 id=377 data-nosnippet>377</a>            )<span class="question-mark">?</span>;
+<a href=#378 id=378 data-nosnippet>378</a>
+<a href=#379 id=379 data-nosnippet>379</a>            <span class="comment">// Compute and assign `x_a` for the next row
+<a href=#380 id=380 data-nosnippet>380</a>            </span><span class="kw">let </span>x_a_new = lambda2.square() - x_a.value() - x_r;
+<a href=#381 id=381 data-nosnippet>381</a>            y_a = lambda2 * (x_a.value() - x_a_new) - y_a;
+<a href=#382 id=382 data-nosnippet>382</a>            <span class="kw">let </span>x_a_val = x_a_new;
+<a href=#383 id=383 data-nosnippet>383</a>            x_a = region.assign_advice(
+<a href=#384 id=384 data-nosnippet>384</a>                || <span class="string">"x_a"</span>,
+<a href=#385 id=385 data-nosnippet>385</a>                <span class="self">self</span>.double_and_add.x_a,
+<a href=#386 id=386 data-nosnippet>386</a>                row + offset + <span class="number">1</span>,
+<a href=#387 id=387 data-nosnippet>387</a>                || x_a_val,
+<a href=#388 id=388 data-nosnippet>388</a>            )<span class="question-mark">?</span>;
+<a href=#389 id=389 data-nosnippet>389</a>        }
+<a href=#390 id=390 data-nosnippet>390</a>
+<a href=#391 id=391 data-nosnippet>391</a>        <span class="comment">// Witness final y_a
+<a href=#392 id=392 data-nosnippet>392</a>        </span><span class="kw">let </span>y_a = region.assign_advice(
+<a href=#393 id=393 data-nosnippet>393</a>            || <span class="string">"y_a"</span>,
+<a href=#394 id=394 data-nosnippet>394</a>            <span class="self">self</span>.double_and_add.lambda_1,
+<a href=#395 id=395 data-nosnippet>395</a>            offset + NUM_BITS,
+<a href=#396 id=396 data-nosnippet>396</a>            || y_a,
+<a href=#397 id=397 data-nosnippet>397</a>        )<span class="question-mark">?</span>;
+<a href=#398 id=398 data-nosnippet>398</a>
+<a href=#399 id=399 data-nosnippet>399</a>        <span class="prelude-val">Ok</span>((X(x_a), Y(y_a), zs))
+<a href=#400 id=400 data-nosnippet>400</a>    }
+<a href=#401 id=401 data-nosnippet>401</a>}
 </code></pre></div></section></main></body></html>
