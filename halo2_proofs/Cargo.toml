@@ -73,9 +73,6 @@ gumdrop = "0.8"
 proptest = "1"
 rand = "0.10"
 
-[target.'cfg(all(target_arch = "wasm32", target_os = "unknown"))'.dev-dependencies]
-getrandom = { version = "0.4", features = ["wasm_js"] }
-
 [features]
 default = ["batch", "multicore"]
 multicore = ["maybe-rayon/threads"]

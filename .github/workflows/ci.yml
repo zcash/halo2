@@ -114,6 +114,10 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' }}
       - name: Add target
         run: rustup target add ${{ matrix.target }}
+      # We depend on `rand/sys-rng`, which means we need to enable `getrandom/wasm_js`.
+      - name: Enable getrandom/wasm_js
+        if: matrix.target == 'wasm32-unknown-unknown'
+        run: cargo add -p halo2_proofs --features wasm_js getrandom
       - name: cargo build
         env:
           FEATURE_FLAGS: ${{ steps.prepare.outputs.feature-flags }}
