@@ -21,6 +21,18 @@
 //!
 //! This means that $2^K$ has to be at most `degree_bound - 1` in order for
 //! the range check constraint to stay within the degree bound.
+//!
+//! # Overflow and uniqueness of decomposition
+//!
+//! When $K \cdot W \geq \lceil \log_2 p \rceil$ (where $p$ is the field modulus),
+//! the decomposition can represent integers in $[0, 2^{K \cdot W})$, which is
+//! larger than $[0, p)$.  This means a single field element may admit more than
+//! one valid decomposition: for any $x$ with $p + x < 2^{K \cdot W}$, both the
+//! base-$2^K$ representation of $x$ and that of $p + x$ satisfy the constraints.
+//!
+//! This is by design.  If your use case requires a *canonical* (unique)
+//! decomposition, you must add an overflow check external to this gadget,
+//! for example by constraining $\alpha < p$ via a comparison gadget.
 
 use ff::PrimeFieldBits;
 use halo2_proofs::{
@@ -101,6 +113,10 @@ impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
     /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
+    ///
+    /// Note: when `WINDOW_NUM_BITS * num_windows >= F::NUM_BITS`, the
+    /// decomposition is not unique.  See the [module-level documentation](self)
+    /// for details.
     pub fn witness_decompose(
         &self,
         region: &mut Region<'_, F>,
@@ -118,6 +134,10 @@ impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
     /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
+    ///
+    /// Note: when `WINDOW_NUM_BITS * num_windows >= F::NUM_BITS`, the
+    /// decomposition is not unique.  See the [module-level documentation](self)
+    /// for details.
     pub fn copy_decompose(
         &self,
         region: &mut Region<'_, F>,
