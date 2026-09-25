@@ -279,10 +279,10 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
         let result = {
             let region: &mut dyn RegionLayouter<F> = &mut region;
             assignment(region.into())
-        }?;
+        };
         self.plan.cs.exit_region();
 
-        Ok(result)
+        result
     }
 
     fn assign_table<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
@@ -299,9 +299,10 @@ impl<'p, 'a, F: Field, CS: Assignment<F> + 'a> AssignmentPass<'p, 'a, F, CS> {
         let result = {
             let table: &mut dyn TableLayouter<F> = &mut table;
             assignment(table.into())
-        }?;
+        };
         let default_and_assigned = table.default_and_assigned;
         self.plan.cs.exit_region();
+        let result = result?;
 
         // Check that all table columns have the same length `first_unused`,
         // and all cells up to that length are assigned.
