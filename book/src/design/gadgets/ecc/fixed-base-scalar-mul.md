@@ -31,7 +31,12 @@ We support using a base field element as the scalar in fixed-base multiplication
 
 Decompose the base field element $\alpha$ into three-bit windows, and range-constrain each window, using the [short range decomposition](../decomposition.md#short-range-decomposition) gadget in strict mode, with $W = 85, K = 3.$
 
-If $k_{0..84}$ is witnessed directly then no issue of canonicity arises. However, because the scalar is given as a base field element here, care must be taken to ensure a canonical representation, since $2^{255} > p$. That is, we must check that $0 \leq \alpha < p,$ where $p$ the is Pallas base field modulus $$p = 2^{254} + t_p = 2^{254} + 45560315531419706090280762371685220353.$$ Note that $t_p < 2^{130}.$
+If $k_{0..84}$ is witnessed directly then no issue of canonicity arises. However, because
+the scalar is given as a base field element here, care must be taken to ensure a canonical
+representation, since $2^{255} > p$. That is, we must check that $0 \leq \alpha < p,$
+where $p$ is the Pallas base field modulus
+$$p = 2^{254} + t_p = 2^{254} + 45560315531419706090280762371685220353.$$ Note that
+$t_p < 2^{130}.$
 
 To do this, we decompose $\alpha$ into three pieces: $$\alpha = \alpha_0 \text{ (252 bits) } \,||\, \alpha_1 \text{ (2 bits) } \,||\, \alpha_2 \text{ (1 bit) }.$$
 
@@ -45,7 +50,8 @@ $$
 2 & q_\text{canon-base-field} \cdot \left(z_{84} - (\alpha_1 + \alpha_2 \cdot 2^2)\right) = 0 \\\hline
 \end{array}
 $$
-If the MSB $\alpha_2 = 0$ is not set, then $\alpha < 2^{254} < p.$ However, in the case where $\alpha_2 = 1$, we must check:
+If the MSB $\alpha_2$ is not set, then $\alpha < 2^{254} < p.$ However, in the case where
+$\alpha_2 = 1$, we must check:
 - $\alpha_2 = 1 \implies \alpha_1 = 0;$
 - $\alpha_2 = 1 \implies \alpha_0 < t_p$:
   - $\alpha_2 = 1 \implies 0 \leq \alpha_0 < 2^{130}$,
@@ -67,7 +73,7 @@ $$
 \begin{array}{|c|l|l|}
 \hline
 \text{Degree} & \text{Constraint} & \text{Comment} \\\hline
-2 & q_\text{canon-base-field} \cdot (\alpha_0' - (\alpha_0 + 2^{130} - t_\mathbb{P})) = 0 \\\hline
+2 & q_\text{canon-base-field} \cdot (\alpha_0' - (\alpha_0 + 2^{130} - t_p)) = 0 \\\hline
 3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \alpha_1 = 0 & \alpha_2 = 1 \implies \alpha_1 = 0 \\\hline
 3 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \textsf{alpha\_0\_hi\_120} = 0 & \text{Constrain $\alpha_0$ to be a $132$-bit value} \\\hline
 4 & q_\text{canon-base-field} \cdot \alpha_2 \cdot \BoolCheck{k_{43}} = 0 & \text{Constrain $\alpha_0[130..\!\!=\!\!131]$ to $0$}  \\\hline
@@ -106,7 +112,8 @@ where $\BoolCheck{x} = x \cdot (1 - x)$.
 Then, we precompute multiples of the fixed base $B$ for each window. This takes the form of a window table: $M[0..W)[0..8)$ such that:
 
 - for the first (W-1) rows $M[0..(W-1))[0..8)$: $$M[w][k] = [(k+2) \cdot (2^3)^w]B$$
-- in the last row $M[W-1][0..8)$: $$M[w][k] = [k \cdot (2^3)^w - \sum\limits_{j=0}^{83} 2^{3j+1}]B$$
+- in the last row $M[W-1][0..8)$:
+  $$M[w][k] = [k \cdot (2^3)^w - \sum\limits_{j=0}^{W-2} 2^{3j+1}]B$$
 
 The additional $(k + 2)$ term lets us avoid adding the point at infinity in the case $k = 0$. We offset these accumulated terms by subtracting them in the final window, i.e. we subtract $\sum\limits_{j=0}^{W-2} 2^{3j+1}$.
 
@@ -123,15 +130,18 @@ For each window of fixed-base multiples $M[w] = (M[w][0], \cdots, M[w][7]), w \i
   $$
   \mathcal{L}_x(k) = \begin{cases}
     ([(k + 2) \cdot (2^3)^w] B)_x &\text{for } w \in [0..(W-1)); \\
-    ([k \cdot (2^3)^w - \sum\limits_{j=0}^{83} 2^{3j+1}] B)_x &\text{for } w = 84; \text{ and}
+    ([k \cdot (2^3)^w - \sum\limits_{j=0}^{W-2} 2^{3j+1}] B)_x &\text{for } w = W-1; \text{ and}
   \end{cases}
   $$
 - Find a value $z_w$ such that $z_w + (M[w][k])_y$ is a square $u^2$ in the field, but the wrong-sign $y$-coordinate $z_w - (M[w][k])_y$ does not produce a square.
 
 Repeating this for all $W$ windows, we end up with:
-- an $W \times 8$ table $\mathcal{L}_x$ storing $8$ coefficients interpolating the $x-$coordinate for each window. Each $x$-coordinate interpolation polynomial will be of the form
+- a $W \times 8$ table $\mathcal{L}_x$ storing $8$ coefficients interpolating the
+  $x-$coordinate for each window. Each $x$-coordinate interpolation polynomial will be of
+  the form
 $$\mathcal{L}_x[w](k) = c_0 + c_1 \cdot k + c_2 \cdot k^2 + \cdots + c_7 \cdot k^7,$$
-where $k \in [0..8), w \in [0..85)$ and $c_k$'s are the coefficients for each power of $k$; and
+where $k \in [0..8), w \in [0..W)$ and $c_k$'s are the coefficients for each power of
+$k$; and
 - a length-$W$ array $Z$ of $z_w$'s.
 
 We load these precomputed values into fixed columns whenever we do fixed-base scalar multiplication in the circuit.
@@ -143,7 +153,8 @@ Given a decomposed scalar $\alpha$ and a fixed base $B$, we compute $[\alpha]B$ 
 2. Check that $(x_w, y_w)$ is on the curve: $y_w^2 = x_w^3 + b$.
 3. Witness $u_w$ such that $y_w + z_w = u_w^2$.
 4. For all windows but the last, use [incomplete addition](./addition.md#incomplete-addition) to sum the $M[w][k_w]$'s, resulting in $[\alpha - k_{84} \cdot (2^3)^{84} + \sum\limits_{j=0}^{83} 2^{3j+1}]B$.
-5. For the last window, use complete addition $M[83][k_{83}] + M[84][k_{84}]$ and return the final result.
+5. For the last window, use complete addition to add $M[84][k_{84}]$ to the sum of the
+   previous windows, and return the final result.
 
 > Note: complete addition is required in the final step to correctly map $[0]B$ to a representation of the point at infinity, $(0,0)$; and also to handle a corner case for which the last step is a doubling.
 
@@ -152,7 +163,7 @@ $$
 \begin{array}{|c|l|}
 \hline
 \text{Degree} & \text{Constraint} \\\hline
-8 & q_\text{mul-fixed} \cdot \left( \mathcal{L}_x[w](k_w) - x_w \right) = 0 \\\hline
+9 & q_\text{mul-fixed} \cdot \left( \mathcal{L}_x[w](k_w) - x_w \right) = 0 \\\hline
 4 & q_\text{mul-fixed} \cdot \left( y_w^2 - x_w^3 - b \right) = 0 \\\hline
 3 & q_\text{mul-fixed} \cdot \left( u_w^2 - y_w - Z[w] \right) = 0 \\\hline
 \end{array}
@@ -161,7 +172,10 @@ $$
 where $b = 5$ (from the Pallas curve equation).
 
 ### Signed short exponent
-Recall that the signed short exponent is witnessed as a $64-$bit magnitude $m$, and a sign $s \in {1, -1}.$ Using the above algorithm, we compute $P = [m] \mathcal{B}$. Then, to get the final result $P',$ we conditionally negate $P$ using $(x, y) \mapsto (x, s \cdot y)$.
+Recall that the signed short exponent is witnessed as a $64-$bit magnitude $m$, and a sign
+$s \in \{1, -1\}.$ Using the above algorithm, we compute $P = [m] \mathcal{B}$. Then, to
+get the final result $P',$ we conditionally negate $P$ using
+$(x, y) \mapsto (x, s \cdot y)$.
 
 <a name="constrain-short-signed-conditional-neg"></a> Constraints:
 $$
@@ -181,7 +195,7 @@ $$
   x_P   &   y_P   &      x_{QR}       &        y_{QR}      &    u   & \text{window}   & L_{0..=7}   & \textsf{fixed\_z}   \\\hline
 x_{P,0} & y_{P,0} &                   &                    &   u_0  & \text{window}_0 & L_{0..=7,0} & \textsf{fixed\_z}_0 \\\hline
 x_{P,1} & y_{P,1} & x_{Q,1} = x_{P,0} & y_{Q,1} = y_{P,0}  &   u_1  & \text{window}_1 & L_{0..=7,1} & \textsf{fixed\_z}_1 \\\hline
-x_{P,2} & y_{P,2} & x_{Q,2} = x_{R,1} & y_{Q,2} = y_{R,1}  &   u_2  & \text{window}_2 & L_{0..=7,1} & \textsf{fixed\_z}_2 \\\hline
+x_{P,2} & y_{P,2} & x_{Q,2} = x_{R,1} & y_{Q,2} = y_{R,1}  &   u_2  & \text{window}_2 & L_{0..=7,2} & \textsf{fixed\_z}_2 \\\hline
 \vdots  & \vdots  &      \vdots       &       \vdots       & \vdots &     \vdots      &    \vdots   &        \vdots       \\\hline
 \end{array}
 $$
