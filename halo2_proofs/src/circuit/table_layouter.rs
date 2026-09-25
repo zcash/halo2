@@ -2,7 +2,7 @@
 
 use std::{
     collections::HashMap,
-    fmt::{self, Debug},
+    fmt::{self},
 };
 
 use ff::Field;
@@ -115,7 +115,7 @@ impl<'r, 'a, F: Field, CS: Assignment<F> + 'a> TableLayouter<F>
     }
 }
 
-pub(crate) fn compute_table_lengths<F: Debug>(
+pub(crate) fn compute_table_lengths<F>(
     default_and_assigned: &HashMap<TableColumn, (DefaultTableValue<F>, Vec<bool>)>,
 ) -> Result<usize, Error> {
     let column_lengths: Result<Vec<_>, Error> = default_and_assigned
