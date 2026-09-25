@@ -34,6 +34,13 @@ and this project adheres to Rust's notion of
 - The `batch` feature flag now enables an optional `rand` dependency with its
   `sys_rng` feature, instead of `rand_core/getrandom`.
 
+### Fixed
+- `halo2_proofs::dev::MockProver::verify` no longer panics when a region enables
+  a selector without assigning any cells; it now returns
+  `VerifyFailure::CellNotAssigned` for the cells the gate requires. The rows on
+  which selectors are enabled are now included in the region's extent, matching
+  how the floor planners measure regions.
+
 ## [0.3.5] - 2026-08-02
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_match_only`

@@ -61,9 +61,12 @@ struct Region {
 impl Region {
     fn update_extent(&mut self, column: Column<Any>, row: usize) {
         self.columns.insert(column);
+        self.update_rows(row);
+    }
 
-        // The region start is the earliest row assigned to.
-        // The region end is the latest row assigned to.
+    fn update_rows(&mut self, row: usize) {
+        // The region start is the earliest row assigned to (or on which a selector
+        // was enabled). The region end is the latest such row.
         let (mut start, mut end) = self.rows.unwrap_or((row, row));
         if row < start {
             // The first row assigned was not at start 0 within the region.
@@ -345,9 +348,12 @@ impl<F: Field> Assignment<F> for MockProver<F> {
 
         // Track that this selector was enabled. We require that all selectors are enabled
         // inside some region (i.e. no floating selectors).
-        self.current_region
-            .as_mut()
-            .unwrap()
+        let region = self.current_region.as_mut().unwrap();
+        // Enabling a selector uses a row of the region, just as assigning a cell does
+        // (`RegionShape` measures regions the same way). Tracking it here means a
+        // region containing only selectors still has a known start row.
+        region.update_rows(row);
+        region
             .enabled_selectors
             .entry(*selector)
             .or_default()
@@ -1011,6 +1017,73 @@ mod tests {
                 gate_offset: 1,
                 column: Column::new(1, Any::Advice),
                 offset: 1,
+            }])
+        );
+    }
+
+    #[test]
+    fn unassigned_cell_in_selector_only_region() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct FaultyCircuitConfig {
+            q: Selector,
+        }
+
+        struct FaultyCircuit {}
+
+        impl Circuit<Fp> for FaultyCircuit {
+            type Config = FaultyCircuitConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let q = meta.selector();
+
+                meta.create_gate("Zero check", |cells| {
+                    let a = cells.query_advice(a, Rotation::cur());
+                    let q = cells.query_selector(q);
+
+                    // If q is enabled, a must be assigned to.
+                    vec![q * a]
+                });
+
+                FaultyCircuitConfig { q }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self {}
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_region(
+                    || "Faulty synthesis",
+                    |mut region| {
+                        // Enable the gate.
+                        config.q.enable(&mut region, 0)?;
+
+                        // BUG: Forget to assign a = 0! This could go unnoticed during
+                        // development, because cell values default to zero, but the
+                        // region now contains a selector and no cells at all.
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        let prover = MockProver::run(K, &FaultyCircuit {}, vec![]).unwrap();
+        assert_eq!(
+            prover.verify(),
+            Err(vec![VerifyFailure::CellNotAssigned {
+                gate: (0, "Zero check").into(),
+                region: (0, "Faulty synthesis".to_owned()).into(),
+                gate_offset: 0,
+                column: Column::new(0, Any::Advice),
+                offset: 0,
             }])
         );
     }
