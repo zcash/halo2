@@ -11,7 +11,7 @@ use std::{convert::TryInto, fmt::Debug, marker::PhantomData};
 use ff::PrimeFieldBits;
 
 use crate::sinsemilla::{chip::generator_table::GeneratorTableConfig, primitives as sinsemilla};
-use pasta_curves::pallas;
+use pasta_curves::{arithmetic::VartimeField, pallas};
 use sinsemilla::SINSEMILLA_S;
 
 use super::*;
@@ -27,7 +27,7 @@ impl<F: PrimeFieldBits> std::ops::Deref for RunningSum<F> {
     }
 }
 
-impl<F: PrimeFieldBits> RangeConstrained<F, AssignedCell<F, F>> {
+impl<F: PrimeFieldBits + VartimeField> RangeConstrained<F, AssignedCell<F, F>> {
     /// Witnesses a subset of the bits in `value` and constrains them to be the correct
     /// number of bits.
     ///
@@ -70,7 +70,9 @@ pub struct LookupRangeCheckConfig<F: PrimeFieldBits, const K: usize> {
 }
 
 /// Trait that provides common methods for a lookup range check.
-pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize>: Eq + Copy + Debug {
+pub trait LookupRangeCheck<F: PrimeFieldBits + VartimeField, const K: usize>:
+    Eq + Copy + Debug
+{
     /// Returns a reference to the `LookupRangeCheckConfig` instance.
     fn config(&self) -> &LookupRangeCheckConfig<F, K>;
 
@@ -207,7 +209,7 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize>: Eq + Copy + Debug
         // For `element` = a_0 + 2^10 a_1 + ... + 2^{120} a_{12}}, initialize z_0 = `element`.
         // If `element` fits in 130 bits, we end up with z_{13} = 0.
         let mut z = element;
-        let inv_two_pow_k = F::from(1u64 << K).invert().unwrap();
+        let inv_two_pow_k = F::from(1u64 << K).invert_vartime().unwrap();
         for (idx, word) in words.iter().enumerate() {
             // Enable q_lookup on this row
             self.config().q_lookup.enable(region, idx)?;
@@ -294,7 +296,9 @@ pub trait LookupRangeCheck<F: PrimeFieldBits, const K: usize>: Eq + Copy + Debug
     }
 }
 
-impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCheckConfig<F, K> {
+impl<F: PrimeFieldBits + VartimeField, const K: usize> LookupRangeCheck<F, K>
+    for LookupRangeCheckConfig<F, K>
+{
     fn config(&self) -> &LookupRangeCheckConfig<F, K> {
         self
     }
@@ -478,7 +482,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K> for LookupRangeCh
         )?;
 
         // Assign 2^{-num_bits} from a fixed column.
-        let inv_two_pow_s = F::from(1 << num_bits).invert().unwrap();
+        let inv_two_pow_s = F::from(1 << num_bits).invert_vartime().unwrap();
         region.assign_advice_from_constant(
             || format!("2^(-{num_bits})"),
             self.running_sum,
@@ -633,7 +637,7 @@ impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck4_5BConfig<F, K> {
     }
 }
 
-impl<F: PrimeFieldBits, const K: usize> LookupRangeCheck<F, K>
+impl<F: PrimeFieldBits + VartimeField, const K: usize> LookupRangeCheck<F, K>
     for LookupRangeCheck4_5BConfig<F, K>
 {
     fn config(&self) -> &LookupRangeCheckConfig<F, K> {
@@ -868,7 +872,7 @@ mod tests {
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::VartimeField, pallas};
 
     use crate::{
         sinsemilla::primitives::K,
@@ -881,12 +885,12 @@ mod tests {
     use std::{convert::TryInto, marker::PhantomData};
 
     #[derive(Clone, Copy)]
-    struct MyLookupCircuit<F: PrimeFieldBits, Lookup: LookupRangeCheck<F, K>> {
+    struct MyLookupCircuit<F: PrimeFieldBits + VartimeField, Lookup: LookupRangeCheck<F, K>> {
         num_words: usize,
         _marker: PhantomData<(F, Lookup)>,
     }
 
-    impl<F: PrimeFieldBits, Lookup: LookupRangeCheck<F, K>> MyLookupCircuit<F, Lookup> {
+    impl<F: PrimeFieldBits + VartimeField, Lookup: LookupRangeCheck<F, K>> MyLookupCircuit<F, Lookup> {
         fn new(num_words: usize) -> Self {
             MyLookupCircuit {
                 num_words,
@@ -895,8 +899,8 @@ mod tests {
         }
     }
 
-    impl<F: PrimeFieldBits, Lookup: LookupRangeCheck<F, K> + std::clone::Clone> Circuit<F>
-        for MyLookupCircuit<F, Lookup>
+    impl<F: PrimeFieldBits + VartimeField, Lookup: LookupRangeCheck<F, K> + std::clone::Clone>
+        Circuit<F> for MyLookupCircuit<F, Lookup>
     {
         type Config = Lookup;
         type FloorPlanner = SimpleFloorPlanner;
@@ -928,7 +932,7 @@ mod tests {
                 (F::from(1 << (self.num_words * K)), F::ONE, false), // a word that is just over self.num_words * K bits long
             ];
 
-            fn expected_zs<F: PrimeFieldBits, const K: usize>(
+            fn expected_zs<F: PrimeFieldBits + VartimeField, const K: usize>(
                 element: F,
                 num_words: usize,
             ) -> Vec<F> {
@@ -944,7 +948,7 @@ mod tests {
                         .collect::<Vec<_>>()
                 };
                 let expected_zs = {
-                    let inv_two_pow_k = F::from(1 << K).invert().unwrap();
+                    let inv_two_pow_k = F::from(1 << K).invert_vartime().unwrap();
                     chunks.iter().fold(vec![element], |mut zs, a_i| {
                         // z_{i + 1} = (z_i - a_i) / 2^{K}
                         let z = (zs[zs.len() - 1] - a_i) * inv_two_pow_k;
@@ -1002,13 +1006,18 @@ mod tests {
     }
 
     #[derive(Clone, Copy)]
-    struct MyShortRangeCheckCircuit<F: PrimeFieldBits, Lookup: LookupRangeCheck<F, K>> {
+    struct MyShortRangeCheckCircuit<
+        F: PrimeFieldBits + VartimeField,
+        Lookup: LookupRangeCheck<F, K>,
+    > {
         element: Value<F>,
         num_bits: usize,
         _lookup_marker: PhantomData<Lookup>,
     }
 
-    impl<F: PrimeFieldBits, Lookup: LookupRangeCheck<F, K>> MyShortRangeCheckCircuit<F, Lookup> {
+    impl<F: PrimeFieldBits + VartimeField, Lookup: LookupRangeCheck<F, K>>
+        MyShortRangeCheckCircuit<F, Lookup>
+    {
         fn new(element: Value<F>, num_bits: usize) -> Self {
             MyShortRangeCheckCircuit {
                 element,
@@ -1018,8 +1027,8 @@ mod tests {
         }
     }
 
-    impl<F: PrimeFieldBits, Lookup: LookupRangeCheck<F, K> + std::clone::Clone> Circuit<F>
-        for MyShortRangeCheckCircuit<F, Lookup>
+    impl<F: PrimeFieldBits + VartimeField, Lookup: LookupRangeCheck<F, K> + std::clone::Clone>
+        Circuit<F> for MyShortRangeCheckCircuit<F, Lookup>
     {
         type Config = Lookup;
         type FloorPlanner = SimpleFloorPlanner;
@@ -1198,7 +1207,7 @@ mod tests {
         //          => element = shifted * 2^{s-K}
         let element = shifted
             * pallas::Base::from(1 << (K as u64 - num_bits))
-                .invert()
+                .invert_vartime()
                 .unwrap();
         let error = Err(vec![VerifyFailure::Lookup {
             lookup_index: 0,

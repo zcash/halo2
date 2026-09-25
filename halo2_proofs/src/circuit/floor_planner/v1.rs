@@ -1,6 +1,7 @@
 use std::fmt;
 
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 
 use crate::{
     circuit::{
@@ -57,7 +58,7 @@ impl<'a, F: Field, CS: Assignment<F>> V1Plan<'a, F, CS> {
 }
 
 impl FloorPlanner for V1 {
-    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+    fn synthesize<F: VartimeField, CS: Assignment<F>, C: Circuit<F>>(
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
@@ -122,7 +123,7 @@ impl FloorPlanner for V1 {
         for ((fixed_column, fixed_row), (value, advice)) in constant_positions().zip(plan.constants)
         {
             plan.cs.assign_fixed(
-                || format!("Constant({:?})", value.evaluate()),
+                || format!("Constant({:?})", value.evaluate_vartime()),
                 fixed_column,
                 fixed_row,
                 || Value::known(value),

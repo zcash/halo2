@@ -1,6 +1,7 @@
 use std::{fmt, marker::PhantomData};
 
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 use tracing::{debug, debug_span, span::EnteredSpan};
 
 use crate::{
@@ -85,7 +86,7 @@ pub struct TracingFloorPlanner<P: FloorPlanner> {
 }
 
 impl<P: FloorPlanner> FloorPlanner for TracingFloorPlanner<P> {
-    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+    fn synthesize<F: VartimeField, CS: Assignment<F>, C: Circuit<F>>(
         cs: &mut CS,
         circuit: &C,
         config: C::Config,

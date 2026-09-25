@@ -1,4 +1,5 @@
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 use tabbycat::{AttrList, Edge, GraphBuilder, GraphType, Identity, StmtList};
 
 use crate::{
@@ -17,7 +18,7 @@ pub mod layout;
 /// inside the gadgets and chips that it uses.
 ///
 /// [`Layouter::namespace`]: crate::circuit::Layouter#method.namespace
-pub fn circuit_dot_graph<F: Field, ConcreteCircuit: Circuit<F>>(
+pub fn circuit_dot_graph<F: VartimeField, ConcreteCircuit: Circuit<F>>(
     circuit: &ConcreteCircuit,
 ) -> String {
     // Collect the graph details.

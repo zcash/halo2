@@ -10,6 +10,18 @@ and this project adheres to Rust's notion of
 - The minimum supported Rust version is now 1.88.
 - Migrated to `ff 0.14`, `group 0.14`, `rand 0.10`, `pasta_curves 0.6`,
   `sinsemilla 0.2`.
+- The following APIs now have a `pasta_curves::arithmetic::VartimeField` bound
+  and make use of variable-time inversions for improved performance:
+  - `halo2_gadgets::utilities`:
+    - `RangeConstrained::witness_short`
+    - `lookup_range_check::LookupRangeCheck`
+- The following APIs now use the new `pasta_curves::arithmetic::VartimeField`
+  bound on `pasta_curves::arithmetic::CurveAffine::{Base, ScalarExt}` to use
+  variable-time inversions for improved performance:
+  - `halo2_gadgets::ecc::chip`:
+    - `constants::compute_lagrange_coeffs`
+    - `EccPoint::{point, x, y}`
+    - `NonIdentityEccPoint::{point, x, y}`
 
 ### Added
 - `halo2_gadgets::ecc`:

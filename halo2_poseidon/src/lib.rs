@@ -11,6 +11,7 @@ use core::convert::TryInto;
 use core::fmt;
 use core::iter;
 use core::marker::PhantomData;
+use pasta_curves::arithmetic::VartimeField;
 
 use group::ff::{Field, FromUniformBytes, PrimeField};
 
@@ -62,7 +63,7 @@ pub trait Spec<F: Field, const T: usize, const RATE: usize>: fmt::Debug {
 
 /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
 pub fn generate_constants<
-    F: FromUniformBytes<64> + Ord,
+    F: FromUniformBytes<64> + VartimeField + Ord,
     S: Spec<F, T, RATE>,
     const T: usize,
     const RATE: usize,

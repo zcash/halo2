@@ -1,7 +1,8 @@
 use group::{
-    ff::{BatchInvert, Field, PrimeField},
+    ff::{Field, PrimeField},
     Curve,
 };
+use pasta_curves::arithmetic::VartimeBatchInvert;
 use rand_core::Rng;
 use std::iter::{self, ExactSizeIterator};
 
@@ -116,7 +117,7 @@ impl Argument {
             }
 
             // Invert to obtain the denominator for the permutation product polynomial
-            modified_values.batch_invert();
+            modified_values.batch_invert_vartime();
 
             // Iterate over each column again, this time finishing the computation
             // of the entire fraction by computing the numerators

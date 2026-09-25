@@ -10,6 +10,7 @@ use std::{
 
 use ff::{Field, PrimeField};
 use group::prime::PrimeGroup;
+use pasta_curves::arithmetic::VartimeField;
 
 use crate::{
     circuit::{layouter::RegionColumn, Value},
@@ -254,7 +255,10 @@ impl<F: Field> Assignment<F> for Layout {
     }
 }
 
-impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, ConcreteCircuit> {
+impl<G: PrimeGroup, ConcreteCircuit: Circuit<G::Scalar>> CircuitCost<G, ConcreteCircuit>
+where
+    G::Scalar: VartimeField,
+{
     /// Measures a circuit with parameter constant `k`.
     ///
     /// Panics if `k` is not large enough for the circuit.

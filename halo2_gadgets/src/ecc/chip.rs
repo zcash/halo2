@@ -84,19 +84,19 @@ impl EccPoint {
             if x.is_zero_vartime() && y.is_zero_vartime() {
                 pallas::Affine::identity()
             } else {
-                pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
+                pallas::Affine::from_xy(x.evaluate_vartime(), y.evaluate_vartime()).unwrap()
             }
         })
     }
     /// The cell containing the affine short-Weierstrass x-coordinate,
     /// or 0 for the zero point.
     pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.x.clone().evaluate()
+        self.x.clone().evaluate_vartime()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate,
     /// or 0 for the zero point.
     pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.y.clone().evaluate()
+        self.y.clone().evaluate_vartime()
     }
 
     #[cfg(test)]
@@ -135,16 +135,16 @@ impl NonIdentityEccPoint {
     pub fn point(&self) -> Value<pallas::Affine> {
         self.x.value().zip(self.y.value()).map(|(x, y)| {
             assert!(!x.is_zero_vartime() && !y.is_zero_vartime());
-            pallas::Affine::from_xy(x.evaluate(), y.evaluate()).unwrap()
+            pallas::Affine::from_xy(x.evaluate_vartime(), y.evaluate_vartime()).unwrap()
         })
     }
     /// The cell containing the affine short-Weierstrass x-coordinate.
     pub fn x(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.x.clone().evaluate()
+        self.x.clone().evaluate_vartime()
     }
     /// The cell containing the affine short-Weierstrass y-coordinate.
     pub fn y(&self) -> AssignedCell<pallas::Base, pallas::Base> {
-        self.y.clone().evaluate()
+        self.y.clone().evaluate_vartime()
     }
 }
 

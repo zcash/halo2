@@ -28,6 +28,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
+use pasta_curves::arithmetic::VartimeField;
 
 use super::range_check;
 
@@ -52,7 +53,9 @@ pub struct RunningSumConfig<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
     _marker: PhantomData<F>,
 }
 
-impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW_NUM_BITS> {
+impl<F: PrimeFieldBits + VartimeField, const WINDOW_NUM_BITS: usize>
+    RunningSumConfig<F, WINDOW_NUM_BITS>
+{
     /// Returns the q_range_check selector of this [`RunningSumConfig`].
     pub(crate) fn q_range_check(&self) -> Selector {
         self.q_range_check
@@ -175,7 +178,11 @@ impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
         // Outside of this helper, z_0 = alpha must have already been loaded into the
         // `z` column at `offset`.
-        let two_pow_k_inv = Value::known(F::from(1 << WINDOW_NUM_BITS as u64).invert().unwrap());
+        let two_pow_k_inv = Value::known(
+            F::from(1 << WINDOW_NUM_BITS as u64)
+                .invert_vartime()
+                .unwrap(),
+        );
         for (i, word) in words.iter().enumerate() {
             // z_next = (z_cur - word) / (2^K)
             let z_next = {
@@ -236,7 +243,7 @@ mod tests {
         }
 
         impl<
-                F: PrimeFieldBits,
+                F: PrimeFieldBits + VartimeField,
                 const WORD_NUM_BITS: usize,
                 const WINDOW_NUM_BITS: usize,
                 const NUM_WINDOWS: usize,

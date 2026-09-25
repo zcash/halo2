@@ -1,10 +1,11 @@
 use alloc::vec::Vec;
 
 use ff::FromUniformBytes;
+use pasta_curves::arithmetic::VartimeField;
 
 use super::{grain::Grain, Mds};
 
-pub(super) fn generate_mds<F: FromUniformBytes<64> + Ord, const T: usize>(
+pub(super) fn generate_mds<F: FromUniformBytes<64> + VartimeField + Ord, const T: usize>(
     grain: &mut Grain<F>,
     mut select: usize,
 ) -> (Mds<F, T>, Mds<F, T>) {
@@ -57,7 +58,7 @@ pub(super) fn generate_mds<F: FromUniformBytes<64> + Ord, const T: usize>(
                 let sum = xs[i] + ys[j];
                 // We leverage the secure MDS selection counter to also check this.
                 assert!(!sum.is_zero_vartime());
-                mds[i][j] = sum.invert().unwrap();
+                mds[i][j] = sum.invert_vartime().unwrap();
             }
         }
 
@@ -87,7 +88,7 @@ pub(super) fn generate_mds<F: FromUniformBytes<64> + Ord, const T: usize>(
                 let denominator: F = x_j - x_m;
 
                 // We can invert freely; by construction, the elements of xs are distinct.
-                let denominator_inverted: F = denominator.invert().unwrap();
+                let denominator_inverted: F = denominator.invert_vartime().unwrap();
 
                 acc * (x - x_m) * denominator_inverted
             }

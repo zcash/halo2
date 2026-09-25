@@ -1,4 +1,5 @@
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 use rand_core::Rng;
 
 use super::super::{Coeff, Polynomial};
@@ -115,7 +116,7 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, R: Rng, T: Transcrip
         transcript.write_point(r_j)?;
 
         let u_j = *transcript.squeeze_challenge_scalar::<()>();
-        let u_j_inv = u_j.invert().unwrap(); // TODO, bubble this up
+        let u_j_inv = u_j.invert_vartime().unwrap(); // TODO, bubble this up
 
         // Collapse `p_prime` and `b`.
         // TODO: parallelize
