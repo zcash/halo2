@@ -509,7 +509,7 @@ where
         {
             use crate::sinsemilla::primitives::{K, S_PERSONALIZATION};
 
-            use group::{Curve, CurveAffine as _};
+            use group::CurveAffine as _;
             use pasta_curves::arithmetic::CurveExt;
 
             let field_elems: Value<Vec<_>> = message
@@ -549,7 +549,7 @@ where
                     let actual_point =
                         pallas::Affine::from_xy(x_a.evaluate_vartime(), y_a.evaluate_vartime())
                             .unwrap();
-                    expected_point.to_affine() == actual_point
+                    expected_point.to_affine_vartime() == actual_point
                 });
         }
     }

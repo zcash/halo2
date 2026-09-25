@@ -3,7 +3,7 @@
 use std::ops::Range;
 
 use ff::{Field, FromUniformBytes};
-use group::Curve;
+use pasta_curves::arithmetic::CurveExt;
 
 use super::{
     circuit::{
@@ -232,7 +232,11 @@ where
 
     let fixed_commitments = fixed
         .iter()
-        .map(|poly| params.commit_lagrange(poly, Blind::default()).to_affine())
+        .map(|poly| {
+            params
+                .commit_lagrange(poly, Blind::default())
+                .to_affine_vartime()
+        })
         .collect();
 
     Ok(VerifyingKey::from_parts(
