@@ -186,6 +186,15 @@ impl<C: CurveAffine> Params<C> {
         reader.read_exact(&mut k[..])?;
         let k = u32::from_le_bytes(k);
 
+        // Enforce the same bound as `Params::new`, so that `1 << k` below cannot
+        // overflow and we never attempt to read 2^k generators for an absurd `k`.
+        if k >= 32 {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("invalid k = {k}: Params require k < 32"),
+            ));
+        }
+
         let n: u64 = 1 << k;
 
         let g: Vec<_> = (0..n).map(|_| C::read(reader)).collect::<Result<_, _>>()?;
@@ -301,6 +310,35 @@ fn test_commit_lagrange_eqaffine() {
     let alpha = Blind(Fp::random(&mut UnwrapErr(SysRng)));
 
     assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
+}
+
+#[test]
+fn test_params_read_write() {
+    const K: u32 = 4;
+
+    use crate::pasta::EqAffine;
+    let params = Params::<EqAffine>::new(K);
+
+    let mut bytes = vec![];
+    params.write(&mut bytes).unwrap();
+
+    // A valid encoding round-trips.
+    let read = Params::<EqAffine>::read(&mut &bytes[..]).unwrap();
+    assert_eq!(read.k, params.k);
+    assert_eq!(read.n, params.n);
+    assert_eq!(read.g, params.g);
+    assert_eq!(read.g_lagrange, params.g_lagrange);
+    assert_eq!(read.w, params.w);
+    assert_eq!(read.u, params.u);
+
+    // An encoding whose `k` is out of range (`Params::new` requires `k < 32`) is
+    // rejected up front, rather than panicking on `1 << k` or attempting to read
+    // 2^k generators from the buffer.
+    for bad_k in [32u32, 63, 64, u32::MAX] {
+        bytes[..4].copy_from_slice(&bad_k.to_le_bytes());
+        let err = Params::<EqAffine>::read(&mut &bytes[..]).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData, "k = {bad_k}");
+    }
 }
 
 #[test]

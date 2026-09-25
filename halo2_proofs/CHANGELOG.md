@@ -34,6 +34,12 @@ and this project adheres to Rust's notion of
 - The `batch` feature flag now enables an optional `rand` dependency with its
   `sys_rng` feature, instead of `rand_core/getrandom`.
 
+### Fixed
+- `halo2_proofs::poly::commitment::Params::read` now returns an
+  `io::ErrorKind::InvalidData` error when the serialized `k` is out of range
+  (`k >= 32`, the bound enforced by `Params::new`), instead of overflowing
+  `1 << k` or trying to read 2^k generators from the buffer.
+
 ## [0.3.5] - 2026-08-02
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_match_only`
