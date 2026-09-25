@@ -218,7 +218,7 @@ over $\mathcal{H}.$
 
 ## Lagrange basis functions
 
-> TODO: explain what a basis is in general (briefly).
+In linear algebra, a **basis** is a set of linearly independent vectors that can be used to represent any vector in a given vector space through linear combinations. For the space of polynomials of degree at most $n-1$, a basis consists of $n$ linearly independent polynomials, and any polynomial in this space can be uniquely expressed as a linear combination of these basis polynomials.
 
 Polynomials are commonly written in the monomial basis (e.g. $X, X^2, ... X^n$). However,
 when working over a multiplicative subgroup of order $n$, we find a more natural expression
