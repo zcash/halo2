@@ -547,7 +547,8 @@ where
                         .chunks(K)
                         .fold(value_Q.to_curve(), |acc, chunk| (acc + S(chunk)) + acc);
                     let actual_point =
-                        pallas::Affine::from_xy(x_a.evaluate(), y_a.evaluate()).unwrap();
+                        pallas::Affine::from_xy(x_a.evaluate_vartime(), y_a.evaluate_vartime())
+                            .unwrap();
                     expected_point.to_affine() == actual_point
                 });
         }

@@ -14,10 +14,8 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 use ff::WithSmallOrderMulGroup;
-use group::{
-    ff::{BatchInvert, Field},
-    Curve,
-};
+use group::{ff::Field, Curve};
+use pasta_curves::arithmetic::VartimeBatchInvert;
 use rand_core::Rng;
 use std::{
     collections::BTreeMap,
@@ -291,7 +289,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
 
         // Batch invert to obtain the denominators for the lookup product
         // polynomials
-        lookup_product.iter_mut().batch_invert();
+        lookup_product.iter_mut().batch_invert_vartime();
 
         // Finish the computation of the entire fraction by computing the numerators
         // (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
