@@ -1,7 +1,5 @@
-use group::{
-    ff::{Field, PrimeField},
-    Curve,
-};
+use group::ff::{Field, PrimeField};
+use pasta_curves::arithmetic::CurveExt;
 
 use super::{Argument, ProvingKey, VerifyingKey};
 use crate::{
@@ -146,7 +144,7 @@ impl Assembly {
             commitments.push(
                 params
                     .commit_lagrange(&permutation_poly, Blind::default())
-                    .to_affine(),
+                    .to_affine_vartime(),
             );
         }
         VerifyingKey { commitments }

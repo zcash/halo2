@@ -1,5 +1,5 @@
-use group::{ff::Field, Curve};
-use pasta_curves::arithmetic::VartimeBatchInvert;
+use group::ff::Field;
+use pasta_curves::arithmetic::{CurveExt, VartimeBatchInvert};
 
 use super::super::Error;
 use super::{Params, MSM};
@@ -54,7 +54,7 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.u, C::Scalar::ONE);
 
-        best_multiexp(&s, &self.msm.params.g).to_affine()
+        best_multiexp(&s, &self.msm.params.g).to_affine_vartime()
     }
 }
 

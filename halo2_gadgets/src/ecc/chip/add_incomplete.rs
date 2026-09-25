@@ -144,12 +144,11 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::Curve;
     use halo2_proofs::{
         circuit::{Layouter, Value},
         plonk::Error,
     };
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use crate::ecc::{EccInstructions, NonIdentityPoint};
 
@@ -172,7 +171,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "witnessed P + Q"),
-                Value::known((p_val + q_val).to_affine()),
+                Value::known((p_val + q_val).to_affine_vartime()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
         }

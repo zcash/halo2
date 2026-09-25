@@ -46,6 +46,12 @@ and this project adheres to Rust's notion of
   bound on `pasta_curves::arithmetic::CurveAffine::ScalarExt` to use
   variable-time inversions for improved performance:
   - `halo2_proofs::plonk::{keygen_pk, keygen_vk, create_proof, verify_proof}`
+- The following APIs now use the new `pasta_curves::arithmetic::CurveExt`
+  variable-time methods for improved performance:
+  - `halo2_proofs::plonk`:
+    - `VerifyingKey::dump_vesta_lean_fixture`
+    - `VerifyingKey::dump_vesta_lean_fixture_match_only`
+    - `{keygen_vk, create_proof, verify_proof}`
 
 ## [0.3.5] - 2026-08-02
 ### Added

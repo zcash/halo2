@@ -8,7 +8,7 @@ use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, Curve
 use crate::helpers::CurveRead;
 
 use ff::{Field, PrimeField};
-use group::{Curve, Group};
+use group::Group;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -67,7 +67,7 @@ impl<C: CurveAffine> Params<C> {
         let g = {
             let mut g = vec![C::identity(); n as usize];
             parallelize(&mut g, |g, starts| {
-                C::Curve::batch_normalize(&g_projective[starts..(starts + g.len())], g);
+                C::Curve::batch_normalize_vartime(&g_projective[starts..(starts + g.len())], g);
             });
             g
         };
@@ -90,7 +90,7 @@ impl<C: CurveAffine> Params<C> {
         let g_lagrange = {
             let mut g_lagrange = vec![C::identity(); n as usize];
             parallelize(&mut g_lagrange, |g_lagrange, starts| {
-                C::Curve::batch_normalize(
+                C::Curve::batch_normalize_vartime(
                     &g_lagrange_projective[starts..(starts + g_lagrange.len())],
                     g_lagrange,
                 );
@@ -100,8 +100,8 @@ impl<C: CurveAffine> Params<C> {
         };
 
         let hasher = C::CurveExt::hash_to_curve("Halo2-Parameters");
-        let w = hasher(&[1]).to_affine();
-        let u = hasher(&[2]).to_affine();
+        let w = hasher(&[1]).to_affine_vartime();
+        let u = hasher(&[2]).to_affine_vartime();
 
         Params {
             k,
@@ -338,7 +338,7 @@ fn test_opening_proof() {
 
     let blind = Blind(Fq::random(&mut rng));
 
-    let p = params.commit(&px, blind).to_affine();
+    let p = params.commit(&px, blind).to_affine_vartime();
 
     let mut transcript = Blake2bWrite::<Vec<u8>, EpAffine, Challenge255<EpAffine>>::init(vec![]);
     transcript.write_point(p).unwrap();

@@ -1,8 +1,5 @@
-use group::{
-    ff::{Field, PrimeField},
-    Curve,
-};
-use pasta_curves::arithmetic::VartimeBatchInvert;
+use group::ff::{Field, PrimeField};
+use pasta_curves::arithmetic::{CurveExt, VartimeBatchInvert};
 use rand_core::Rng;
 use std::iter::{self, ExactSizeIterator};
 
@@ -179,7 +176,7 @@ impl Argument {
                 evaluator.register_poly(domain.coeff_to_extended(z.clone()));
 
             let permutation_product_commitment =
-                permutation_product_commitment_projective.to_affine();
+                permutation_product_commitment_projective.to_affine_vartime();
 
             // Hash the permutation product commitment
             transcript.write_point(permutation_product_commitment)?;

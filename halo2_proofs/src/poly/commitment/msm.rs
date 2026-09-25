@@ -218,13 +218,15 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 #[cfg(test)]
 mod tests {
     use crate::poly::commitment::{Params, MSM};
-    use group::Curve;
-    use pasta_curves::{arithmetic::CurveAffine, EpAffine, Fp, Fq};
+    use pasta_curves::{
+        arithmetic::{CurveAffine, CurveExt},
+        EpAffine, Fp, Fq,
+    };
 
     #[test]
     fn msm_arithmetic() {
         let base = EpAffine::from_xy(-Fp::one(), Fp::from(2)).unwrap();
-        let base_viol = (base + base).to_affine();
+        let base_viol = (base + base).to_affine_vartime();
 
         let params = Params::new(4);
         let mut a: MSM<EpAffine> = MSM::new(&params);

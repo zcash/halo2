@@ -22,6 +22,13 @@ and this project adheres to Rust's notion of
     - `constants::compute_lagrange_coeffs`
     - `EccPoint::{point, x, y}`
     - `NonIdentityEccPoint::{point, x, y}`
+- The following APIs now use the new `pasta_curves::arithmetic::CurveExt`
+  variable-time methods for improved performance:
+  - `halo2_gadgets::ecc`:
+    - `chip::constants::*`
+    - `FixedPoint::mul`
+    - `FixedPointBaseField::mul`
+    - `FixedPointShort::mul`
 
 ### Added
 - `halo2_gadgets::ecc`:

@@ -43,7 +43,7 @@
 //! fail on the accepting fixtures.
 
 use ff::{Field, FromUniformBytes, PrimeField};
-use group::Curve;
+use pasta_curves::arithmetic::CurveExt;
 use std::collections::{BTreeSet, HashMap};
 use std::io::Read;
 
@@ -573,7 +573,9 @@ impl VerifyingKey<EqAffine> {
                 let mut poly = column.to_vec();
                 poly.resize(params.n as usize, Fp::ZERO);
                 let poly = self.domain.lagrange_from_vec(poly);
-                let derived = params.commit_lagrange(&poly, Blind::default()).to_affine();
+                let derived = params
+                    .commit_lagrange(&poly, Blind::default())
+                    .to_affine_vartime();
                 assert_eq!(
                     derived,
                     common_points[p * n_inst_cols + col],
