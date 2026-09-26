@@ -310,7 +310,7 @@ mod tests {
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::pallas::Base;
+    use pasta_curves::{arithmetic::CurveExt, pallas::Base};
     use rand::{rand_core::UnwrapErr, rngs::SysRng};
     use std::marker::PhantomData;
 
@@ -409,7 +409,7 @@ mod tests {
             CircuitVersion, NonIdentityPoint, Point,
         };
 
-        use group::{Curve, CurveAffine as _, Group};
+        use group::{CurveAffine as _, Group};
         use halo2_proofs::{
             circuit::{Layouter, SimpleFloorPlanner, Value},
             dev::MockProver,
@@ -611,8 +611,10 @@ mod tests {
                     } else {
                         pallas::Base::zero()
                     };
-                    let left_point = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine();
-                    let right_point = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine();
+                    let left_point =
+                        pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine_vartime();
+                    let right_point =
+                        pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine_vartime();
                     circuits.push(MyMuxCircuit::<Lookup> {
                         left_point: Value::known(left_point),
                         right_point: Value::known(right_point),

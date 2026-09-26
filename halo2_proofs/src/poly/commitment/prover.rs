@@ -1,14 +1,14 @@
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 use rand_core::Rng;
 
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
 use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine,
+    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, CurveExt,
 };
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
-use group::Curve;
 use std::io;
 
 /// Create a polynomial commitment opening proof for the polynomial defined
@@ -49,7 +49,7 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, R: Rng, T: Transcrip
     let s_poly_blind = Blind(C::Scalar::random(&mut rng));
 
     // Write a commitment to the random polynomial to the transcript
-    let s_poly_commitment = params.commit(&s_poly, s_poly_blind).to_affine();
+    let s_poly_commitment = params.commit(&s_poly, s_poly_blind).to_affine_vartime();
     transcript.write_point(s_poly_commitment)?;
 
     // Challenge that will ensure that the prover cannot change P but can only
@@ -107,15 +107,15 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, R: Rng, T: Transcrip
         let r_j_randomness = C::Scalar::random(&mut rng);
         let l_j = l_j + &best_multiexp(&[value_l_j * &z, l_j_randomness], &[params.u, params.w]);
         let r_j = r_j + &best_multiexp(&[value_r_j * &z, r_j_randomness], &[params.u, params.w]);
-        let l_j = l_j.to_affine();
-        let r_j = r_j.to_affine();
+        let l_j = l_j.to_affine_vartime();
+        let r_j = r_j.to_affine_vartime();
 
         // Feed L and R into the real transcript
         transcript.write_point(l_j)?;
         transcript.write_point(r_j)?;
 
         let u_j = *transcript.squeeze_challenge_scalar::<()>();
-        let u_j_inv = u_j.invert().unwrap(); // TODO, bubble this up
+        let u_j_inv = u_j.invert_vartime().unwrap(); // TODO, bubble this up
 
         // Collapse `p_prime` and `b`.
         // TODO: parallelize
@@ -156,6 +156,6 @@ fn parallel_generator_collapse<C: CurveAffine>(g: &mut [C], challenge: C::Scalar
         for (g_lo, g_hi) in g_lo.iter().zip(g_hi.iter()) {
             tmp.push(g_lo.to_curve() + &(*g_hi * challenge));
         }
-        C::Curve::batch_normalize(&tmp, g_lo);
+        C::Curve::batch_normalize_vartime(&tmp, g_lo);
     });
 }

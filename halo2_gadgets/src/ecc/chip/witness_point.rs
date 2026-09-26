@@ -212,9 +212,9 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::{Curve, Group};
+    use group::Group;
     use halo2_proofs::circuit::Layouter;
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use super::*;
     use crate::ecc::{EccInstructions, NonIdentityPoint, Point};
@@ -252,7 +252,7 @@ pub mod tests {
         let _ = NonIdentityPoint::new_from_constant(
             chip.clone(),
             layouter.namespace(|| "witness a constant non-identity point"),
-            pallas::Point::generator().to_affine(),
+            pallas::Point::generator().to_affine_vartime(),
         )
         .unwrap();
 
@@ -268,7 +268,7 @@ pub mod tests {
         let _ = Point::new_from_constant(
             chip,
             layouter.namespace(|| "witness a constant non-identity point"),
-            pallas::Point::generator().to_affine(),
+            pallas::Point::generator().to_affine_vartime(),
         )
         .unwrap();
     }

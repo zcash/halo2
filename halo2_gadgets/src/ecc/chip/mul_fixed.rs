@@ -6,10 +6,7 @@ use crate::utilities::decompose_running_sum::RunningSumConfig;
 
 use std::{marker::PhantomData, sync::LazyLock};
 
-use group::{
-    ff::{Field, PrimeField, PrimeFieldBits},
-    Curve,
-};
+use group::ff::{Field, PrimeField, PrimeFieldBits};
 use halo2_proofs::{
     circuit::{AssignedCell, Region, Value},
     plonk::{
@@ -18,7 +15,10 @@ use halo2_proofs::{
     },
     poly::Rotation,
 };
-use pasta_curves::{arithmetic::CurveAffine, pallas};
+use pasta_curves::{
+    arithmetic::{CurveAffine, CurveExt},
+    pallas,
+};
 
 pub mod base_field_elem;
 pub mod full_width;
@@ -260,7 +260,7 @@ impl<FixedPoints: super::FixedPoints<pallas::Affine>> Config<FixedPoints> {
         // Compute [window_scalar]B
         let mul_b = {
             let mul_b = window_scalar.map(|scalar| base_value * scalar);
-            let mul_b = mul_b.map(|mul_b| mul_b.to_affine().coordinates().unwrap());
+            let mul_b = mul_b.map(|mul_b| mul_b.to_affine_vartime().coordinates().unwrap());
 
             let x = mul_b.map(|mul_b| {
                 let x = *mul_b.x();

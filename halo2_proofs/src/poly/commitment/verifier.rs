@@ -1,7 +1,5 @@
-use group::{
-    ff::{BatchInvert, Field},
-    Curve,
-};
+use group::ff::Field;
+use pasta_curves::arithmetic::{CurveExt, VartimeBatchInvert};
 
 use super::super::Error;
 use super::{Params, MSM};
@@ -56,7 +54,7 @@ impl<'a, C: CurveAffine, E: EncodedChallenge<C>> Guard<'a, C, E> {
     pub fn compute_g(&self) -> C {
         let s = compute_s(&self.u, C::Scalar::ONE);
 
-        best_multiexp(&s, &self.msm.params.g).to_affine()
+        best_multiexp(&s, &self.msm.params.g).to_affine_vartime()
     }
 }
 
@@ -95,7 +93,7 @@ pub fn verify_proof<'a, C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRea
     rounds
         .iter_mut()
         .map(|&mut (_, _, _, ref mut u_j, _)| u_j)
-        .batch_invert();
+        .batch_invert_vartime();
 
     // This is the left-hand side of the verifier equation.
     // P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)

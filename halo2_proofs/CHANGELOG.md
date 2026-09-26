@@ -22,6 +22,9 @@ and this project adheres to Rust's notion of
   `transcript_repr`. The exporter re-hashes it and checks the scalar before
   emitting, so a consumer can recompute the key digest and read the pinned
   fields instead of trusting the captured scalar.
+- `halo2_proofs::circuit::AssignedCell::evaluate_vartime`
+- `halo2_proofs::circuit::Value::evaluate_vartime`
+- `halo2_proofs::plonk::Assigned::evaluate_vartime`
 
 ### Changed
 - The minimum supported Rust version is now 1.88.
@@ -33,6 +36,22 @@ and this project adheres to Rust's notion of
   on failure, matching the old `rand_core::OsRng` behaviour).
 - The `batch` feature flag now enables an optional `rand` dependency with its
   `sys_rng` feature, instead of `rand_core/getrandom`.
+- The following APIs now have a `pasta_curves::arithmetic::VartimeField` bound
+  and make use of variable-time inversions for improved performance:
+  - `halo2_proofs::arithmetic::lagrange_interpolate`
+  - Various APIs under `halo2_proofs::dev`
+  - `halo2_proofs::plonk::FloorPlanner::synthesize`
+  - `halo2_proofs::poly::EvaluationDomain::{new, l_i_range}`
+- The following APIs now use the new `pasta_curves::arithmetic::VartimeField`
+  bound on `pasta_curves::arithmetic::CurveAffine::ScalarExt` to use
+  variable-time inversions for improved performance:
+  - `halo2_proofs::plonk::{keygen_pk, keygen_vk, create_proof, verify_proof}`
+- The following APIs now use the new `pasta_curves::arithmetic::CurveExt`
+  variable-time methods for improved performance:
+  - `halo2_proofs::plonk`:
+    - `VerifyingKey::dump_vesta_lean_fixture`
+    - `VerifyingKey::dump_vesta_lean_fixture_match_only`
+    - `{keygen_vk, create_proof, verify_proof}`
 
 ## [0.3.5] - 2026-08-02
 ### Added

@@ -70,6 +70,7 @@ impl Spec<Fq, 3, 2> for P128Pow5T3 {
 mod tests {
     use alloc::vec::Vec;
     use core::marker::PhantomData;
+    use pasta_curves::arithmetic::VartimeField;
 
     use ff::{Field, FromUniformBytes, PrimeField};
 
@@ -91,7 +92,7 @@ mod tests {
         }
     }
 
-    impl<F: FromUniformBytes<64> + Ord, const SECURE_MDS: usize> Spec<F, 3, 2>
+    impl<F: FromUniformBytes<64> + VartimeField + Ord, const SECURE_MDS: usize> Spec<F, 3, 2>
         for P128Pow5T3Gen<F, SECURE_MDS>
     {
         fn full_rounds() -> usize {
@@ -117,7 +118,7 @@ mod tests {
 
     #[test]
     fn verify_constants() {
-        fn verify_constants_helper<F: FromUniformBytes<64> + Ord>(
+        fn verify_constants_helper<F: FromUniformBytes<64> + VartimeField + Ord>(
             expected_round_constants: [[F; 3]; 64],
             expected_mds: [[F; 3]; 3],
             expected_mds_inv: [[F; 3]; 3],

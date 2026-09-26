@@ -1,7 +1,5 @@
-use group::{
-    ff::{BatchInvert, Field, PrimeField},
-    Curve,
-};
+use group::ff::{Field, PrimeField};
+use pasta_curves::arithmetic::{CurveExt, VartimeBatchInvert};
 use rand_core::Rng;
 use std::iter::{self, ExactSizeIterator};
 
@@ -116,7 +114,7 @@ impl Argument {
             }
 
             // Invert to obtain the denominator for the permutation product polynomial
-            modified_values.batch_invert();
+            modified_values.batch_invert_vartime();
 
             // Iterate over each column again, this time finishing the computation
             // of the entire fraction by computing the numerators
@@ -178,7 +176,7 @@ impl Argument {
                 evaluator.register_poly(domain.coeff_to_extended(z.clone()));
 
             let permutation_product_commitment =
-                permutation_product_commitment_projective.to_affine();
+                permutation_product_commitment_projective.to_affine_vartime();
 
             // Hash the permutation product commitment
             transcript.write_point(permutation_product_commitment)?;

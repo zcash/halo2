@@ -3,6 +3,7 @@
 use std::{format, string::String, vec, vec::Vec};
 
 use ff::{Field, PrimeField};
+use pasta_curves::arithmetic::VartimeField;
 
 use crate::{
     circuit::Value,
@@ -66,7 +67,7 @@ impl<F: Field> CircuitFixtureRecorder<F> {
     }
 }
 
-impl<F: Field> Assignment<F> for CircuitFixtureRecorder<F> {
+impl<F: VartimeField> Assignment<F> for CircuitFixtureRecorder<F> {
     fn enter_region<NR, N>(&mut self, name: N)
     where
         NR: Into<String>,
@@ -126,7 +127,7 @@ impl<F: Field> Assignment<F> for CircuitFixtureRecorder<F> {
     {
         self.touch(row);
         let mut assigned = F::ZERO;
-        value().map(|value| assigned = Into::<Assigned<F>>::into(value).evaluate());
+        value().map(|value| assigned = Into::<Assigned<F>>::into(value).evaluate_vartime());
         if !self.in_region {
             self.constants.push((assigned, column.index(), row));
         }
@@ -153,7 +154,7 @@ impl<F: Field> Assignment<F> for CircuitFixtureRecorder<F> {
         value: Value<Assigned<F>>,
     ) -> Result<(), Error> {
         let mut assigned = F::ZERO;
-        value.map(|value| assigned = value.evaluate());
+        value.map(|value| assigned = value.evaluate_vartime());
         self.fills.push((column.index(), row, assigned));
         Ok(())
     }

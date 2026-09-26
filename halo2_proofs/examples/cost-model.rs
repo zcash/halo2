@@ -6,9 +6,10 @@ use std::{
 };
 
 use ff::Field;
-use group::{Curve, Group};
+use group::Group;
 use gumdrop::Options;
 use halo2_proofs::{arithmetic::best_multiexp, pasta::pallas};
+use pasta_curves::arithmetic::CurveExt;
 use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
 
@@ -35,7 +36,7 @@ impl Estimator {
                 .map(|_| pallas::Scalar::random(&mut rng))
                 .collect(),
             multiexp_bases: (0..max_size)
-                .map(|_| pallas::Point::random(&mut rng).to_affine())
+                .map(|_| pallas::Point::random(&mut rng).to_affine_vartime())
                 .collect(),
         }
     }

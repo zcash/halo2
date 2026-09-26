@@ -4,6 +4,7 @@ use std::fmt;
 use std::marker::PhantomData;
 
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 
 use crate::{
     circuit::{
@@ -26,7 +27,7 @@ use crate::{
 pub struct SimpleFloorPlanner;
 
 impl FloorPlanner for SimpleFloorPlanner {
-    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+    fn synthesize<F: VartimeField, CS: Assignment<F>, C: Circuit<F>>(
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
@@ -74,7 +75,7 @@ impl<'a, F: Field, CS: Assignment<F>> SingleChipLayouter<'a, F, CS> {
     }
 }
 
-impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a, F, CS> {
+impl<'a, F: VartimeField, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a, F, CS> {
     type Root = Self;
 
     fn assign_region<A, AR, N, NR>(&mut self, name: N, mut assignment: A) -> Result<AR, Error>
@@ -129,7 +130,7 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
                 .or_default();
             for (constant, advice) in constants_to_assign {
                 self.cs.assign_fixed(
-                    || format!("Constant({:?})", constant.evaluate()),
+                    || format!("Constant({:?})", constant.evaluate_vartime()),
                     constants_column,
                     *next_constant_row,
                     || Value::known(constant),

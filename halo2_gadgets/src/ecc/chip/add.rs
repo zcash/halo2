@@ -307,7 +307,7 @@ impl Config {
         #[cfg(test)]
         // Check that the correct sum is obtained.
         {
-            use group::Curve;
+            use pasta_curves::arithmetic::CurveExt;
 
             let p = p.point();
             let q = q.point();
@@ -316,7 +316,7 @@ impl Config {
 
             real_sum
                 .zip(result)
-                .assert_if_known(|(real_sum, result)| &real_sum.to_affine() == result);
+                .assert_if_known(|(real_sum, result)| &real_sum.to_affine_vartime() == result);
         }
 
         Ok(result)
@@ -325,7 +325,7 @@ impl Config {
 
 #[cfg(test)]
 pub mod tests {
-    use group::{Curve, CurveAffine as _};
+    use group::CurveAffine as _;
     use halo2_proofs::{
         circuit::{Layouter, Value},
         plonk::Error,
@@ -371,7 +371,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "witnessed P + Q"),
-                Value::known((p_val + q_val).to_affine()),
+                Value::known((p_val + q_val).to_affine_vartime()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain P + Q"), &witnessed_result)?;
         }
@@ -382,7 +382,7 @@ pub mod tests {
             let witnessed_result = NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "witnessed P + P"),
-                Value::known((p_val + p_val).to_affine()),
+                Value::known((p_val + p_val).to_affine_vartime()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain P + P"), &witnessed_result)?;
         }
@@ -404,7 +404,7 @@ pub mod tests {
         let endo_p = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo(P)"),
-            Value::known(endo_p.to_affine()),
+            Value::known(endo_p.to_affine_vartime()),
         )?;
         p.add(layouter.namespace(|| "P + endo(P)"), &endo_p)?;
 
@@ -413,7 +413,7 @@ pub mod tests {
         let endo_p_neg = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo(-P)"),
-            Value::known(endo_p_neg.to_affine()),
+            Value::known(endo_p_neg.to_affine_vartime()),
         )?;
         p.add(layouter.namespace(|| "P + endo(-P)"), &endo_p_neg)?;
 
@@ -422,7 +422,7 @@ pub mod tests {
         let endo_2_p = NonIdentityPoint::new(
             chip.clone(),
             layouter.namespace(|| "endo^2(P)"),
-            Value::known(endo_2_p.to_affine()),
+            Value::known(endo_2_p.to_affine_vartime()),
         )?;
         p.add(layouter.namespace(|| "P + endo^2(P)"), &endo_2_p)?;
 
@@ -431,7 +431,7 @@ pub mod tests {
         let endo_2_p_neg = NonIdentityPoint::new(
             chip,
             layouter.namespace(|| "endo^2(-P)"),
-            Value::known(endo_2_p_neg.to_affine()),
+            Value::known(endo_2_p_neg.to_affine_vartime()),
         )?;
         p.add(layouter.namespace(|| "P + endo^2(-P)"), &endo_2_p_neg)?;
 

@@ -1,6 +1,7 @@
 use core::cmp::max;
 use core::ops::{Add, Mul};
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 use std::{
     convert::TryFrom,
     ops::{Neg, Sub},
@@ -457,7 +458,7 @@ pub trait FloorPlanner {
     /// - Perform any necessary setup or measurement tasks, which may involve one or more
     ///   calls to `Circuit::default().synthesize(config, &mut layouter)`.
     /// - Call `circuit.synthesize(config, &mut layouter)` exactly once.
-    fn synthesize<F: Field, CS: Assignment<F>, C: Circuit<F>>(
+    fn synthesize<F: VartimeField, CS: Assignment<F>, C: Circuit<F>>(
         cs: &mut CS,
         circuit: &C,
         config: C::Config,
