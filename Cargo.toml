@@ -36,7 +36,6 @@ arrayvec = "0.7"
 indexmap = "2"
 
 # Performance
-lazy_static = "1"
 maybe-rayon = { version = "0.1", default-features = false}
 
 # Developer tooling dependencies

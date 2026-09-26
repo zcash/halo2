@@ -4,7 +4,7 @@ use super::{
 };
 use crate::utilities::decompose_running_sum::RunningSumConfig;
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::LazyLock};
 
 use group::{
     ff::{Field, PrimeField, PrimeFieldBits},
@@ -18,19 +18,16 @@ use halo2_proofs::{
     },
     poly::Rotation,
 };
-use lazy_static::lazy_static;
 use pasta_curves::{arithmetic::CurveAffine, pallas};
 
 pub mod base_field_elem;
 pub mod full_width;
 pub mod short;
 
-lazy_static! {
-    static ref TWO_SCALAR: pallas::Scalar = pallas::Scalar::from(2);
-    // H = 2^3 (3-bit window)
-    static ref H_SCALAR: pallas::Scalar = pallas::Scalar::from(H as u64);
-    static ref H_BASE: pallas::Base = pallas::Base::from(H as u64);
-}
+static TWO_SCALAR: LazyLock<pallas::Scalar> = LazyLock::new(|| pallas::Scalar::from(2));
+// H = 2^3 (3-bit window)
+static H_SCALAR: LazyLock<pallas::Scalar> = LazyLock::new(|| pallas::Scalar::from(H as u64));
+static H_BASE: LazyLock<pallas::Base> = LazyLock::new(|| pallas::Base::from(H as u64));
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Config<FixedPoints: super::FixedPoints<pallas::Affine>> {

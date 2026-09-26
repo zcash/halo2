@@ -28,7 +28,6 @@ ff.workspace = true
 group.workspace = true
 halo2_poseidon.workspace = true
 halo2_proofs.workspace = true
-lazy_static.workspace = true
 pasta_curves.workspace = true
 proptest = { workspace = true, optional = true }
 rand.workspace = true

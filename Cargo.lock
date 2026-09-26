@@ -850,7 +850,6 @@ dependencies = [
  "group",
  "halo2_poseidon",
  "halo2_proofs",
- "lazy_static",
  "pasta_curves",
  "plotters",
  "pprof",
