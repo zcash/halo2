@@ -2,7 +2,7 @@
 name = "halo2"
 version = "0.1.0-beta.2"
 authors = [
-    "Jack Grigg <jack@electriccoin.co>",
+    "Jack Grigg <jack@zodl.com>",
 ]
 edition.workspace = true
 rust-version.workspace = true

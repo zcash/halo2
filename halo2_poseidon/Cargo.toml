@@ -2,7 +2,7 @@
 name = "halo2_poseidon"
 version = "0.1.0"
 authors = [
-    "Jack Grigg <jack@electriccoin.co>",
+    "Jack Grigg <jack@zodl.com>",
     "Daira Emma Hopwood <daira@jacaranda.org>",
     "Ying Tong Lai",
 ]

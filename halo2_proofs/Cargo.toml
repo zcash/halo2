@@ -2,10 +2,10 @@
 name = "halo2_proofs"
 version = "0.3.5"
 authors = [
-    "Sean Bowe <sean@electriccoin.co>",
-    "Ying Tong Lai <yingtong@electriccoin.co>",
+    "Sean Bowe",
+    "Ying Tong Lai",
     "Daira Emma Hopwood <daira@jacaranda.org>",
-    "Jack Grigg <jack@electriccoin.co>",
+    "Jack Grigg <jack@zodl.com>",
 ]
 edition.workspace = true
 rust-version.workspace = true

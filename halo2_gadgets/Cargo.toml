@@ -2,11 +2,11 @@
 name = "halo2_gadgets"
 version = "0.5.0"
 authors = [
-    "Sean Bowe <sean@electriccoin.co>",
-    "Jack Grigg <jack@electriccoin.co>",
+    "Sean Bowe",
+    "Jack Grigg <jack@zodl.com>",
     "Daira Emma Hopwood <daira@jacaranda.org>",
-    "Ying Tong Lai <yingtong@electriccoin.co>",
-    "Kris Nuttycombe <kris@electriccoin.co>",
+    "Ying Tong Lai",
+    "Kris Nuttycombe <kris@zodl.com>",
 ]
 edition.workspace = true
 rust-version.workspace = true
