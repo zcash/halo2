@@ -50,6 +50,6 @@ halo2_legacy_pdqsort = "0.1"
 
 # Testing
 assert_matches = "1.5"
-criterion = "0.3"
+criterion = "0.5"
 gumdrop = "0.8"
 proptest = "1"
