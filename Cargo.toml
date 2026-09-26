@@ -33,7 +33,7 @@ uint = "0.9.2" # MSRV 1.56.1
 
 # Correctness
 arrayvec = "0.7"
-indexmap = "1"
+indexmap = "2"
 
 # Performance
 lazy_static = "1"
