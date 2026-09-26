@@ -497,7 +497,8 @@ impl<F: Field> Circuit<F> for MyCircuit<F> {
 #[allow(clippy::many_single_char_names)]
 fn main() {
     use halo2_proofs::{dev::MockProver, pasta::Fp};
-    use rand_core::OsRng;
+    use rand::rngs::SysRng;
+    use rand_core::UnwrapErr;
 
     // ANCHOR: test-circuit
     // The number of rows in our circuit cannot exceed 2^k. Since our example
@@ -505,10 +506,10 @@ fn main() {
     let k = 4;
 
     // Prepare the private and public inputs to the circuit!
-    let rng = OsRng;
-    let a = Fp::random(rng);
-    let b = Fp::random(rng);
-    let c = Fp::random(rng);
+    let mut rng = UnwrapErr(SysRng);
+    let a = Fp::random(&mut rng);
+    let b = Fp::random(&mut rng);
+    let c = Fp::random(&mut rng);
     let d = (a + b) * c;
 
     // Instantiate the circuit with the private inputs.

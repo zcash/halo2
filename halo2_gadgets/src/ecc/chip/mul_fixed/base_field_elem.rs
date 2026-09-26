@@ -389,7 +389,7 @@ pub mod tests {
         plonk::Error,
     };
     use pasta_curves::pallas;
-    use rand::rngs::OsRng;
+    use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
     use crate::{
         ecc::{
@@ -419,7 +419,7 @@ pub mod tests {
         base: FixedPointBaseField<pallas::Affine, EccChip<TestFixedBases, Lookup>>,
         base_val: pallas::Affine,
     ) -> Result<(), Error> {
-        let rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         let column = chip.config().advices[0];
 
@@ -442,7 +442,7 @@ pub mod tests {
 
         // [a]B
         {
-            let scalar_fixed = pallas::Base::random(rng);
+            let scalar_fixed = pallas::Base::random(&mut rng);
             let result = {
                 let scalar_fixed = chip.load_private(
                     layouter.namespace(|| "random base field element"),

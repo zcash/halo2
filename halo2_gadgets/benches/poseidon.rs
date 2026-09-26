@@ -19,7 +19,7 @@ use std::convert::TryInto;
 use std::marker::PhantomData;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use rand::rngs::OsRng;
+use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
 #[derive(Clone, Copy)]
 struct HashCircuit<S, const WIDTH: usize, const RATE: usize, const L: usize>
@@ -159,9 +159,9 @@ fn bench_poseidon<S, const WIDTH: usize, const RATE: usize, const L: usize>(
     let prover_name = name.to_string() + "-prover";
     let verifier_name = name.to_string() + "-verifier";
 
-    let mut rng = OsRng;
+    let mut rng = UnwrapErr(SysRng);
     let message = (0..L)
-        .map(|_| pallas::Base::random(rng))
+        .map(|_| pallas::Base::random(&mut rng))
         .collect::<Vec<_>>()
         .try_into()
         .unwrap();

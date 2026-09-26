@@ -1,6 +1,6 @@
 use ff::Field;
 use group::Curve;
-use rand_core::RngCore;
+use rand_core::Rng;
 use std::iter;
 use std::ops::RangeTo;
 
@@ -35,7 +35,7 @@ use crate::{
 pub fn create_proof<
     C: CurveAffine,
     E: EncodedChallenge<C>,
-    R: RngCore,
+    R: Rng,
     T: TranscriptWrite<C, E>,
     ConcreteCircuit: Circuit<C::Scalar>,
 >(
@@ -732,7 +732,8 @@ fn test_create_proof() {
         transcript::{Blake2bWrite, Challenge255},
     };
     use pasta_curves::EqAffine;
-    use rand_core::OsRng;
+    use rand::rngs::SysRng;
+    use rand_core::UnwrapErr;
 
     #[derive(Clone, Copy)]
     struct MyCircuit;
@@ -768,7 +769,7 @@ fn test_create_proof() {
         &pk,
         &[MyCircuit, MyCircuit],
         &[],
-        OsRng,
+        UnwrapErr(SysRng),
         &mut transcript,
     );
     assert!(matches!(proof.unwrap_err(), Error::InvalidInstances));
@@ -779,7 +780,7 @@ fn test_create_proof() {
         &pk,
         &[MyCircuit, MyCircuit],
         &[&[], &[]],
-        OsRng,
+        UnwrapErr(SysRng),
         &mut transcript,
     )
     .expect("proof generation should not fail");

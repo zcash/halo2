@@ -7,7 +7,8 @@ use halo2_proofs::pasta::{EqAffine, Fp};
 use halo2_proofs::plonk::*;
 use halo2_proofs::poly::{commitment::Params, Rotation};
 use halo2_proofs::transcript::{Blake2bRead, Blake2bWrite, Challenge255};
-use rand_core::OsRng;
+use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
 
 use std::marker::PhantomData;
 
@@ -255,10 +256,10 @@ fn criterion_benchmark(c: &mut Criterion) {
     }
 
     fn prover(k: u32, params: &Params<EqAffine>, pk: &ProvingKey<EqAffine>) -> Vec<u8> {
-        let rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         let circuit: MyCircuit<Fp> = MyCircuit {
-            a: Value::known(Fp::random(rng)),
+            a: Value::known(Fp::random(&mut rng)),
             k,
         };
 
