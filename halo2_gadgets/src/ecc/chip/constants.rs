@@ -232,6 +232,7 @@ mod tests {
     use group::{ff::Field, Curve, Group};
     use pasta_curves::{arithmetic::CurveAffine, pallas};
     use proptest::prelude::*;
+    use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
     use super::{compute_window_table, find_zs_and_us, test_lagrange_coeffs, H, NUM_WINDOWS};
 
@@ -257,7 +258,7 @@ mod tests {
 
     #[test]
     fn zs_and_us() {
-        let base = pallas::Point::random(rand::rngs::OsRng);
+        let base = pallas::Point::random(&mut UnwrapErr(SysRng));
         let (z, u): (Vec<u64>, Vec<[pallas::Base; H]>) =
             find_zs_and_us(base.to_affine(), NUM_WINDOWS)
                 .unwrap()

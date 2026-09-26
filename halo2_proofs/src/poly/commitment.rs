@@ -8,7 +8,7 @@ use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, Curve
 use crate::helpers::CurveRead;
 
 use ff::{Field, PrimeField};
-use group::{prime::PrimeCurveAffine, Curve, Group};
+use group::{Curve, Group};
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 mod msm;
@@ -74,7 +74,7 @@ impl<C: CurveAffine> Params<C> {
 
         // Let's evaluate all of the Lagrange basis polynomials
         // using an inverse FFT.
-        let mut alpha_inv = <<C as PrimeCurveAffine>::Curve as Group>::Scalar::ROOT_OF_UNITY_INV;
+        let mut alpha_inv = <<C as group::CurveAffine>::Curve as Group>::Scalar::ROOT_OF_UNITY_INV;
         for _ in k..C::Scalar::S {
             alpha_inv = alpha_inv.square();
         }
@@ -259,7 +259,8 @@ impl<F: Field> MulAssign<F> for Blind<F> {
 fn test_commit_lagrange_epaffine() {
     const K: u32 = 6;
 
-    use rand_core::OsRng;
+    use rand::rngs::SysRng;
+    use rand_core::UnwrapErr;
 
     use crate::pasta::{EpAffine, Fq};
     let params = Params::<EpAffine>::new(K);
@@ -273,7 +274,7 @@ fn test_commit_lagrange_epaffine() {
 
     let b = domain.lagrange_to_coeff(a.clone());
 
-    let alpha = Blind(Fq::random(OsRng));
+    let alpha = Blind(Fq::random(&mut UnwrapErr(SysRng)));
 
     assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
 }
@@ -282,7 +283,8 @@ fn test_commit_lagrange_epaffine() {
 fn test_commit_lagrange_eqaffine() {
     const K: u32 = 6;
 
-    use rand_core::OsRng;
+    use rand::rngs::SysRng;
+    use rand_core::UnwrapErr;
 
     use crate::pasta::{EqAffine, Fp};
     let params = Params::<EqAffine>::new(K);
@@ -296,7 +298,7 @@ fn test_commit_lagrange_eqaffine() {
 
     let b = domain.lagrange_to_coeff(a.clone());
 
-    let alpha = Blind(Fp::random(OsRng));
+    let alpha = Blind(Fp::random(&mut UnwrapErr(SysRng)));
 
     assert_eq!(params.commit(&b, alpha), params.commit_lagrange(&a, alpha));
 }
@@ -306,7 +308,8 @@ fn test_opening_proof() {
     const K: u32 = 6;
 
     use ff::Field;
-    use rand_core::OsRng;
+    use rand::rngs::SysRng;
+    use rand_core::UnwrapErr;
 
     use super::{
         commitment::{Blind, Params},
@@ -318,7 +321,7 @@ fn test_opening_proof() {
         Blake2bRead, Blake2bWrite, Challenge255, Transcript, TranscriptRead, TranscriptWrite,
     };
 
-    let rng = OsRng;
+    let mut rng = UnwrapErr(SysRng);
 
     let params = Params::<EpAffine>::new(K);
     let mut params_buffer = vec![];
@@ -333,7 +336,7 @@ fn test_opening_proof() {
         *a = Fq::from(i as u64);
     }
 
-    let blind = Blind(Fq::random(rng));
+    let blind = Blind(Fq::random(&mut rng));
 
     let p = params.commit(&px, blind).to_affine();
 
