@@ -18,7 +18,7 @@ use group::{
     ff::{BatchInvert, Field},
     Curve,
 };
-use rand_core::RngCore;
+use rand_core::Rng;
 use std::{
     collections::BTreeMap,
     iter,
@@ -80,7 +80,7 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
         E: EncodedChallenge<C>,
         Ev: Copy + Send + Sync,
         Ec: Copy + Send + Sync,
-        R: RngCore,
+        R: Rng,
         T: TranscriptWrite<C, E>,
     >(
         &self,
@@ -253,7 +253,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
     #[allow(clippy::too_many_arguments)]
     pub(in crate::plonk) fn commit_product<
         E: EncodedChallenge<C>,
-        R: RngCore,
+        R: Rng,
         T: TranscriptWrite<C, E>,
     >(
         self,
@@ -376,7 +376,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
             assert_eq!(z[u], C::Scalar::ONE);
         }
 
-        let product_blind = Blind(C::Scalar::random(rng));
+        let product_blind = Blind(C::Scalar::random(&mut rng));
         let product_commitment = params.commit_lagrange(&z, product_blind).to_affine();
         let z = pk.vk.domain.lagrange_to_coeff(z);
         let product_coset = evaluator.register_poly(pk.vk.domain.coeff_to_extended(z.clone()));
@@ -562,7 +562,7 @@ type ExpressionPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCo
 ///   that has the corresponding value in S'.
 ///
 /// This method returns (A', S') if no errors are encountered.
-fn permute_expression_pair<C: CurveAffine, R: RngCore>(
+fn permute_expression_pair<C: CurveAffine, R: Rng>(
     pk: &ProvingKey<C>,
     params: &Params<C>,
     domain: &EvaluationDomain<C::Scalar>,

@@ -1,5 +1,5 @@
 use ff::Field;
-use rand_core::RngCore;
+use rand_core::Rng;
 
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
@@ -24,12 +24,7 @@ use std::io;
 /// opening v, and the point x. It's probably also nice for the transcript
 /// to have seen the elliptic curve description and the URS, if you want to
 /// be rigorous.
-pub fn create_proof<
-    C: CurveAffine,
-    E: EncodedChallenge<C>,
-    R: RngCore,
-    T: TranscriptWrite<C, E>,
->(
+pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, R: Rng, T: TranscriptWrite<C, E>>(
     params: &Params<C>,
     mut rng: R,
     transcript: &mut T,

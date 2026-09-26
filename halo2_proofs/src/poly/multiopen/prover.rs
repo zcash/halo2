@@ -12,7 +12,7 @@ use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;
 use group::Curve;
-use rand_core::RngCore;
+use rand_core::Rng;
 use std::hash::Hash;
 use std::io;
 use std::marker::PhantomData;
@@ -23,7 +23,7 @@ pub fn create_proof<
     I,
     C: CurveAffine,
     E: EncodedChallenge<C>,
-    R: RngCore,
+    R: Rng,
     T: TranscriptWrite<C, E>,
 >(
     params: &Params<C>,

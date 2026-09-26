@@ -316,7 +316,7 @@ mod tests {
         plonk::{Circuit, ConstraintSystem, Error},
     };
     use pasta_curves::pallas::Base;
-    use rand::rngs::OsRng;
+    use rand::{rand_core::UnwrapErr, rngs::SysRng};
     use std::marker::PhantomData;
 
     #[test]
@@ -381,13 +381,13 @@ mod tests {
             }
         }
 
-        let rng = OsRng;
+        let mut rng = UnwrapErr(SysRng);
 
         // Test swap case
         {
             let circuit: MyCondSwapCircuit<Base> = MyCondSwapCircuit {
-                a: Value::known(Base::random(rng)),
-                b: Value::known(Base::random(rng)),
+                a: Value::known(Base::random(&mut rng)),
+                b: Value::known(Base::random(&mut rng)),
                 swap: Value::known(true),
             };
             let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
@@ -397,8 +397,8 @@ mod tests {
         // Test non-swap case
         {
             let circuit: MyCondSwapCircuit<Base> = MyCondSwapCircuit {
-                a: Value::known(Base::random(rng)),
-                b: Value::known(Base::random(rng)),
+                a: Value::known(Base::random(&mut rng)),
+                b: Value::known(Base::random(&mut rng)),
                 swap: Value::known(false),
             };
             let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
@@ -489,7 +489,7 @@ mod tests {
             CircuitVersion, NonIdentityPoint, Point,
         };
 
-        use group::{cofactor::CofactorCurveAffine, Curve, Group};
+        use group::{Curve, CurveAffine as _, Group};
         use halo2_proofs::{
             circuit::{Layouter, SimpleFloorPlanner, Value},
             dev::MockProver,
@@ -497,7 +497,7 @@ mod tests {
         };
         use pasta_curves::{arithmetic::CurveAffine, pallas, EpAffine};
 
-        use rand::rngs::OsRng;
+        use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
         #[derive(Clone, Debug)]
         pub struct MuxConfig<Lookup: PallasLookupRangeCheck> {
@@ -691,8 +691,8 @@ mod tests {
                     } else {
                         pallas::Base::zero()
                     };
-                    let left_point = pallas::Point::random(OsRng).to_affine();
-                    let right_point = pallas::Point::random(OsRng).to_affine();
+                    let left_point = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine();
+                    let right_point = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine();
                     circuits.push(MyMuxCircuit::<Lookup> {
                         left_point: Value::known(left_point),
                         right_point: Value::known(right_point),
