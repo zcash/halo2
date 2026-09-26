@@ -25,11 +25,14 @@ and this project adheres to Rust's notion of
 
 ### Changed
 - The minimum supported Rust version is now 1.88.
-- `halo2_proofs::dev::MockProver` now returns `Error::BoundsFailure` when a
-  circuit queries an instance cell beyond the public inputs that were provided
-  to `MockProver::run`, matching the behaviour of `create_proof`. Previously the
-  padding rows read as zero, so such circuits passed `MockProver` but failed to
-  prove.
+- Migrated to `ff 0.14`, `group 0.14` and `rand_core 0.10`.
+- `halo2_proofs::plonk::create_proof` now has an `R: rand_core::Rng` bound,
+  replacing the deprecated `rand_core::RngCore`. `Rng` is the infallible half
+  of the new fallible RNG interface, so a fallible source such as
+  `getrandom::SysRng` must be wrapped in `rand_core::UnwrapErr` (which panics
+  on failure, matching the old `rand_core::OsRng` behaviour).
+- The `batch` feature flag now enables an optional `rand` dependency with its
+  `sys_rng` feature, instead of `rand_core/getrandom`.
 
 ## [0.3.5] - 2026-08-02
 ### Added
