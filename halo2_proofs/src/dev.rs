@@ -370,7 +370,12 @@ impl<F: Field> Assignment<F> for MockProver<F> {
         self.instance
             .get(column.index())
             .and_then(|column| column.get(row))
-            .map(|v| circuit::Value::known(v.value()))
+            .and_then(|v| match v {
+                InstanceValue::Assigned(v) => Some(circuit::Value::known(*v)),
+                // Padding rows were not provided by the caller. The real prover only
+                // exposes the rows it was given, so treat this as out of bounds too.
+                InstanceValue::Padding => None,
+            })
             .ok_or(Error::BoundsFailure)
     }
 
@@ -936,7 +941,7 @@ mod tests {
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         plonk::{
-            Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Selector,
+            Advice, Any, Circuit, Column, ConstraintSystem, Error, Expression, Instance, Selector,
             TableColumn,
         },
         poly::Rotation,
@@ -1013,6 +1018,73 @@ mod tests {
                 offset: 1,
             }])
         );
+    }
+
+    #[test]
+    fn instance_query_out_of_bounds() {
+        const K: u32 = 4;
+
+        #[derive(Clone)]
+        struct MyConfig {
+            a: Column<Advice>,
+            instance: Column<Instance>,
+        }
+
+        struct MyCircuit {
+            row: usize,
+        }
+
+        impl Circuit<Fp> for MyCircuit {
+            type Config = MyConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn configure(meta: &mut ConstraintSystem<Fp>) -> Self::Config {
+                let a = meta.advice_column();
+                let instance = meta.instance_column();
+                meta.enable_equality(a);
+                meta.enable_equality(instance);
+
+                MyConfig { a, instance }
+            }
+
+            fn without_witnesses(&self) -> Self {
+                Self { row: self.row }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<Fp>,
+            ) -> Result<(), Error> {
+                layouter.assign_region(
+                    || "load instance",
+                    |mut region| {
+                        region.assign_advice_from_instance(
+                            || "instance",
+                            config.instance,
+                            self.row,
+                            config.a,
+                            0,
+                        )?;
+                        Ok(())
+                    },
+                )
+            }
+        }
+
+        // Only row 0 of the instance column is provided.
+        let instance = vec![vec![Fp::from(7)]];
+
+        // Reading a provided row works.
+        let prover = MockProver::run(K, &MyCircuit { row: 0 }, instance.clone()).unwrap();
+        assert_eq!(prover.verify(), Ok(()));
+
+        // Reading past the provided public inputs is an error, as it is in the real
+        // prover. Previously `MockProver` silently returned zero for the padding row.
+        assert!(matches!(
+            MockProver::run(K, &MyCircuit { row: 1 }, instance).unwrap_err(),
+            Error::BoundsFailure
+        ));
     }
 
     #[test]

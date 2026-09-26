@@ -33,6 +33,11 @@ and this project adheres to Rust's notion of
   on failure, matching the old `rand_core::OsRng` behaviour).
 - The `batch` feature flag now enables an optional `rand` dependency with its
   `sys_rng` feature, instead of `rand_core/getrandom`.
+- `halo2_proofs::dev::MockProver` now returns `Error::BoundsFailure` when a
+  circuit queries an instance cell beyond the public inputs that were provided
+  to `MockProver::run`, matching the behaviour of `create_proof`. Previously the
+  padding rows read as zero, so such circuits passed `MockProver` but failed to
+  prove.
 
 ## [0.3.5] - 2026-08-02
 ### Added
