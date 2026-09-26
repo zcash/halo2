@@ -1191,8 +1191,9 @@ dependencies = [
 
 [[package]]
 name = "pasta_curves"
-version = "0.5.2"
-source = "git+https://github.com/zcash/pasta_curves.git?rev=6aac244ffd28d4f704ef873ceb8c374610d328ec#6aac244ffd28d4f704ef873ceb8c374610d328ec"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ec2f82051d06ea52d7ec6a47546c592fc52392b6040e503e05a764dd10dd1de"
 dependencies = [
  "blake2b_simd",
  "ff",
@@ -1663,8 +1664,9 @@ checksum = "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea"
 
 [[package]]
 name = "sinsemilla"
-version = "0.1.0"
-source = "git+https://github.com/zcash/sinsemilla.git?rev=fd0e46c6db9c6572218e95a9c55fea5a824751ad#fd0e46c6db9c6572218e95a9c55fea5a824751ad"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72744738b764bb3bb7bb5dcf71b62d19c2de8a09f850a7388f6088f244037299"
 dependencies = [
  "group",
  "pasta_curves",
