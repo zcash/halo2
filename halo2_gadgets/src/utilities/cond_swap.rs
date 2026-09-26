@@ -231,24 +231,29 @@ impl<F: PrimeField> CondSwapChip<F> {
     ///
     /// # Side-effects
     ///
-    /// `advices[0]` will be equality-enabled.
+    /// `advices[0]`, `advices[1]` and `advices[4]` will be equality-enabled.
     pub fn configure(
         meta: &mut ConstraintSystem<F>,
         advices: [Column<Advice>; 5],
     ) -> CondSwapConfig {
         let a = advices[0];
-        // Only column a is used in an equality constraint directly by this chip.
+        let b = advices[1];
+        let swap = advices[4];
+        // `swap` copies its first input into column `a`; `mux` additionally copies its
+        // inputs into columns `b` and `swap`.
         meta.enable_equality(a);
+        meta.enable_equality(b);
+        meta.enable_equality(swap);
 
         let q_swap = meta.selector();
 
         let config = CondSwapConfig {
             q_swap,
             a,
-            b: advices[1],
+            b,
             a_swapped: advices[2],
             b_swapped: advices[3],
-            swap: advices[4],
+            swap,
         };
 
         // TODO: optimise shape of gate for Merkle path validation
@@ -397,6 +402,81 @@ mod tests {
                 swap: Value::known(false),
             };
             let prover = MockProver::<Base>::run(3, &circuit, vec![]).unwrap();
+            assert_eq!(prover.verify(), Ok(()));
+        }
+    }
+
+    #[test]
+    fn mux_with_configure_side_effects_only() {
+        // `mux` copies `left`, `right` and `choice` into the chip's columns, so it must
+        // work in a circuit that relies solely on the equality constraints that
+        // `CondSwapChip::configure` documents it enables itself.
+        #[derive(Default)]
+        struct MyMuxCircuit<F: Field> {
+            choice: Value<F>,
+            left: Value<F>,
+            right: Value<F>,
+        }
+
+        impl<F: PrimeField> Circuit<F> for MyMuxCircuit<F> {
+            type Config = CondSwapConfig;
+            type FloorPlanner = SimpleFloorPlanner;
+
+            fn without_witnesses(&self) -> Self {
+                Self::default()
+            }
+
+            fn configure(meta: &mut ConstraintSystem<F>) -> Self::Config {
+                let advices = [
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                    meta.advice_column(),
+                ];
+
+                CondSwapChip::<F>::configure(meta, advices)
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl Layouter<F>,
+            ) -> Result<(), Error> {
+                let chip = CondSwapChip::<F>::construct(config.clone());
+
+                let choice =
+                    chip.load_private(layouter.namespace(|| "choice"), config.a, self.choice)?;
+                let left = chip.load_private(layouter.namespace(|| "left"), config.a, self.left)?;
+                let right =
+                    chip.load_private(layouter.namespace(|| "right"), config.a, self.right)?;
+
+                let out = chip.mux(&mut layouter, choice, left, right)?;
+
+                self.choice
+                    .zip(self.left.zip(self.right))
+                    .zip(out.value())
+                    .assert_if_known(|((choice, (left, right)), out)| {
+                        if *choice == F::ZERO {
+                            *out == left
+                        } else {
+                            *out == right
+                        }
+                    });
+
+                Ok(())
+            }
+        }
+
+        let rng = OsRng;
+
+        for choice in [false, true] {
+            let circuit: MyMuxCircuit<Base> = MyMuxCircuit {
+                choice: Value::known(Base::from(choice as u64)),
+                left: Value::known(Base::random(rng)),
+                right: Value::known(Base::random(rng)),
+            };
+            let prover = MockProver::<Base>::run(4, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
         }
     }

@@ -9,6 +9,13 @@ and this project adheres to Rust's notion of
 ### Changed
 - The minimum supported Rust version is now 1.88.
 - Migrated to `ff 0.14`, `group 0.14` and `rand 0.10`.
+- `halo2_gadgets::utilities::cond_swap::CondSwapChip::configure` now
+  equality-enables `advices[1]` and `advices[4]` in addition to `advices[0]`.
+  `CondSwapInstructions::mux` copies its `right` and `choice` inputs into these
+  columns, so circuits that had not enabled equality on them themselves failed
+  with `Error::ColumnNotInPermutation`. Circuits that already equality-enable
+  these columns (as the Orchard circuit does for all of its advice columns) are
+  unaffected.
 
 ### Added
 - `halo2_gadgets::ecc`:
