@@ -468,13 +468,15 @@ mod tests {
             }
         }
 
-        let rng = OsRng;
+        use rand::{rand_core::UnwrapErr, rngs::SysRng};
+
+        let mut rng = UnwrapErr(SysRng);
 
         for choice in [false, true] {
             let circuit: MyMuxCircuit<Base> = MyMuxCircuit {
                 choice: Value::known(Base::from(choice as u64)),
-                left: Value::known(Base::random(rng)),
-                right: Value::known(Base::random(rng)),
+                left: Value::known(Base::random(&mut rng)),
+                right: Value::known(Base::random(&mut rng)),
             };
             let prover = MockProver::<Base>::run(4, &circuit, vec![]).unwrap();
             assert_eq!(prover.verify(), Ok(()));
