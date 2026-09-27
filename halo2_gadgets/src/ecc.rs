@@ -646,14 +646,13 @@ pub(crate) mod tests {
     use ff::PrimeField;
     use group::{Curve, CurveAffine as _, Group};
     use rand::{rand_core::UnwrapErr, rngs::SysRng};
-    use std::marker::PhantomData;
+    use std::{marker::PhantomData, sync::LazyLock};
 
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use lazy_static::lazy_static;
     use pasta_curves::pallas;
 
     use super::{
@@ -679,13 +678,12 @@ pub(crate) mod tests {
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct Short;
 
-    lazy_static! {
-        static ref BASE: pallas::Affine = pallas::Point::generator().to_affine();
-        static ref ZS_AND_US: Vec<(u64, [pallas::Base; H])> =
-            find_zs_and_us(*BASE, NUM_WINDOWS).unwrap();
-        static ref ZS_AND_US_SHORT: Vec<(u64, [pallas::Base; H])> =
-            find_zs_and_us(*BASE, NUM_WINDOWS_SHORT).unwrap();
-    }
+    static BASE: LazyLock<pallas::Affine> =
+        LazyLock::new(|| pallas::Point::generator().to_affine());
+    static ZS_AND_US: LazyLock<Vec<(u64, [pallas::Base; H])>> =
+        LazyLock::new(|| find_zs_and_us(*BASE, NUM_WINDOWS).unwrap());
+    static ZS_AND_US_SHORT: LazyLock<Vec<(u64, [pallas::Base; H])>> =
+        LazyLock::new(|| find_zs_and_us(*BASE, NUM_WINDOWS_SHORT).unwrap());
 
     impl FullWidth {
         pub(crate) fn from_pallas_generator() -> Self {

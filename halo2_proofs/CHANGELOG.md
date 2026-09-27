@@ -25,7 +25,7 @@ and this project adheres to Rust's notion of
 
 ### Changed
 - The minimum supported Rust version is now 1.88.
-- Migrated to `ff 0.14`, `group 0.14` and `rand_core 0.10`.
+- Migrated to `ff 0.14`, `group 0.14`, `rand_core 0.10`, `pasta_curves 0.6`.
 - `halo2_proofs::plonk::create_proof` now has an `R: rand_core::Rng` bound,
   replacing the deprecated `rand_core::RngCore`. `Rng` is the infallible half
   of the new fallible RNG interface, so a fallible source such as

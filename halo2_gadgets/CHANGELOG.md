@@ -8,7 +8,8 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 ### Changed
 - The minimum supported Rust version is now 1.88.
-- Migrated to `ff 0.14`, `group 0.14` and `rand 0.10`.
+- Migrated to `ff 0.14`, `group 0.14`, `rand 0.10`, `pasta_curves 0.6`,
+  `sinsemilla 0.2`.
 - `halo2_gadgets::utilities::cond_swap::CondSwapChip::configure` now
   equality-enables `advices[1]` and `advices[4]` in addition to `advices[0]`.
   `CondSwapInstructions::mux` copies its `right` and `choice` inputs into these
