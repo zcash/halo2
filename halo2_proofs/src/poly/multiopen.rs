@@ -277,7 +277,7 @@ where
 
 #[test]
 fn test_roundtrip() {
-    use group::Curve;
+    use pasta_curves::arithmetic::CurveExt;
     use rand::rngs::SysRng;
     use rand_core::UnwrapErr;
 
@@ -309,9 +309,9 @@ fn test_roundtrip() {
 
     let blind = Blind(Fp::random(&mut rng));
 
-    let a = params.commit(&ax, blind).to_affine();
-    let b = params.commit(&bx, blind).to_affine();
-    let c = params.commit(&cx, blind).to_affine();
+    let a = params.commit(&ax, blind).to_affine_vartime();
+    let b = params.commit(&bx, blind).to_affine_vartime();
+    let c = params.commit(&cx, blind).to_affine_vartime();
 
     let x = Fp::random(&mut rng);
     let y = Fp::random(&mut rng);
@@ -391,7 +391,7 @@ fn test_roundtrip() {
 #[test]
 fn test_identical_queries() {
     use assert_matches::assert_matches;
-    use group::Curve;
+    use pasta_curves::arithmetic::CurveExt;
     use rand::rngs::SysRng;
     use rand_core::UnwrapErr;
 
@@ -423,9 +423,9 @@ fn test_identical_queries() {
 
     let blind = Blind(Fp::random(&mut rng));
 
-    let a = params.commit(&ax, blind).to_affine();
-    let b = params.commit(&bx, blind).to_affine();
-    let c = params.commit(&cx, blind).to_affine();
+    let a = params.commit(&ax, blind).to_affine_vartime();
+    let b = params.commit(&bx, blind).to_affine_vartime();
+    let c = params.commit(&cx, blind).to_affine_vartime();
 
     let x = Fp::random(&mut rng);
     let y = Fp::random(&mut rng);

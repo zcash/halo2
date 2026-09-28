@@ -9,7 +9,8 @@ use crate::{
 use super::{Coeff, ExtendedLagrangeCoeff, LagrangeCoeff, Polynomial, Rotation};
 
 use ff::WithSmallOrderMulGroup;
-use group::ff::{BatchInvert, Field};
+use group::ff::Field;
+use pasta_curves::arithmetic::{VartimeBatchInvert, VartimeField};
 
 use std::marker::PhantomData;
 
@@ -34,7 +35,7 @@ pub struct EvaluationDomain<F: Field> {
     barycentric_weight: F,
 }
 
-impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
+impl<F: WithSmallOrderMulGroup<3> + VartimeField> EvaluationDomain<F> {
     /// This constructs a new evaluation domain object based on the provided
     /// values $j, k$.
     pub fn new(j: u32, k: u32) -> Self {
@@ -125,7 +126,7 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
             .chain(Some(&mut barycentric_weight))
             .chain(Some(&mut extended_omega_inv))
             .chain(Some(&mut omega_inv))
-            .batch_invert();
+            .batch_invert_vartime();
 
         EvaluationDomain {
             n,
@@ -144,7 +145,9 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
             barycentric_weight,
         }
     }
+}
 
+impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     /// Obtains a polynomial in Lagrange form when given a vector of Lagrange
     /// coefficients of size `n`; panics if the provided vector is the wrong
     /// length.
@@ -416,7 +419,9 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         }
         point
     }
+}
 
+impl<F: WithSmallOrderMulGroup<3> + VartimeField> EvaluationDomain<F> {
     /// Computes evaluations (at the point `x`, where `xn = x^n`) of Lagrange
     /// basis polynomials `l_i(X)` defined such that `l_i(omega^i) = 1` and
     /// `l_i(omega^j) = 0` for all `j != i` at each provided rotation `i`.
@@ -459,7 +464,7 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
                 let result = x - self.rotate_omega(F::ONE, rotation);
                 results.push(result);
             }
-            results.iter_mut().batch_invert();
+            results.iter_mut().batch_invert_vartime();
         }
 
         let common = (xn - F::ONE) * self.barycentric_weight;
@@ -470,7 +475,9 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
 
         results
     }
+}
 
+impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     /// Gets the quotient polynomial's degree (as a multiple of n)
     pub fn get_quotient_poly_degree(&self) -> usize {
         self.quotient_poly_degree as usize

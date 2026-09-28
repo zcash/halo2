@@ -547,8 +547,8 @@ pub(crate) mod tests {
         },
     };
 
-    use group::{ff::Field, Curve};
-    use pasta_curves::pallas;
+    use group::ff::Field;
+    use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use std::convert::TryInto;
     use std::marker::PhantomData;
@@ -558,8 +558,8 @@ pub(crate) mod tests {
 
     static COMMIT_DOMAIN: LazyLock<sinsemilla::CommitDomain> =
         LazyLock::new(|| sinsemilla::CommitDomain::new(PERSONALIZATION));
-    static Q: LazyLock<pallas::Affine> = LazyLock::new(|| COMMIT_DOMAIN.Q().to_affine());
-    static R: LazyLock<pallas::Affine> = LazyLock::new(|| COMMIT_DOMAIN.R().to_affine());
+    static Q: LazyLock<pallas::Affine> = LazyLock::new(|| COMMIT_DOMAIN.Q().to_affine_vartime());
+    static R: LazyLock<pallas::Affine> = LazyLock::new(|| COMMIT_DOMAIN.R().to_affine_vartime());
     static R_ZS_AND_US: LazyLock<Vec<(u64, [pallas::Base; H])>> =
         LazyLock::new(|| find_zs_and_us(*R, NUM_WINDOWS).unwrap());
 
@@ -733,7 +733,7 @@ pub(crate) mod tests {
                         let point = merkle_crh
                             .hash_to_point(l.into_iter().chain(left).chain(right))
                             .unwrap();
-                        point.to_affine()
+                        point.to_affine_vartime()
                     },
                 );
 
@@ -785,7 +785,7 @@ pub(crate) mod tests {
                 let expected_result = message.map(|message| {
                     let domain = sinsemilla::CommitDomain::new(PERSONALIZATION);
                     let point = domain.commit(message.into_iter(), &r_val).unwrap();
-                    point.to_affine()
+                    point.to_affine_vartime()
                 });
 
                 NonIdentityPoint::new(

@@ -1,5 +1,5 @@
 use ff::Field;
-use group::Curve;
+use pasta_curves::arithmetic::CurveExt;
 use std::iter;
 
 use super::{
@@ -97,7 +97,9 @@ pub fn verify_proof<
                     poly.resize(params.n as usize, C::Scalar::ZERO);
                     let poly = vk.domain.lagrange_from_vec(poly);
 
-                    Ok(params.commit_lagrange(&poly, Blind::default()).to_affine())
+                    Ok(params
+                        .commit_lagrange(&poly, Blind::default())
+                        .to_affine_vartime())
                 })
                 .collect::<Result<Vec<_>, _>>()
         })
