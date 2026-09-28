@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/commitment/verifier.rs`."><title>verifier.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (5ceaf6608 2026-09-25)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/poly/commitment/verifier.rs`."><title>verifier.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.101.0-nightly (d080e7dff 2026-09-27)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -13,175 +13,173 @@
         });
     });
 </script>
-</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/poly/commitment/</div>verifier.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>group::{
-<a href=#2 id=2 data-nosnippet>2</a>    ff::{BatchInvert, Field},
-<a href=#3 id=3 data-nosnippet>3</a>    Curve,
-<a href=#4 id=4 data-nosnippet>4</a>};
-<a href=#5 id=5 data-nosnippet>5</a>
-<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::Error;
-<a href=#7 id=7 data-nosnippet>7</a><span class="kw">use super</span>::{Params, MSM};
-<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::transcript::{EncodedChallenge, TranscriptRead};
+</head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">halo2_proofs/poly/commitment/</div>verifier.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>group::ff::Field;
+<a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>pasta_curves::arithmetic::{CurveExt, VartimeBatchInvert};
+<a href=#3 id=3 data-nosnippet>3</a>
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">super</span>::<span class="kw">super</span>::Error;
+<a href=#5 id=5 data-nosnippet>5</a><span class="kw">use super</span>::{Params, MSM};
+<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span><span class="kw">crate</span>::transcript::{EncodedChallenge, TranscriptRead};
+<a href=#7 id=7 data-nosnippet>7</a>
+<a href=#8 id=8 data-nosnippet>8</a><span class="kw">use </span><span class="kw">crate</span>::arithmetic::{best_multiexp, CurveAffine};
 <a href=#9 id=9 data-nosnippet>9</a>
-<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span><span class="kw">crate</span>::arithmetic::{best_multiexp, CurveAffine};
-<a href=#11 id=11 data-nosnippet>11</a>
-<a href=#12 id=12 data-nosnippet>12</a><span class="doccomment">/// A guard returned by the verifier
-<a href=#13 id=13 data-nosnippet>13</a></span><span class="attr">#[derive(Debug, Clone)]
-<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">pub struct </span>Guard&lt;<span class="lifetime">'a</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
-<a href=#15 id=15 data-nosnippet>15</a>    msm: MSM&lt;<span class="lifetime">'a</span>, C&gt;,
-<a href=#16 id=16 data-nosnippet>16</a>    neg_c: C::Scalar,
-<a href=#17 id=17 data-nosnippet>17</a>    u: Vec&lt;C::Scalar&gt;,
-<a href=#18 id=18 data-nosnippet>18</a>    u_packed: Vec&lt;E&gt;,
-<a href=#19 id=19 data-nosnippet>19</a>}
-<a href=#20 id=20 data-nosnippet>20</a>
-<a href=#21 id=21 data-nosnippet>21</a><span class="doccomment">/// An accumulator instance consisting of an evaluation claim and a proof.
-<a href=#22 id=22 data-nosnippet>22</a></span><span class="attr">#[derive(Debug, Clone)]
-<a href=#23 id=23 data-nosnippet>23</a></span><span class="kw">pub struct </span>Accumulator&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
-<a href=#24 id=24 data-nosnippet>24</a>    <span class="doccomment">/// The claimed output of the linear-time polycommit opening protocol
-<a href=#25 id=25 data-nosnippet>25</a>    </span><span class="kw">pub </span>g: C,
-<a href=#26 id=26 data-nosnippet>26</a>
-<a href=#27 id=27 data-nosnippet>27</a>    <span class="doccomment">/// A vector of challenges u_0, ..., u_{k - 1} sampled by the verifier, to
-<a href=#28 id=28 data-nosnippet>28</a>    /// be used in computing G'_0.
-<a href=#29 id=29 data-nosnippet>29</a>    </span><span class="kw">pub </span>u_packed: Vec&lt;E&gt;,
-<a href=#30 id=30 data-nosnippet>30</a>}
-<a href=#31 id=31 data-nosnippet>31</a>
-<a href=#32 id=32 data-nosnippet>32</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; Guard&lt;<span class="lifetime">'a</span>, C, E&gt; {
-<a href=#33 id=33 data-nosnippet>33</a>    <span class="doccomment">/// Lets caller supply the challenges and obtain an MSM with updated
-<a href=#34 id=34 data-nosnippet>34</a>    /// scalars and points.
-<a href=#35 id=35 data-nosnippet>35</a>    </span><span class="kw">pub fn </span>use_challenges(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; MSM&lt;<span class="lifetime">'a</span>, C&gt; {
-<a href=#36 id=36 data-nosnippet>36</a>        <span class="kw">let </span>s = compute_s(<span class="kw-2">&amp;</span><span class="self">self</span>.u, <span class="self">self</span>.neg_c);
-<a href=#37 id=37 data-nosnippet>37</a>        <span class="self">self</span>.msm.add_to_g_scalars(<span class="kw-2">&amp;</span>s);
-<a href=#38 id=38 data-nosnippet>38</a>
-<a href=#39 id=39 data-nosnippet>39</a>        <span class="self">self</span>.msm
-<a href=#40 id=40 data-nosnippet>40</a>    }
-<a href=#41 id=41 data-nosnippet>41</a>
-<a href=#42 id=42 data-nosnippet>42</a>    <span class="doccomment">/// Lets caller supply the purported G point and simply appends
-<a href=#43 id=43 data-nosnippet>43</a>    /// [-c] G to return an updated MSM.
-<a href=#44 id=44 data-nosnippet>44</a>    </span><span class="kw">pub fn </span>use_g(<span class="kw-2">mut </span><span class="self">self</span>, g: C) -&gt; (MSM&lt;<span class="lifetime">'a</span>, C&gt;, Accumulator&lt;C, E&gt;) {
-<a href=#45 id=45 data-nosnippet>45</a>        <span class="self">self</span>.msm.append_term(<span class="self">self</span>.neg_c, g);
-<a href=#46 id=46 data-nosnippet>46</a>
-<a href=#47 id=47 data-nosnippet>47</a>        <span class="kw">let </span>accumulator = Accumulator {
-<a href=#48 id=48 data-nosnippet>48</a>            g,
-<a href=#49 id=49 data-nosnippet>49</a>            u_packed: <span class="self">self</span>.u_packed,
-<a href=#50 id=50 data-nosnippet>50</a>        };
-<a href=#51 id=51 data-nosnippet>51</a>
-<a href=#52 id=52 data-nosnippet>52</a>        (<span class="self">self</span>.msm, accumulator)
-<a href=#53 id=53 data-nosnippet>53</a>    }
-<a href=#54 id=54 data-nosnippet>54</a>
-<a href=#55 id=55 data-nosnippet>55</a>    <span class="doccomment">/// Computes G = ⟨s, params.g⟩
-<a href=#56 id=56 data-nosnippet>56</a>    </span><span class="kw">pub fn </span>compute_g(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C {
-<a href=#57 id=57 data-nosnippet>57</a>        <span class="kw">let </span>s = compute_s(<span class="kw-2">&amp;</span><span class="self">self</span>.u, C::Scalar::ONE);
-<a href=#58 id=58 data-nosnippet>58</a>
-<a href=#59 id=59 data-nosnippet>59</a>        best_multiexp(<span class="kw-2">&amp;</span>s, <span class="kw-2">&amp;</span><span class="self">self</span>.msm.params.g).to_affine()
-<a href=#60 id=60 data-nosnippet>60</a>    }
-<a href=#61 id=61 data-nosnippet>61</a>}
-<a href=#62 id=62 data-nosnippet>62</a>
-<a href=#63 id=63 data-nosnippet>63</a><span class="doccomment">/// Checks to see if the proof represented within `transcript` is valid, and a
-<a href=#64 id=64 data-nosnippet>64</a>/// point `x` that the polynomial commitment `P` opens purportedly to the value
-<a href=#65 id=65 data-nosnippet>65</a>/// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
-<a href=#66 id=66 data-nosnippet>66</a></span><span class="kw">pub fn </span>verify_proof&lt;<span class="lifetime">'a</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;&gt;(
-<a href=#67 id=67 data-nosnippet>67</a>    params: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Params&lt;C&gt;,
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="kw-2">mut </span>msm: MSM&lt;<span class="lifetime">'a</span>, C&gt;,
-<a href=#69 id=69 data-nosnippet>69</a>    transcript: <span class="kw-2">&amp;mut </span>T,
-<a href=#70 id=70 data-nosnippet>70</a>    x: C::Scalar,
-<a href=#71 id=71 data-nosnippet>71</a>    v: C::Scalar,
-<a href=#72 id=72 data-nosnippet>72</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Guard&lt;<span class="lifetime">'a</span>, C, E&gt;, Error&gt; {
-<a href=#73 id=73 data-nosnippet>73</a>    <span class="kw">let </span>k = params.k <span class="kw">as </span>usize;
-<a href=#74 id=74 data-nosnippet>74</a>
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="comment">// P' = P - [v] G_0 + [ξ] S
-<a href=#76 id=76 data-nosnippet>76</a>    </span>msm.add_constant_term(-v); <span class="comment">// add [-v] G_0
-<a href=#77 id=77 data-nosnippet>77</a>    </span><span class="kw">let </span>s_poly_commitment = transcript.read_point().map_err(|<span class="kw">_</span>| Error::OpeningError)<span class="question-mark">?</span>;
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="kw">let </span>xi = <span class="kw-2">*</span>transcript.squeeze_challenge_scalar::&lt;()&gt;();
-<a href=#79 id=79 data-nosnippet>79</a>    msm.append_term(xi, s_poly_commitment);
+<a href=#10 id=10 data-nosnippet>10</a><span class="doccomment">/// A guard returned by the verifier
+<a href=#11 id=11 data-nosnippet>11</a></span><span class="attr">#[derive(Debug, Clone)]
+<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">pub struct </span>Guard&lt;<span class="lifetime">'a</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
+<a href=#13 id=13 data-nosnippet>13</a>    msm: MSM&lt;<span class="lifetime">'a</span>, C&gt;,
+<a href=#14 id=14 data-nosnippet>14</a>    neg_c: C::Scalar,
+<a href=#15 id=15 data-nosnippet>15</a>    u: Vec&lt;C::Scalar&gt;,
+<a href=#16 id=16 data-nosnippet>16</a>    u_packed: Vec&lt;E&gt;,
+<a href=#17 id=17 data-nosnippet>17</a>}
+<a href=#18 id=18 data-nosnippet>18</a>
+<a href=#19 id=19 data-nosnippet>19</a><span class="doccomment">/// An accumulator instance consisting of an evaluation claim and a proof.
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="attr">#[derive(Debug, Clone)]
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">pub struct </span>Accumulator&lt;C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; {
+<a href=#22 id=22 data-nosnippet>22</a>    <span class="doccomment">/// The claimed output of the linear-time polycommit opening protocol
+<a href=#23 id=23 data-nosnippet>23</a>    </span><span class="kw">pub </span>g: C,
+<a href=#24 id=24 data-nosnippet>24</a>
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="doccomment">/// A vector of challenges u_0, ..., u_{k - 1} sampled by the verifier, to
+<a href=#26 id=26 data-nosnippet>26</a>    /// be used in computing G'_0.
+<a href=#27 id=27 data-nosnippet>27</a>    </span><span class="kw">pub </span>u_packed: Vec&lt;E&gt;,
+<a href=#28 id=28 data-nosnippet>28</a>}
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a><span class="kw">impl</span>&lt;<span class="lifetime">'a</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;&gt; Guard&lt;<span class="lifetime">'a</span>, C, E&gt; {
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="doccomment">/// Lets caller supply the challenges and obtain an MSM with updated
+<a href=#32 id=32 data-nosnippet>32</a>    /// scalars and points.
+<a href=#33 id=33 data-nosnippet>33</a>    </span><span class="kw">pub fn </span>use_challenges(<span class="kw-2">mut </span><span class="self">self</span>) -&gt; MSM&lt;<span class="lifetime">'a</span>, C&gt; {
+<a href=#34 id=34 data-nosnippet>34</a>        <span class="kw">let </span>s = compute_s(<span class="kw-2">&amp;</span><span class="self">self</span>.u, <span class="self">self</span>.neg_c);
+<a href=#35 id=35 data-nosnippet>35</a>        <span class="self">self</span>.msm.add_to_g_scalars(<span class="kw-2">&amp;</span>s);
+<a href=#36 id=36 data-nosnippet>36</a>
+<a href=#37 id=37 data-nosnippet>37</a>        <span class="self">self</span>.msm
+<a href=#38 id=38 data-nosnippet>38</a>    }
+<a href=#39 id=39 data-nosnippet>39</a>
+<a href=#40 id=40 data-nosnippet>40</a>    <span class="doccomment">/// Lets caller supply the purported G point and simply appends
+<a href=#41 id=41 data-nosnippet>41</a>    /// [-c] G to return an updated MSM.
+<a href=#42 id=42 data-nosnippet>42</a>    </span><span class="kw">pub fn </span>use_g(<span class="kw-2">mut </span><span class="self">self</span>, g: C) -&gt; (MSM&lt;<span class="lifetime">'a</span>, C&gt;, Accumulator&lt;C, E&gt;) {
+<a href=#43 id=43 data-nosnippet>43</a>        <span class="self">self</span>.msm.append_term(<span class="self">self</span>.neg_c, g);
+<a href=#44 id=44 data-nosnippet>44</a>
+<a href=#45 id=45 data-nosnippet>45</a>        <span class="kw">let </span>accumulator = Accumulator {
+<a href=#46 id=46 data-nosnippet>46</a>            g,
+<a href=#47 id=47 data-nosnippet>47</a>            u_packed: <span class="self">self</span>.u_packed,
+<a href=#48 id=48 data-nosnippet>48</a>        };
+<a href=#49 id=49 data-nosnippet>49</a>
+<a href=#50 id=50 data-nosnippet>50</a>        (<span class="self">self</span>.msm, accumulator)
+<a href=#51 id=51 data-nosnippet>51</a>    }
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="doccomment">/// Computes G = ⟨s, params.g⟩
+<a href=#54 id=54 data-nosnippet>54</a>    </span><span class="kw">pub fn </span>compute_g(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; C {
+<a href=#55 id=55 data-nosnippet>55</a>        <span class="kw">let </span>s = compute_s(<span class="kw-2">&amp;</span><span class="self">self</span>.u, C::Scalar::ONE);
+<a href=#56 id=56 data-nosnippet>56</a>
+<a href=#57 id=57 data-nosnippet>57</a>        best_multiexp(<span class="kw-2">&amp;</span>s, <span class="kw-2">&amp;</span><span class="self">self</span>.msm.params.g).to_affine_vartime()
+<a href=#58 id=58 data-nosnippet>58</a>    }
+<a href=#59 id=59 data-nosnippet>59</a>}
+<a href=#60 id=60 data-nosnippet>60</a>
+<a href=#61 id=61 data-nosnippet>61</a><span class="doccomment">/// Checks to see if the proof represented within `transcript` is valid, and a
+<a href=#62 id=62 data-nosnippet>62</a>/// point `x` that the polynomial commitment `P` opens purportedly to the value
+<a href=#63 id=63 data-nosnippet>63</a>/// `v`. The provided `msm` should evaluate to the commitment `P` being opened.
+<a href=#64 id=64 data-nosnippet>64</a></span><span class="kw">pub fn </span>verify_proof&lt;<span class="lifetime">'a</span>, C: CurveAffine, E: EncodedChallenge&lt;C&gt;, T: TranscriptRead&lt;C, E&gt;&gt;(
+<a href=#65 id=65 data-nosnippet>65</a>    params: <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Params&lt;C&gt;,
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="kw-2">mut </span>msm: MSM&lt;<span class="lifetime">'a</span>, C&gt;,
+<a href=#67 id=67 data-nosnippet>67</a>    transcript: <span class="kw-2">&amp;mut </span>T,
+<a href=#68 id=68 data-nosnippet>68</a>    x: C::Scalar,
+<a href=#69 id=69 data-nosnippet>69</a>    v: C::Scalar,
+<a href=#70 id=70 data-nosnippet>70</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Guard&lt;<span class="lifetime">'a</span>, C, E&gt;, Error&gt; {
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">let </span>k = params.k <span class="kw">as </span>usize;
+<a href=#72 id=72 data-nosnippet>72</a>
+<a href=#73 id=73 data-nosnippet>73</a>    <span class="comment">// P' = P - [v] G_0 + [ξ] S
+<a href=#74 id=74 data-nosnippet>74</a>    </span>msm.add_constant_term(-v); <span class="comment">// add [-v] G_0
+<a href=#75 id=75 data-nosnippet>75</a>    </span><span class="kw">let </span>s_poly_commitment = transcript.read_point().map_err(|<span class="kw">_</span>| Error::OpeningError)<span class="question-mark">?</span>;
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">let </span>xi = <span class="kw-2">*</span>transcript.squeeze_challenge_scalar::&lt;()&gt;();
+<a href=#77 id=77 data-nosnippet>77</a>    msm.append_term(xi, s_poly_commitment);
+<a href=#78 id=78 data-nosnippet>78</a>
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="kw">let </span>z = <span class="kw-2">*</span>transcript.squeeze_challenge_scalar::&lt;()&gt;();
 <a href=#80 id=80 data-nosnippet>80</a>
-<a href=#81 id=81 data-nosnippet>81</a>    <span class="kw">let </span>z = <span class="kw-2">*</span>transcript.squeeze_challenge_scalar::&lt;()&gt;();
-<a href=#82 id=82 data-nosnippet>82</a>
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="kw">let </span><span class="kw-2">mut </span>rounds = <span class="macro">vec!</span>[];
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="kw">for _ in </span><span class="number">0</span>..k {
-<a href=#85 id=85 data-nosnippet>85</a>        <span class="comment">// Read L and R from the proof and write them to the transcript
-<a href=#86 id=86 data-nosnippet>86</a>        </span><span class="kw">let </span>l = transcript.read_point().map_err(|<span class="kw">_</span>| Error::OpeningError)<span class="question-mark">?</span>;
-<a href=#87 id=87 data-nosnippet>87</a>        <span class="kw">let </span>r = transcript.read_point().map_err(|<span class="kw">_</span>| Error::OpeningError)<span class="question-mark">?</span>;
-<a href=#88 id=88 data-nosnippet>88</a>
-<a href=#89 id=89 data-nosnippet>89</a>        <span class="kw">let </span>u_j_packed = transcript.squeeze_challenge();
-<a href=#90 id=90 data-nosnippet>90</a>        <span class="kw">let </span>u_j = <span class="kw-2">*</span>u_j_packed.as_challenge_scalar::&lt;()&gt;();
-<a href=#91 id=91 data-nosnippet>91</a>
-<a href=#92 id=92 data-nosnippet>92</a>        rounds.push((l, r, u_j, <span class="comment">/* to be inverted */ </span>u_j, u_j_packed));
-<a href=#93 id=93 data-nosnippet>93</a>    }
-<a href=#94 id=94 data-nosnippet>94</a>
-<a href=#95 id=95 data-nosnippet>95</a>    rounds
-<a href=#96 id=96 data-nosnippet>96</a>        .iter_mut()
-<a href=#97 id=97 data-nosnippet>97</a>        .map(|<span class="kw-2">&amp;mut </span>(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>u_j, <span class="kw">_</span>)| u_j)
-<a href=#98 id=98 data-nosnippet>98</a>        .batch_invert();
-<a href=#99 id=99 data-nosnippet>99</a>
-<a href=#100 id=100 data-nosnippet>100</a>    <span class="comment">// This is the left-hand side of the verifier equation.
-<a href=#101 id=101 data-nosnippet>101</a>    // P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
-<a href=#102 id=102 data-nosnippet>102</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>u = Vec::with_capacity(k);
-<a href=#103 id=103 data-nosnippet>103</a>    <span class="kw">let </span><span class="kw-2">mut </span>u_packed: Vec&lt;E&gt; = Vec::with_capacity(k);
-<a href=#104 id=104 data-nosnippet>104</a>    <span class="kw">for </span>(l, r, u_j, u_j_inv, u_j_packed) <span class="kw">in </span>rounds {
-<a href=#105 id=105 data-nosnippet>105</a>        msm.append_term(u_j_inv, l);
-<a href=#106 id=106 data-nosnippet>106</a>        msm.append_term(u_j, r);
-<a href=#107 id=107 data-nosnippet>107</a>
-<a href=#108 id=108 data-nosnippet>108</a>        u.push(u_j);
-<a href=#109 id=109 data-nosnippet>109</a>        u_packed.push(u_j_packed);
-<a href=#110 id=110 data-nosnippet>110</a>    }
-<a href=#111 id=111 data-nosnippet>111</a>
-<a href=#112 id=112 data-nosnippet>112</a>    <span class="comment">// Our goal is to check that the left hand side of the verifier
-<a href=#113 id=113 data-nosnippet>113</a>    // equation
-<a href=#114 id=114 data-nosnippet>114</a>    //     P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
-<a href=#115 id=115 data-nosnippet>115</a>    // equals (given b = \mathbf{b}_0, and the prover's values c, f),
-<a href=#116 id=116 data-nosnippet>116</a>    // the right-hand side
-<a href=#117 id=117 data-nosnippet>117</a>    //   = [c] (G'_0 + [b * z] U) + [f] W
-<a href=#118 id=118 data-nosnippet>118</a>    // Subtracting the right-hand side from both sides we get
-<a href=#119 id=119 data-nosnippet>119</a>    //   P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
-<a href=#120 id=120 data-nosnippet>120</a>    //   + [-c] G'_0 + [-cbz] U + [-f] W
-<a href=#121 id=121 data-nosnippet>121</a>    //   = 0
-<a href=#122 id=122 data-nosnippet>122</a>    //
-<a href=#123 id=123 data-nosnippet>123</a>    // Note that the guard returned from this function does not include
-<a href=#124 id=124 data-nosnippet>124</a>    // the [-c]G'_0 term.
-<a href=#125 id=125 data-nosnippet>125</a>
-<a href=#126 id=126 data-nosnippet>126</a>    </span><span class="kw">let </span>c = transcript.read_scalar().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>;
-<a href=#127 id=127 data-nosnippet>127</a>    <span class="kw">let </span>neg_c = -c;
-<a href=#128 id=128 data-nosnippet>128</a>    <span class="kw">let </span>f = transcript.read_scalar().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>;
-<a href=#129 id=129 data-nosnippet>129</a>    <span class="kw">let </span>b = compute_b(x, <span class="kw-2">&amp;</span>u);
-<a href=#130 id=130 data-nosnippet>130</a>
-<a href=#131 id=131 data-nosnippet>131</a>    msm.add_to_u_scalar(neg_c * <span class="kw-2">&amp;</span>b * <span class="kw-2">&amp;</span>z);
-<a href=#132 id=132 data-nosnippet>132</a>    msm.add_to_w_scalar(-f);
-<a href=#133 id=133 data-nosnippet>133</a>
-<a href=#134 id=134 data-nosnippet>134</a>    <span class="kw">let </span>guard = Guard {
-<a href=#135 id=135 data-nosnippet>135</a>        msm,
-<a href=#136 id=136 data-nosnippet>136</a>        neg_c,
-<a href=#137 id=137 data-nosnippet>137</a>        u,
-<a href=#138 id=138 data-nosnippet>138</a>        u_packed,
-<a href=#139 id=139 data-nosnippet>139</a>    };
-<a href=#140 id=140 data-nosnippet>140</a>
-<a href=#141 id=141 data-nosnippet>141</a>    <span class="prelude-val">Ok</span>(guard)
-<a href=#142 id=142 data-nosnippet>142</a>}
-<a href=#143 id=143 data-nosnippet>143</a>
-<a href=#144 id=144 data-nosnippet>144</a><span class="doccomment">/// Computes $\prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} x^{2^i})$.
-<a href=#145 id=145 data-nosnippet>145</a></span><span class="kw">fn </span>compute_b&lt;F: Field&gt;(x: F, u: <span class="kw-2">&amp;</span>[F]) -&gt; F {
-<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">let </span><span class="kw-2">mut </span>tmp = F::ONE;
-<a href=#147 id=147 data-nosnippet>147</a>    <span class="kw">let </span><span class="kw-2">mut </span>cur = x;
-<a href=#148 id=148 data-nosnippet>148</a>    <span class="kw">for </span>u_j <span class="kw">in </span>u.iter().rev() {
-<a href=#149 id=149 data-nosnippet>149</a>        tmp <span class="kw-2">*</span>= F::ONE + <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>u_j * <span class="kw-2">&amp;</span>cur);
-<a href=#150 id=150 data-nosnippet>150</a>        cur <span class="kw-2">*</span>= cur;
-<a href=#151 id=151 data-nosnippet>151</a>    }
-<a href=#152 id=152 data-nosnippet>152</a>    tmp
-<a href=#153 id=153 data-nosnippet>153</a>}
-<a href=#154 id=154 data-nosnippet>154</a>
-<a href=#155 id=155 data-nosnippet>155</a><span class="doccomment">/// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} X^{2^i})$.
-<a href=#156 id=156 data-nosnippet>156</a></span><span class="kw">fn </span>compute_s&lt;F: Field&gt;(u: <span class="kw-2">&amp;</span>[F], init: F) -&gt; Vec&lt;F&gt; {
-<a href=#157 id=157 data-nosnippet>157</a>    <span class="macro">assert!</span>(!u.is_empty());
-<a href=#158 id=158 data-nosnippet>158</a>    <span class="kw">let </span><span class="kw-2">mut </span>v = <span class="macro">vec!</span>[F::ZERO; <span class="number">1 </span>&lt;&lt; u.len()];
-<a href=#159 id=159 data-nosnippet>159</a>    v[<span class="number">0</span>] = init;
-<a href=#160 id=160 data-nosnippet>160</a>
-<a href=#161 id=161 data-nosnippet>161</a>    <span class="kw">for </span>(len, u_j) <span class="kw">in </span>u.iter().rev().enumerate().map(|(i, u_j)| (<span class="number">1 </span>&lt;&lt; i, u_j)) {
-<a href=#162 id=162 data-nosnippet>162</a>        <span class="kw">let </span>(left, right) = v.split_at_mut(len);
-<a href=#163 id=163 data-nosnippet>163</a>        <span class="kw">let </span>right = <span class="kw-2">&amp;mut </span>right[<span class="number">0</span>..len];
-<a href=#164 id=164 data-nosnippet>164</a>        right.copy_from_slice(left);
-<a href=#165 id=165 data-nosnippet>165</a>        <span class="kw">for </span>v <span class="kw">in </span>right {
-<a href=#166 id=166 data-nosnippet>166</a>            <span class="kw-2">*</span>v <span class="kw-2">*</span>= u_j;
-<a href=#167 id=167 data-nosnippet>167</a>        }
-<a href=#168 id=168 data-nosnippet>168</a>    }
-<a href=#169 id=169 data-nosnippet>169</a>
-<a href=#170 id=170 data-nosnippet>170</a>    v
-<a href=#171 id=171 data-nosnippet>171</a>}
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="kw">let </span><span class="kw-2">mut </span>rounds = <span class="macro">vec!</span>[];
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="kw">for _ in </span><span class="number">0</span>..k {
+<a href=#83 id=83 data-nosnippet>83</a>        <span class="comment">// Read L and R from the proof and write them to the transcript
+<a href=#84 id=84 data-nosnippet>84</a>        </span><span class="kw">let </span>l = transcript.read_point().map_err(|<span class="kw">_</span>| Error::OpeningError)<span class="question-mark">?</span>;
+<a href=#85 id=85 data-nosnippet>85</a>        <span class="kw">let </span>r = transcript.read_point().map_err(|<span class="kw">_</span>| Error::OpeningError)<span class="question-mark">?</span>;
+<a href=#86 id=86 data-nosnippet>86</a>
+<a href=#87 id=87 data-nosnippet>87</a>        <span class="kw">let </span>u_j_packed = transcript.squeeze_challenge();
+<a href=#88 id=88 data-nosnippet>88</a>        <span class="kw">let </span>u_j = <span class="kw-2">*</span>u_j_packed.as_challenge_scalar::&lt;()&gt;();
+<a href=#89 id=89 data-nosnippet>89</a>
+<a href=#90 id=90 data-nosnippet>90</a>        rounds.push((l, r, u_j, <span class="comment">/* to be inverted */ </span>u_j, u_j_packed));
+<a href=#91 id=91 data-nosnippet>91</a>    }
+<a href=#92 id=92 data-nosnippet>92</a>
+<a href=#93 id=93 data-nosnippet>93</a>    rounds
+<a href=#94 id=94 data-nosnippet>94</a>        .iter_mut()
+<a href=#95 id=95 data-nosnippet>95</a>        .map(|<span class="kw-2">&amp;mut </span>(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>u_j, <span class="kw">_</span>)| u_j)
+<a href=#96 id=96 data-nosnippet>96</a>        .batch_invert_vartime();
+<a href=#97 id=97 data-nosnippet>97</a>
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="comment">// This is the left-hand side of the verifier equation.
+<a href=#99 id=99 data-nosnippet>99</a>    // P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
+<a href=#100 id=100 data-nosnippet>100</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>u = Vec::with_capacity(k);
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="kw">let </span><span class="kw-2">mut </span>u_packed: Vec&lt;E&gt; = Vec::with_capacity(k);
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="kw">for </span>(l, r, u_j, u_j_inv, u_j_packed) <span class="kw">in </span>rounds {
+<a href=#103 id=103 data-nosnippet>103</a>        msm.append_term(u_j_inv, l);
+<a href=#104 id=104 data-nosnippet>104</a>        msm.append_term(u_j, r);
+<a href=#105 id=105 data-nosnippet>105</a>
+<a href=#106 id=106 data-nosnippet>106</a>        u.push(u_j);
+<a href=#107 id=107 data-nosnippet>107</a>        u_packed.push(u_j_packed);
+<a href=#108 id=108 data-nosnippet>108</a>    }
+<a href=#109 id=109 data-nosnippet>109</a>
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="comment">// Our goal is to check that the left hand side of the verifier
+<a href=#111 id=111 data-nosnippet>111</a>    // equation
+<a href=#112 id=112 data-nosnippet>112</a>    //     P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
+<a href=#113 id=113 data-nosnippet>113</a>    // equals (given b = \mathbf{b}_0, and the prover's values c, f),
+<a href=#114 id=114 data-nosnippet>114</a>    // the right-hand side
+<a href=#115 id=115 data-nosnippet>115</a>    //   = [c] (G'_0 + [b * z] U) + [f] W
+<a href=#116 id=116 data-nosnippet>116</a>    // Subtracting the right-hand side from both sides we get
+<a href=#117 id=117 data-nosnippet>117</a>    //   P' + \sum([u_j^{-1}] L_j) + \sum([u_j] R_j)
+<a href=#118 id=118 data-nosnippet>118</a>    //   + [-c] G'_0 + [-cbz] U + [-f] W
+<a href=#119 id=119 data-nosnippet>119</a>    //   = 0
+<a href=#120 id=120 data-nosnippet>120</a>    //
+<a href=#121 id=121 data-nosnippet>121</a>    // Note that the guard returned from this function does not include
+<a href=#122 id=122 data-nosnippet>122</a>    // the [-c]G'_0 term.
+<a href=#123 id=123 data-nosnippet>123</a>
+<a href=#124 id=124 data-nosnippet>124</a>    </span><span class="kw">let </span>c = transcript.read_scalar().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>;
+<a href=#125 id=125 data-nosnippet>125</a>    <span class="kw">let </span>neg_c = -c;
+<a href=#126 id=126 data-nosnippet>126</a>    <span class="kw">let </span>f = transcript.read_scalar().map_err(|<span class="kw">_</span>| Error::SamplingError)<span class="question-mark">?</span>;
+<a href=#127 id=127 data-nosnippet>127</a>    <span class="kw">let </span>b = compute_b(x, <span class="kw-2">&amp;</span>u);
+<a href=#128 id=128 data-nosnippet>128</a>
+<a href=#129 id=129 data-nosnippet>129</a>    msm.add_to_u_scalar(neg_c * <span class="kw-2">&amp;</span>b * <span class="kw-2">&amp;</span>z);
+<a href=#130 id=130 data-nosnippet>130</a>    msm.add_to_w_scalar(-f);
+<a href=#131 id=131 data-nosnippet>131</a>
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="kw">let </span>guard = Guard {
+<a href=#133 id=133 data-nosnippet>133</a>        msm,
+<a href=#134 id=134 data-nosnippet>134</a>        neg_c,
+<a href=#135 id=135 data-nosnippet>135</a>        u,
+<a href=#136 id=136 data-nosnippet>136</a>        u_packed,
+<a href=#137 id=137 data-nosnippet>137</a>    };
+<a href=#138 id=138 data-nosnippet>138</a>
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="prelude-val">Ok</span>(guard)
+<a href=#140 id=140 data-nosnippet>140</a>}
+<a href=#141 id=141 data-nosnippet>141</a>
+<a href=#142 id=142 data-nosnippet>142</a><span class="doccomment">/// Computes $\prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} x^{2^i})$.
+<a href=#143 id=143 data-nosnippet>143</a></span><span class="kw">fn </span>compute_b&lt;F: Field&gt;(x: F, u: <span class="kw-2">&amp;</span>[F]) -&gt; F {
+<a href=#144 id=144 data-nosnippet>144</a>    <span class="kw">let </span><span class="kw-2">mut </span>tmp = F::ONE;
+<a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">let </span><span class="kw-2">mut </span>cur = x;
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">for </span>u_j <span class="kw">in </span>u.iter().rev() {
+<a href=#147 id=147 data-nosnippet>147</a>        tmp <span class="kw-2">*</span>= F::ONE + <span class="kw-2">&amp;</span>(<span class="kw-2">*</span>u_j * <span class="kw-2">&amp;</span>cur);
+<a href=#148 id=148 data-nosnippet>148</a>        cur <span class="kw-2">*</span>= cur;
+<a href=#149 id=149 data-nosnippet>149</a>    }
+<a href=#150 id=150 data-nosnippet>150</a>    tmp
+<a href=#151 id=151 data-nosnippet>151</a>}
+<a href=#152 id=152 data-nosnippet>152</a>
+<a href=#153 id=153 data-nosnippet>153</a><span class="doccomment">/// Computes the coefficients of $g(X) = \prod\limits_{i=0}^{k-1} (1 + u_{k - 1 - i} X^{2^i})$.
+<a href=#154 id=154 data-nosnippet>154</a></span><span class="kw">fn </span>compute_s&lt;F: Field&gt;(u: <span class="kw-2">&amp;</span>[F], init: F) -&gt; Vec&lt;F&gt; {
+<a href=#155 id=155 data-nosnippet>155</a>    <span class="macro">assert!</span>(!u.is_empty());
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="kw">let </span><span class="kw-2">mut </span>v = <span class="macro">vec!</span>[F::ZERO; <span class="number">1 </span>&lt;&lt; u.len()];
+<a href=#157 id=157 data-nosnippet>157</a>    v[<span class="number">0</span>] = init;
+<a href=#158 id=158 data-nosnippet>158</a>
+<a href=#159 id=159 data-nosnippet>159</a>    <span class="kw">for </span>(len, u_j) <span class="kw">in </span>u.iter().rev().enumerate().map(|(i, u_j)| (<span class="number">1 </span>&lt;&lt; i, u_j)) {
+<a href=#160 id=160 data-nosnippet>160</a>        <span class="kw">let </span>(left, right) = v.split_at_mut(len);
+<a href=#161 id=161 data-nosnippet>161</a>        <span class="kw">let </span>right = <span class="kw-2">&amp;mut </span>right[<span class="number">0</span>..len];
+<a href=#162 id=162 data-nosnippet>162</a>        right.copy_from_slice(left);
+<a href=#163 id=163 data-nosnippet>163</a>        <span class="kw">for </span>v <span class="kw">in </span>right {
+<a href=#164 id=164 data-nosnippet>164</a>            <span class="kw-2">*</span>v <span class="kw-2">*</span>= u_j;
+<a href=#165 id=165 data-nosnippet>165</a>        }
+<a href=#166 id=166 data-nosnippet>166</a>    }
+<a href=#167 id=167 data-nosnippet>167</a>
+<a href=#168 id=168 data-nosnippet>168</a>    v
+<a href=#169 id=169 data-nosnippet>169</a>}
 </code></pre></div></section></main></body></html>

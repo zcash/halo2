@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/dev/cost.rs`."><title>cost.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (5ceaf6608 2026-09-25)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `halo2_proofs/src/dev/cost.rs`."><title>cost.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="halo2_proofs" data-themes="" data-resource-suffix="" data-rustdoc-version="1.101.0-nightly (d080e7dff 2026-09-27)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.css" integrity="sha384-9eLZqc9ds8eNjO3TmqPeYcDj8n+Qfa4nuSiGYa6DjLNcv9BtN69ZIulL9+8CqC9Y" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/katex.min.js"                  integrity="sha384-K3vbOmF2BtaVai+Qk37uypf7VrgBubhQreNQe9aGsz9lB63dIFiQVlJbr92dw2Lx" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/contrib/auto-render.min.js"    integrity="sha384-kmZOZB5ObwgQnS/DuDg6TScgOiWWBiVt0plIRkZCmE6rDZGrEOQeHM5PcHi+nyqe" crossorigin="anonymous"></script>
 <script>
@@ -269,294 +269,297 @@
 <a href=#254 id=254 data-nosnippet>254</a>    </span>}
 <a href=#255 id=255 data-nosnippet>255</a>}
 <a href=#256 id=256 data-nosnippet>256</a>
-<a href=#257 id=257 data-nosnippet>257</a><span class="kw">impl</span>&lt;G: PrimeGroup, ConcreteCircuit: Circuit&lt;G::Scalar&gt;&gt; CircuitCost&lt;G, ConcreteCircuit&gt; {
-<a href=#258 id=258 data-nosnippet>258</a>    <span class="doccomment">/// Measures a circuit with parameter constant `k`.
-<a href=#259 id=259 data-nosnippet>259</a>    ///
-<a href=#260 id=260 data-nosnippet>260</a>    /// Panics if `k` is not large enough for the circuit.
-<a href=#261 id=261 data-nosnippet>261</a>    </span><span class="kw">pub fn </span>measure(k: u32, circuit: <span class="kw-2">&amp;</span>ConcreteCircuit) -&gt; <span class="self">Self </span>{
-<a href=#262 id=262 data-nosnippet>262</a>        <span class="comment">// Collect the layout details.
-<a href=#263 id=263 data-nosnippet>263</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>cs = ConstraintSystem::default();
-<a href=#264 id=264 data-nosnippet>264</a>        <span class="kw">let </span>config = ConcreteCircuit::configure(<span class="kw-2">&amp;mut </span>cs);
-<a href=#265 id=265 data-nosnippet>265</a>        <span class="kw">let </span><span class="kw-2">mut </span>layout = Layout::new(k, <span class="number">1 </span>&lt;&lt; k, cs.num_selectors);
-<a href=#266 id=266 data-nosnippet>266</a>        ConcreteCircuit::FloorPlanner::synthesize(
-<a href=#267 id=267 data-nosnippet>267</a>            <span class="kw-2">&amp;mut </span>layout,
-<a href=#268 id=268 data-nosnippet>268</a>            circuit,
-<a href=#269 id=269 data-nosnippet>269</a>            config,
-<a href=#270 id=270 data-nosnippet>270</a>            cs.constants.clone(),
-<a href=#271 id=271 data-nosnippet>271</a>        )
-<a href=#272 id=272 data-nosnippet>272</a>        .unwrap();
-<a href=#273 id=273 data-nosnippet>273</a>        <span class="kw">let </span>(cs, <span class="kw">_</span>) = cs.compress_selectors(layout.selectors);
-<a href=#274 id=274 data-nosnippet>274</a>
-<a href=#275 id=275 data-nosnippet>275</a>        <span class="macro">assert!</span>((<span class="number">1 </span>&lt;&lt; k) &gt;= cs.minimum_rows());
-<a href=#276 id=276 data-nosnippet>276</a>
-<a href=#277 id=277 data-nosnippet>277</a>        <span class="comment">// Figure out how many point sets we have due to queried cells.
-<a href=#278 id=278 data-nosnippet>278</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>column_queries: HashMap&lt;Column&lt;Any&gt;, HashSet&lt;i32&gt;&gt; = HashMap::new();
-<a href=#279 id=279 data-nosnippet>279</a>        <span class="kw">for </span>(c, r) <span class="kw">in </span>iter::empty()
-<a href=#280 id=280 data-nosnippet>280</a>            .chain(
-<a href=#281 id=281 data-nosnippet>281</a>                cs.advice_queries
-<a href=#282 id=282 data-nosnippet>282</a>                    .iter()
-<a href=#283 id=283 data-nosnippet>283</a>                    .map(|(c, r)| (Column::&lt;Any&gt;::from(<span class="kw-2">*</span>c), <span class="kw-2">*</span>r)),
-<a href=#284 id=284 data-nosnippet>284</a>            )
-<a href=#285 id=285 data-nosnippet>285</a>            .chain(cs.instance_queries.iter().map(|(c, r)| ((<span class="kw-2">*</span>c).into(), <span class="kw-2">*</span>r)))
-<a href=#286 id=286 data-nosnippet>286</a>            .chain(cs.fixed_queries.iter().map(|(c, r)| ((<span class="kw-2">*</span>c).into(), <span class="kw-2">*</span>r)))
-<a href=#287 id=287 data-nosnippet>287</a>            .chain(
-<a href=#288 id=288 data-nosnippet>288</a>                cs.permutation
-<a href=#289 id=289 data-nosnippet>289</a>                    .get_columns()
-<a href=#290 id=290 data-nosnippet>290</a>                    .into_iter()
-<a href=#291 id=291 data-nosnippet>291</a>                    .map(|c| (c, Rotation::cur())),
-<a href=#292 id=292 data-nosnippet>292</a>            )
-<a href=#293 id=293 data-nosnippet>293</a>        {
-<a href=#294 id=294 data-nosnippet>294</a>            column_queries.entry(c).or_default().insert(r.<span class="number">0</span>);
-<a href=#295 id=295 data-nosnippet>295</a>        }
-<a href=#296 id=296 data-nosnippet>296</a>        <span class="kw">let </span><span class="kw-2">mut </span>point_sets: HashSet&lt;Vec&lt;i32&gt;&gt; = HashSet::new();
-<a href=#297 id=297 data-nosnippet>297</a>        <span class="kw">for </span>(<span class="kw">_</span>, r) <span class="kw">in </span>column_queries {
-<a href=#298 id=298 data-nosnippet>298</a>            <span class="comment">// Sort the query sets so we merge duplicates.
-<a href=#299 id=299 data-nosnippet>299</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>query_set: Vec&lt;<span class="kw">_</span>&gt; = r.into_iter().collect();
-<a href=#300 id=300 data-nosnippet>300</a>            query_set.sort_unstable();
-<a href=#301 id=301 data-nosnippet>301</a>            point_sets.insert(query_set);
-<a href=#302 id=302 data-nosnippet>302</a>        }
-<a href=#303 id=303 data-nosnippet>303</a>
-<a href=#304 id=304 data-nosnippet>304</a>        <span class="comment">// Include lookup polynomials in point sets:
-<a href=#305 id=305 data-nosnippet>305</a>        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>]); <span class="comment">// product_poly
-<a href=#306 id=306 data-nosnippet>306</a>        </span>point_sets.insert(<span class="macro">vec!</span>[-<span class="number">1</span>, <span class="number">0</span>]); <span class="comment">// permuted_input_poly
-<a href=#307 id=307 data-nosnippet>307</a>        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>]); <span class="comment">// permuted_table_poly
-<a href=#308 id=308 data-nosnippet>308</a>
-<a href=#309 id=309 data-nosnippet>309</a>        // Include permutation polynomials in point sets.
-<a href=#310 id=310 data-nosnippet>310</a>        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>]); <span class="comment">// permutation_product_poly
-<a href=#311 id=311 data-nosnippet>311</a>        </span><span class="kw">let </span>max_deg = cs.degree();
-<a href=#312 id=312 data-nosnippet>312</a>        <span class="kw">let </span>permutation_cols = cs.permutation.get_columns().len();
-<a href=#313 id=313 data-nosnippet>313</a>        <span class="kw">if </span>permutation_cols &gt; max_deg - <span class="number">2 </span>{
-<a href=#314 id=314 data-nosnippet>314</a>            <span class="comment">// permutation_product_poly for chaining chunks.
-<a href=#315 id=315 data-nosnippet>315</a>            </span>point_sets.insert(<span class="macro">vec!</span>[-((cs.blinding_factors() + <span class="number">1</span>) <span class="kw">as </span>i32), <span class="number">0</span>, <span class="number">1</span>]);
-<a href=#316 id=316 data-nosnippet>316</a>        }
-<a href=#317 id=317 data-nosnippet>317</a>
-<a href=#318 id=318 data-nosnippet>318</a>        CircuitCost {
-<a href=#319 id=319 data-nosnippet>319</a>            k,
-<a href=#320 id=320 data-nosnippet>320</a>            max_deg,
-<a href=#321 id=321 data-nosnippet>321</a>            advice_columns: cs.num_advice_columns,
-<a href=#322 id=322 data-nosnippet>322</a>            instance_queries: cs.instance_queries.len(),
-<a href=#323 id=323 data-nosnippet>323</a>            advice_queries: cs.advice_queries.len(),
-<a href=#324 id=324 data-nosnippet>324</a>            fixed_queries: cs.fixed_queries.len(),
-<a href=#325 id=325 data-nosnippet>325</a>            lookups: cs.lookups.len(),
-<a href=#326 id=326 data-nosnippet>326</a>            permutation_cols,
-<a href=#327 id=327 data-nosnippet>327</a>            point_sets: point_sets.len(),
-<a href=#328 id=328 data-nosnippet>328</a>            _marker: PhantomData,
-<a href=#329 id=329 data-nosnippet>329</a>            max_rows: layout.total_rows,
-<a href=#330 id=330 data-nosnippet>330</a>            max_advice_rows: layout.total_advice_rows,
-<a href=#331 id=331 data-nosnippet>331</a>            max_fixed_rows: layout.total_fixed_rows,
-<a href=#332 id=332 data-nosnippet>332</a>            num_advice_columns: cs.num_advice_columns,
-<a href=#333 id=333 data-nosnippet>333</a>            num_fixed_columns: cs.num_fixed_columns,
-<a href=#334 id=334 data-nosnippet>334</a>            num_instance_columns: cs.num_instance_columns,
-<a href=#335 id=335 data-nosnippet>335</a>            num_total_columns: cs.num_instance_columns
-<a href=#336 id=336 data-nosnippet>336</a>                + cs.num_advice_columns
-<a href=#337 id=337 data-nosnippet>337</a>                + cs.num_fixed_columns,
-<a href=#338 id=338 data-nosnippet>338</a>        }
-<a href=#339 id=339 data-nosnippet>339</a>    }
-<a href=#340 id=340 data-nosnippet>340</a>
-<a href=#341 id=341 data-nosnippet>341</a>    <span class="kw">fn </span>permutation_chunks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
-<a href=#342 id=342 data-nosnippet>342</a>        <span class="kw">let </span>chunk_size = <span class="self">self</span>.max_deg - <span class="number">2</span>;
-<a href=#343 id=343 data-nosnippet>343</a>        <span class="self">self</span>.permutation_cols.div_ceil(chunk_size)
-<a href=#344 id=344 data-nosnippet>344</a>    }
-<a href=#345 id=345 data-nosnippet>345</a>
-<a href=#346 id=346 data-nosnippet>346</a>    <span class="doccomment">/// Returns the marginal proof size per instance of this circuit.
-<a href=#347 id=347 data-nosnippet>347</a>    </span><span class="kw">pub fn </span>marginal_proof_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MarginalProofSize&lt;G&gt; {
-<a href=#348 id=348 data-nosnippet>348</a>        <span class="kw">let </span>chunks = <span class="self">self</span>.permutation_chunks();
-<a href=#349 id=349 data-nosnippet>349</a>
-<a href=#350 id=350 data-nosnippet>350</a>        MarginalProofSize {
-<a href=#351 id=351 data-nosnippet>351</a>            <span class="comment">// Cells:
-<a href=#352 id=352 data-nosnippet>352</a>            // - 1 commitment per advice column per instance
-<a href=#353 id=353 data-nosnippet>353</a>            // - 1 eval per instance column query per instance
-<a href=#354 id=354 data-nosnippet>354</a>            // - 1 eval per advice column query per instance
-<a href=#355 id=355 data-nosnippet>355</a>            </span>instance: ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.instance_queries),
-<a href=#356 id=356 data-nosnippet>356</a>            advice: ProofContribution::new(<span class="self">self</span>.advice_columns, <span class="self">self</span>.advice_queries),
-<a href=#357 id=357 data-nosnippet>357</a>
-<a href=#358 id=358 data-nosnippet>358</a>            <span class="comment">// Lookup arguments:
-<a href=#359 id=359 data-nosnippet>359</a>            // - 3 commitments per lookup argument per instance
-<a href=#360 id=360 data-nosnippet>360</a>            // - 5 evals per lookup argument per instance
-<a href=#361 id=361 data-nosnippet>361</a>            </span>lookups: ProofContribution::new(<span class="number">3 </span>* <span class="self">self</span>.lookups, <span class="number">5 </span>* <span class="self">self</span>.lookups),
-<a href=#362 id=362 data-nosnippet>362</a>
-<a href=#363 id=363 data-nosnippet>363</a>            <span class="comment">// Global permutation argument:
-<a href=#364 id=364 data-nosnippet>364</a>            // - chunks commitments per instance
-<a href=#365 id=365 data-nosnippet>365</a>            // - 2 * chunks + (chunks - 1) evals per instance
-<a href=#366 id=366 data-nosnippet>366</a>            </span>equality: ProofContribution::new(
-<a href=#367 id=367 data-nosnippet>367</a>                chunks,
-<a href=#368 id=368 data-nosnippet>368</a>                <span class="kw">if </span>chunks == <span class="number">0 </span>{ chunks } <span class="kw">else </span>{ <span class="number">3 </span>* chunks - <span class="number">1 </span>},
-<a href=#369 id=369 data-nosnippet>369</a>            ),
-<a href=#370 id=370 data-nosnippet>370</a>
-<a href=#371 id=371 data-nosnippet>371</a>            _marker: PhantomData,
-<a href=#372 id=372 data-nosnippet>372</a>        }
-<a href=#373 id=373 data-nosnippet>373</a>    }
-<a href=#374 id=374 data-nosnippet>374</a>
-<a href=#375 id=375 data-nosnippet>375</a>    <span class="doccomment">/// Returns the proof size for the given number of instances of this circuit.
-<a href=#376 id=376 data-nosnippet>376</a>    </span><span class="kw">pub fn </span>proof_size(<span class="kw-2">&amp;</span><span class="self">self</span>, instances: usize) -&gt; ProofSize&lt;G&gt; {
-<a href=#377 id=377 data-nosnippet>377</a>        <span class="kw">let </span>marginal = <span class="self">self</span>.marginal_proof_size();
-<a href=#378 id=378 data-nosnippet>378</a>
-<a href=#379 id=379 data-nosnippet>379</a>        ProofSize {
-<a href=#380 id=380 data-nosnippet>380</a>            <span class="comment">// Cells:
-<a href=#381 id=381 data-nosnippet>381</a>            // - marginal cost per instance
-<a href=#382 id=382 data-nosnippet>382</a>            // - 1 eval per fixed column query
-<a href=#383 id=383 data-nosnippet>383</a>            </span>instance: marginal.instance * instances,
-<a href=#384 id=384 data-nosnippet>384</a>            advice: marginal.advice * instances,
-<a href=#385 id=385 data-nosnippet>385</a>            fixed: ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.fixed_queries),
-<a href=#386 id=386 data-nosnippet>386</a>
-<a href=#387 id=387 data-nosnippet>387</a>            <span class="comment">// Lookup arguments:
-<a href=#388 id=388 data-nosnippet>388</a>            // - marginal cost per instance
-<a href=#389 id=389 data-nosnippet>389</a>            </span>lookups: marginal.lookups * instances,
-<a href=#390 id=390 data-nosnippet>390</a>
-<a href=#391 id=391 data-nosnippet>391</a>            <span class="comment">// Global permutation argument:
-<a href=#392 id=392 data-nosnippet>392</a>            // - marginal cost per instance
-<a href=#393 id=393 data-nosnippet>393</a>            // - 1 eval per column
-<a href=#394 id=394 data-nosnippet>394</a>            </span>equality: marginal.equality * instances
-<a href=#395 id=395 data-nosnippet>395</a>                + ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.permutation_cols),
-<a href=#396 id=396 data-nosnippet>396</a>
-<a href=#397 id=397 data-nosnippet>397</a>            <span class="comment">// Vanishing argument:
-<a href=#398 id=398 data-nosnippet>398</a>            // - 1 + (max_deg - 1) commitments
-<a href=#399 id=399 data-nosnippet>399</a>            // - 1 random_poly eval
-<a href=#400 id=400 data-nosnippet>400</a>            </span>vanishing: ProofContribution::new(<span class="self">self</span>.max_deg, <span class="number">1</span>),
-<a href=#401 id=401 data-nosnippet>401</a>
-<a href=#402 id=402 data-nosnippet>402</a>            <span class="comment">// Multiopening argument:
-<a href=#403 id=403 data-nosnippet>403</a>            // - f_commitment
-<a href=#404 id=404 data-nosnippet>404</a>            // - 1 eval per set of points in multiopen argument
-<a href=#405 id=405 data-nosnippet>405</a>            </span>multiopen: ProofContribution::new(<span class="number">1</span>, <span class="self">self</span>.point_sets),
-<a href=#406 id=406 data-nosnippet>406</a>
-<a href=#407 id=407 data-nosnippet>407</a>            <span class="comment">// Polycommit:
-<a href=#408 id=408 data-nosnippet>408</a>            // - s_poly commitment
-<a href=#409 id=409 data-nosnippet>409</a>            // - inner product argument (2 * k round commitments)
-<a href=#410 id=410 data-nosnippet>410</a>            // - a
-<a href=#411 id=411 data-nosnippet>411</a>            // - xi
-<a href=#412 id=412 data-nosnippet>412</a>            </span>polycomm: ProofContribution::new((<span class="number">1 </span>+ <span class="number">2 </span>* <span class="self">self</span>.k).try_into().unwrap(), <span class="number">2</span>),
-<a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a>            _marker: PhantomData,
-<a href=#415 id=415 data-nosnippet>415</a>        }
-<a href=#416 id=416 data-nosnippet>416</a>    }
-<a href=#417 id=417 data-nosnippet>417</a>}
-<a href=#418 id=418 data-nosnippet>418</a>
-<a href=#419 id=419 data-nosnippet>419</a><span class="doccomment">/// (commitments, evaluations)
-<a href=#420 id=420 data-nosnippet>420</a></span><span class="attr">#[derive(Debug)]
-<a href=#421 id=421 data-nosnippet>421</a></span><span class="kw">struct </span>ProofContribution {
-<a href=#422 id=422 data-nosnippet>422</a>    commitments: usize,
-<a href=#423 id=423 data-nosnippet>423</a>    evaluations: usize,
-<a href=#424 id=424 data-nosnippet>424</a>}
-<a href=#425 id=425 data-nosnippet>425</a>
-<a href=#426 id=426 data-nosnippet>426</a><span class="kw">impl </span>ProofContribution {
-<a href=#427 id=427 data-nosnippet>427</a>    <span class="kw">fn </span>new(commitments: usize, evaluations: usize) -&gt; <span class="self">Self </span>{
-<a href=#428 id=428 data-nosnippet>428</a>        ProofContribution {
-<a href=#429 id=429 data-nosnippet>429</a>            commitments,
-<a href=#430 id=430 data-nosnippet>430</a>            evaluations,
-<a href=#431 id=431 data-nosnippet>431</a>        }
-<a href=#432 id=432 data-nosnippet>432</a>    }
-<a href=#433 id=433 data-nosnippet>433</a>
-<a href=#434 id=434 data-nosnippet>434</a>    <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>, point: usize, scalar: usize) -&gt; usize {
-<a href=#435 id=435 data-nosnippet>435</a>        <span class="self">self</span>.commitments * point + <span class="self">self</span>.evaluations * scalar
-<a href=#436 id=436 data-nosnippet>436</a>    }
-<a href=#437 id=437 data-nosnippet>437</a>}
-<a href=#438 id=438 data-nosnippet>438</a>
-<a href=#439 id=439 data-nosnippet>439</a><span class="kw">impl </span>Add <span class="kw">for </span>ProofContribution {
-<a href=#440 id=440 data-nosnippet>440</a>    <span class="kw">type </span>Output = <span class="self">Self</span>;
+<a href=#257 id=257 data-nosnippet>257</a><span class="kw">impl</span>&lt;G: PrimeGroup, ConcreteCircuit: Circuit&lt;G::Scalar&gt;&gt; CircuitCost&lt;G, ConcreteCircuit&gt;
+<a href=#258 id=258 data-nosnippet>258</a><span class="kw">where
+<a href=#259 id=259 data-nosnippet>259</a>    </span>G::Scalar: Field,
+<a href=#260 id=260 data-nosnippet>260</a>{
+<a href=#261 id=261 data-nosnippet>261</a>    <span class="doccomment">/// Measures a circuit with parameter constant `k`.
+<a href=#262 id=262 data-nosnippet>262</a>    ///
+<a href=#263 id=263 data-nosnippet>263</a>    /// Panics if `k` is not large enough for the circuit.
+<a href=#264 id=264 data-nosnippet>264</a>    </span><span class="kw">pub fn </span>measure(k: u32, circuit: <span class="kw-2">&amp;</span>ConcreteCircuit) -&gt; <span class="self">Self </span>{
+<a href=#265 id=265 data-nosnippet>265</a>        <span class="comment">// Collect the layout details.
+<a href=#266 id=266 data-nosnippet>266</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>cs = ConstraintSystem::default();
+<a href=#267 id=267 data-nosnippet>267</a>        <span class="kw">let </span>config = ConcreteCircuit::configure(<span class="kw-2">&amp;mut </span>cs);
+<a href=#268 id=268 data-nosnippet>268</a>        <span class="kw">let </span><span class="kw-2">mut </span>layout = Layout::new(k, <span class="number">1 </span>&lt;&lt; k, cs.num_selectors);
+<a href=#269 id=269 data-nosnippet>269</a>        ConcreteCircuit::FloorPlanner::synthesize(
+<a href=#270 id=270 data-nosnippet>270</a>            <span class="kw-2">&amp;mut </span>layout,
+<a href=#271 id=271 data-nosnippet>271</a>            circuit,
+<a href=#272 id=272 data-nosnippet>272</a>            config,
+<a href=#273 id=273 data-nosnippet>273</a>            cs.constants.clone(),
+<a href=#274 id=274 data-nosnippet>274</a>        )
+<a href=#275 id=275 data-nosnippet>275</a>        .unwrap();
+<a href=#276 id=276 data-nosnippet>276</a>        <span class="kw">let </span>(cs, <span class="kw">_</span>) = cs.compress_selectors(layout.selectors);
+<a href=#277 id=277 data-nosnippet>277</a>
+<a href=#278 id=278 data-nosnippet>278</a>        <span class="macro">assert!</span>((<span class="number">1 </span>&lt;&lt; k) &gt;= cs.minimum_rows());
+<a href=#279 id=279 data-nosnippet>279</a>
+<a href=#280 id=280 data-nosnippet>280</a>        <span class="comment">// Figure out how many point sets we have due to queried cells.
+<a href=#281 id=281 data-nosnippet>281</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>column_queries: HashMap&lt;Column&lt;Any&gt;, HashSet&lt;i32&gt;&gt; = HashMap::new();
+<a href=#282 id=282 data-nosnippet>282</a>        <span class="kw">for </span>(c, r) <span class="kw">in </span>iter::empty()
+<a href=#283 id=283 data-nosnippet>283</a>            .chain(
+<a href=#284 id=284 data-nosnippet>284</a>                cs.advice_queries
+<a href=#285 id=285 data-nosnippet>285</a>                    .iter()
+<a href=#286 id=286 data-nosnippet>286</a>                    .map(|(c, r)| (Column::&lt;Any&gt;::from(<span class="kw-2">*</span>c), <span class="kw-2">*</span>r)),
+<a href=#287 id=287 data-nosnippet>287</a>            )
+<a href=#288 id=288 data-nosnippet>288</a>            .chain(cs.instance_queries.iter().map(|(c, r)| ((<span class="kw-2">*</span>c).into(), <span class="kw-2">*</span>r)))
+<a href=#289 id=289 data-nosnippet>289</a>            .chain(cs.fixed_queries.iter().map(|(c, r)| ((<span class="kw-2">*</span>c).into(), <span class="kw-2">*</span>r)))
+<a href=#290 id=290 data-nosnippet>290</a>            .chain(
+<a href=#291 id=291 data-nosnippet>291</a>                cs.permutation
+<a href=#292 id=292 data-nosnippet>292</a>                    .get_columns()
+<a href=#293 id=293 data-nosnippet>293</a>                    .into_iter()
+<a href=#294 id=294 data-nosnippet>294</a>                    .map(|c| (c, Rotation::cur())),
+<a href=#295 id=295 data-nosnippet>295</a>            )
+<a href=#296 id=296 data-nosnippet>296</a>        {
+<a href=#297 id=297 data-nosnippet>297</a>            column_queries.entry(c).or_default().insert(r.<span class="number">0</span>);
+<a href=#298 id=298 data-nosnippet>298</a>        }
+<a href=#299 id=299 data-nosnippet>299</a>        <span class="kw">let </span><span class="kw-2">mut </span>point_sets: HashSet&lt;Vec&lt;i32&gt;&gt; = HashSet::new();
+<a href=#300 id=300 data-nosnippet>300</a>        <span class="kw">for </span>(<span class="kw">_</span>, r) <span class="kw">in </span>column_queries {
+<a href=#301 id=301 data-nosnippet>301</a>            <span class="comment">// Sort the query sets so we merge duplicates.
+<a href=#302 id=302 data-nosnippet>302</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>query_set: Vec&lt;<span class="kw">_</span>&gt; = r.into_iter().collect();
+<a href=#303 id=303 data-nosnippet>303</a>            query_set.sort_unstable();
+<a href=#304 id=304 data-nosnippet>304</a>            point_sets.insert(query_set);
+<a href=#305 id=305 data-nosnippet>305</a>        }
+<a href=#306 id=306 data-nosnippet>306</a>
+<a href=#307 id=307 data-nosnippet>307</a>        <span class="comment">// Include lookup polynomials in point sets:
+<a href=#308 id=308 data-nosnippet>308</a>        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>]); <span class="comment">// product_poly
+<a href=#309 id=309 data-nosnippet>309</a>        </span>point_sets.insert(<span class="macro">vec!</span>[-<span class="number">1</span>, <span class="number">0</span>]); <span class="comment">// permuted_input_poly
+<a href=#310 id=310 data-nosnippet>310</a>        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>]); <span class="comment">// permuted_table_poly
+<a href=#311 id=311 data-nosnippet>311</a>
+<a href=#312 id=312 data-nosnippet>312</a>        // Include permutation polynomials in point sets.
+<a href=#313 id=313 data-nosnippet>313</a>        </span>point_sets.insert(<span class="macro">vec!</span>[<span class="number">0</span>, <span class="number">1</span>]); <span class="comment">// permutation_product_poly
+<a href=#314 id=314 data-nosnippet>314</a>        </span><span class="kw">let </span>max_deg = cs.degree();
+<a href=#315 id=315 data-nosnippet>315</a>        <span class="kw">let </span>permutation_cols = cs.permutation.get_columns().len();
+<a href=#316 id=316 data-nosnippet>316</a>        <span class="kw">if </span>permutation_cols &gt; max_deg - <span class="number">2 </span>{
+<a href=#317 id=317 data-nosnippet>317</a>            <span class="comment">// permutation_product_poly for chaining chunks.
+<a href=#318 id=318 data-nosnippet>318</a>            </span>point_sets.insert(<span class="macro">vec!</span>[-((cs.blinding_factors() + <span class="number">1</span>) <span class="kw">as </span>i32), <span class="number">0</span>, <span class="number">1</span>]);
+<a href=#319 id=319 data-nosnippet>319</a>        }
+<a href=#320 id=320 data-nosnippet>320</a>
+<a href=#321 id=321 data-nosnippet>321</a>        CircuitCost {
+<a href=#322 id=322 data-nosnippet>322</a>            k,
+<a href=#323 id=323 data-nosnippet>323</a>            max_deg,
+<a href=#324 id=324 data-nosnippet>324</a>            advice_columns: cs.num_advice_columns,
+<a href=#325 id=325 data-nosnippet>325</a>            instance_queries: cs.instance_queries.len(),
+<a href=#326 id=326 data-nosnippet>326</a>            advice_queries: cs.advice_queries.len(),
+<a href=#327 id=327 data-nosnippet>327</a>            fixed_queries: cs.fixed_queries.len(),
+<a href=#328 id=328 data-nosnippet>328</a>            lookups: cs.lookups.len(),
+<a href=#329 id=329 data-nosnippet>329</a>            permutation_cols,
+<a href=#330 id=330 data-nosnippet>330</a>            point_sets: point_sets.len(),
+<a href=#331 id=331 data-nosnippet>331</a>            _marker: PhantomData,
+<a href=#332 id=332 data-nosnippet>332</a>            max_rows: layout.total_rows,
+<a href=#333 id=333 data-nosnippet>333</a>            max_advice_rows: layout.total_advice_rows,
+<a href=#334 id=334 data-nosnippet>334</a>            max_fixed_rows: layout.total_fixed_rows,
+<a href=#335 id=335 data-nosnippet>335</a>            num_advice_columns: cs.num_advice_columns,
+<a href=#336 id=336 data-nosnippet>336</a>            num_fixed_columns: cs.num_fixed_columns,
+<a href=#337 id=337 data-nosnippet>337</a>            num_instance_columns: cs.num_instance_columns,
+<a href=#338 id=338 data-nosnippet>338</a>            num_total_columns: cs.num_instance_columns
+<a href=#339 id=339 data-nosnippet>339</a>                + cs.num_advice_columns
+<a href=#340 id=340 data-nosnippet>340</a>                + cs.num_fixed_columns,
+<a href=#341 id=341 data-nosnippet>341</a>        }
+<a href=#342 id=342 data-nosnippet>342</a>    }
+<a href=#343 id=343 data-nosnippet>343</a>
+<a href=#344 id=344 data-nosnippet>344</a>    <span class="kw">fn </span>permutation_chunks(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; usize {
+<a href=#345 id=345 data-nosnippet>345</a>        <span class="kw">let </span>chunk_size = <span class="self">self</span>.max_deg - <span class="number">2</span>;
+<a href=#346 id=346 data-nosnippet>346</a>        <span class="self">self</span>.permutation_cols.div_ceil(chunk_size)
+<a href=#347 id=347 data-nosnippet>347</a>    }
+<a href=#348 id=348 data-nosnippet>348</a>
+<a href=#349 id=349 data-nosnippet>349</a>    <span class="doccomment">/// Returns the marginal proof size per instance of this circuit.
+<a href=#350 id=350 data-nosnippet>350</a>    </span><span class="kw">pub fn </span>marginal_proof_size(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; MarginalProofSize&lt;G&gt; {
+<a href=#351 id=351 data-nosnippet>351</a>        <span class="kw">let </span>chunks = <span class="self">self</span>.permutation_chunks();
+<a href=#352 id=352 data-nosnippet>352</a>
+<a href=#353 id=353 data-nosnippet>353</a>        MarginalProofSize {
+<a href=#354 id=354 data-nosnippet>354</a>            <span class="comment">// Cells:
+<a href=#355 id=355 data-nosnippet>355</a>            // - 1 commitment per advice column per instance
+<a href=#356 id=356 data-nosnippet>356</a>            // - 1 eval per instance column query per instance
+<a href=#357 id=357 data-nosnippet>357</a>            // - 1 eval per advice column query per instance
+<a href=#358 id=358 data-nosnippet>358</a>            </span>instance: ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.instance_queries),
+<a href=#359 id=359 data-nosnippet>359</a>            advice: ProofContribution::new(<span class="self">self</span>.advice_columns, <span class="self">self</span>.advice_queries),
+<a href=#360 id=360 data-nosnippet>360</a>
+<a href=#361 id=361 data-nosnippet>361</a>            <span class="comment">// Lookup arguments:
+<a href=#362 id=362 data-nosnippet>362</a>            // - 3 commitments per lookup argument per instance
+<a href=#363 id=363 data-nosnippet>363</a>            // - 5 evals per lookup argument per instance
+<a href=#364 id=364 data-nosnippet>364</a>            </span>lookups: ProofContribution::new(<span class="number">3 </span>* <span class="self">self</span>.lookups, <span class="number">5 </span>* <span class="self">self</span>.lookups),
+<a href=#365 id=365 data-nosnippet>365</a>
+<a href=#366 id=366 data-nosnippet>366</a>            <span class="comment">// Global permutation argument:
+<a href=#367 id=367 data-nosnippet>367</a>            // - chunks commitments per instance
+<a href=#368 id=368 data-nosnippet>368</a>            // - 2 * chunks + (chunks - 1) evals per instance
+<a href=#369 id=369 data-nosnippet>369</a>            </span>equality: ProofContribution::new(
+<a href=#370 id=370 data-nosnippet>370</a>                chunks,
+<a href=#371 id=371 data-nosnippet>371</a>                <span class="kw">if </span>chunks == <span class="number">0 </span>{ chunks } <span class="kw">else </span>{ <span class="number">3 </span>* chunks - <span class="number">1 </span>},
+<a href=#372 id=372 data-nosnippet>372</a>            ),
+<a href=#373 id=373 data-nosnippet>373</a>
+<a href=#374 id=374 data-nosnippet>374</a>            _marker: PhantomData,
+<a href=#375 id=375 data-nosnippet>375</a>        }
+<a href=#376 id=376 data-nosnippet>376</a>    }
+<a href=#377 id=377 data-nosnippet>377</a>
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="doccomment">/// Returns the proof size for the given number of instances of this circuit.
+<a href=#379 id=379 data-nosnippet>379</a>    </span><span class="kw">pub fn </span>proof_size(<span class="kw-2">&amp;</span><span class="self">self</span>, instances: usize) -&gt; ProofSize&lt;G&gt; {
+<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw">let </span>marginal = <span class="self">self</span>.marginal_proof_size();
+<a href=#381 id=381 data-nosnippet>381</a>
+<a href=#382 id=382 data-nosnippet>382</a>        ProofSize {
+<a href=#383 id=383 data-nosnippet>383</a>            <span class="comment">// Cells:
+<a href=#384 id=384 data-nosnippet>384</a>            // - marginal cost per instance
+<a href=#385 id=385 data-nosnippet>385</a>            // - 1 eval per fixed column query
+<a href=#386 id=386 data-nosnippet>386</a>            </span>instance: marginal.instance * instances,
+<a href=#387 id=387 data-nosnippet>387</a>            advice: marginal.advice * instances,
+<a href=#388 id=388 data-nosnippet>388</a>            fixed: ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.fixed_queries),
+<a href=#389 id=389 data-nosnippet>389</a>
+<a href=#390 id=390 data-nosnippet>390</a>            <span class="comment">// Lookup arguments:
+<a href=#391 id=391 data-nosnippet>391</a>            // - marginal cost per instance
+<a href=#392 id=392 data-nosnippet>392</a>            </span>lookups: marginal.lookups * instances,
+<a href=#393 id=393 data-nosnippet>393</a>
+<a href=#394 id=394 data-nosnippet>394</a>            <span class="comment">// Global permutation argument:
+<a href=#395 id=395 data-nosnippet>395</a>            // - marginal cost per instance
+<a href=#396 id=396 data-nosnippet>396</a>            // - 1 eval per column
+<a href=#397 id=397 data-nosnippet>397</a>            </span>equality: marginal.equality * instances
+<a href=#398 id=398 data-nosnippet>398</a>                + ProofContribution::new(<span class="number">0</span>, <span class="self">self</span>.permutation_cols),
+<a href=#399 id=399 data-nosnippet>399</a>
+<a href=#400 id=400 data-nosnippet>400</a>            <span class="comment">// Vanishing argument:
+<a href=#401 id=401 data-nosnippet>401</a>            // - 1 + (max_deg - 1) commitments
+<a href=#402 id=402 data-nosnippet>402</a>            // - 1 random_poly eval
+<a href=#403 id=403 data-nosnippet>403</a>            </span>vanishing: ProofContribution::new(<span class="self">self</span>.max_deg, <span class="number">1</span>),
+<a href=#404 id=404 data-nosnippet>404</a>
+<a href=#405 id=405 data-nosnippet>405</a>            <span class="comment">// Multiopening argument:
+<a href=#406 id=406 data-nosnippet>406</a>            // - f_commitment
+<a href=#407 id=407 data-nosnippet>407</a>            // - 1 eval per set of points in multiopen argument
+<a href=#408 id=408 data-nosnippet>408</a>            </span>multiopen: ProofContribution::new(<span class="number">1</span>, <span class="self">self</span>.point_sets),
+<a href=#409 id=409 data-nosnippet>409</a>
+<a href=#410 id=410 data-nosnippet>410</a>            <span class="comment">// Polycommit:
+<a href=#411 id=411 data-nosnippet>411</a>            // - s_poly commitment
+<a href=#412 id=412 data-nosnippet>412</a>            // - inner product argument (2 * k round commitments)
+<a href=#413 id=413 data-nosnippet>413</a>            // - a
+<a href=#414 id=414 data-nosnippet>414</a>            // - xi
+<a href=#415 id=415 data-nosnippet>415</a>            </span>polycomm: ProofContribution::new((<span class="number">1 </span>+ <span class="number">2 </span>* <span class="self">self</span>.k).try_into().unwrap(), <span class="number">2</span>),
+<a href=#416 id=416 data-nosnippet>416</a>
+<a href=#417 id=417 data-nosnippet>417</a>            _marker: PhantomData,
+<a href=#418 id=418 data-nosnippet>418</a>        }
+<a href=#419 id=419 data-nosnippet>419</a>    }
+<a href=#420 id=420 data-nosnippet>420</a>}
+<a href=#421 id=421 data-nosnippet>421</a>
+<a href=#422 id=422 data-nosnippet>422</a><span class="doccomment">/// (commitments, evaluations)
+<a href=#423 id=423 data-nosnippet>423</a></span><span class="attr">#[derive(Debug)]
+<a href=#424 id=424 data-nosnippet>424</a></span><span class="kw">struct </span>ProofContribution {
+<a href=#425 id=425 data-nosnippet>425</a>    commitments: usize,
+<a href=#426 id=426 data-nosnippet>426</a>    evaluations: usize,
+<a href=#427 id=427 data-nosnippet>427</a>}
+<a href=#428 id=428 data-nosnippet>428</a>
+<a href=#429 id=429 data-nosnippet>429</a><span class="kw">impl </span>ProofContribution {
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">fn </span>new(commitments: usize, evaluations: usize) -&gt; <span class="self">Self </span>{
+<a href=#431 id=431 data-nosnippet>431</a>        ProofContribution {
+<a href=#432 id=432 data-nosnippet>432</a>            commitments,
+<a href=#433 id=433 data-nosnippet>433</a>            evaluations,
+<a href=#434 id=434 data-nosnippet>434</a>        }
+<a href=#435 id=435 data-nosnippet>435</a>    }
+<a href=#436 id=436 data-nosnippet>436</a>
+<a href=#437 id=437 data-nosnippet>437</a>    <span class="kw">fn </span>len(<span class="kw-2">&amp;</span><span class="self">self</span>, point: usize, scalar: usize) -&gt; usize {
+<a href=#438 id=438 data-nosnippet>438</a>        <span class="self">self</span>.commitments * point + <span class="self">self</span>.evaluations * scalar
+<a href=#439 id=439 data-nosnippet>439</a>    }
+<a href=#440 id=440 data-nosnippet>440</a>}
 <a href=#441 id=441 data-nosnippet>441</a>
-<a href=#442 id=442 data-nosnippet>442</a>    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
-<a href=#443 id=443 data-nosnippet>443</a>        <span class="self">Self </span>{
-<a href=#444 id=444 data-nosnippet>444</a>            commitments: <span class="self">self</span>.commitments + rhs.commitments,
-<a href=#445 id=445 data-nosnippet>445</a>            evaluations: <span class="self">self</span>.evaluations + rhs.evaluations,
-<a href=#446 id=446 data-nosnippet>446</a>        }
-<a href=#447 id=447 data-nosnippet>447</a>    }
-<a href=#448 id=448 data-nosnippet>448</a>}
-<a href=#449 id=449 data-nosnippet>449</a>
-<a href=#450 id=450 data-nosnippet>450</a><span class="kw">impl </span>Mul&lt;usize&gt; <span class="kw">for </span>ProofContribution {
-<a href=#451 id=451 data-nosnippet>451</a>    <span class="kw">type </span>Output = <span class="self">Self</span>;
+<a href=#442 id=442 data-nosnippet>442</a><span class="kw">impl </span>Add <span class="kw">for </span>ProofContribution {
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="kw">type </span>Output = <span class="self">Self</span>;
+<a href=#444 id=444 data-nosnippet>444</a>
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="kw">fn </span>add(<span class="self">self</span>, rhs: <span class="self">Self</span>) -&gt; <span class="self">Self</span>::Output {
+<a href=#446 id=446 data-nosnippet>446</a>        <span class="self">Self </span>{
+<a href=#447 id=447 data-nosnippet>447</a>            commitments: <span class="self">self</span>.commitments + rhs.commitments,
+<a href=#448 id=448 data-nosnippet>448</a>            evaluations: <span class="self">self</span>.evaluations + rhs.evaluations,
+<a href=#449 id=449 data-nosnippet>449</a>        }
+<a href=#450 id=450 data-nosnippet>450</a>    }
+<a href=#451 id=451 data-nosnippet>451</a>}
 <a href=#452 id=452 data-nosnippet>452</a>
-<a href=#453 id=453 data-nosnippet>453</a>    <span class="kw">fn </span>mul(<span class="self">self</span>, instances: usize) -&gt; <span class="self">Self</span>::Output {
-<a href=#454 id=454 data-nosnippet>454</a>        <span class="self">Self </span>{
-<a href=#455 id=455 data-nosnippet>455</a>            commitments: <span class="self">self</span>.commitments * instances,
-<a href=#456 id=456 data-nosnippet>456</a>            evaluations: <span class="self">self</span>.evaluations * instances,
-<a href=#457 id=457 data-nosnippet>457</a>        }
-<a href=#458 id=458 data-nosnippet>458</a>    }
-<a href=#459 id=459 data-nosnippet>459</a>}
-<a href=#460 id=460 data-nosnippet>460</a>
-<a href=#461 id=461 data-nosnippet>461</a><span class="doccomment">/// The marginal size of a Halo 2 proof, broken down into its contributing factors.
-<a href=#462 id=462 data-nosnippet>462</a></span><span class="attr">#[derive(Debug)]
-<a href=#463 id=463 data-nosnippet>463</a></span><span class="kw">pub struct </span>MarginalProofSize&lt;G: PrimeGroup&gt; {
-<a href=#464 id=464 data-nosnippet>464</a>    instance: ProofContribution,
-<a href=#465 id=465 data-nosnippet>465</a>    advice: ProofContribution,
-<a href=#466 id=466 data-nosnippet>466</a>    lookups: ProofContribution,
-<a href=#467 id=467 data-nosnippet>467</a>    equality: ProofContribution,
-<a href=#468 id=468 data-nosnippet>468</a>    _marker: PhantomData&lt;G&gt;,
-<a href=#469 id=469 data-nosnippet>469</a>}
-<a href=#470 id=470 data-nosnippet>470</a>
-<a href=#471 id=471 data-nosnippet>471</a><span class="kw">impl</span>&lt;G: PrimeGroup&gt; From&lt;MarginalProofSize&lt;G&gt;&gt; <span class="kw">for </span>usize {
-<a href=#472 id=472 data-nosnippet>472</a>    <span class="kw">fn </span>from(proof: MarginalProofSize&lt;G&gt;) -&gt; <span class="self">Self </span>{
-<a href=#473 id=473 data-nosnippet>473</a>        <span class="kw">let </span>point = G::Repr::default().as_ref().len();
-<a href=#474 id=474 data-nosnippet>474</a>        <span class="kw">let </span>scalar = &lt;G::Scalar <span class="kw">as </span>PrimeField&gt;::Repr::default().as_ref().len();
-<a href=#475 id=475 data-nosnippet>475</a>
-<a href=#476 id=476 data-nosnippet>476</a>        proof.instance.len(point, scalar)
-<a href=#477 id=477 data-nosnippet>477</a>            + proof.advice.len(point, scalar)
-<a href=#478 id=478 data-nosnippet>478</a>            + proof.lookups.len(point, scalar)
-<a href=#479 id=479 data-nosnippet>479</a>            + proof.equality.len(point, scalar)
-<a href=#480 id=480 data-nosnippet>480</a>    }
-<a href=#481 id=481 data-nosnippet>481</a>}
-<a href=#482 id=482 data-nosnippet>482</a>
-<a href=#483 id=483 data-nosnippet>483</a><span class="doccomment">/// The size of a Halo 2 proof, broken down into its contributing factors.
-<a href=#484 id=484 data-nosnippet>484</a></span><span class="attr">#[derive(Debug)]
-<a href=#485 id=485 data-nosnippet>485</a></span><span class="kw">pub struct </span>ProofSize&lt;G: PrimeGroup&gt; {
-<a href=#486 id=486 data-nosnippet>486</a>    instance: ProofContribution,
-<a href=#487 id=487 data-nosnippet>487</a>    advice: ProofContribution,
-<a href=#488 id=488 data-nosnippet>488</a>    fixed: ProofContribution,
-<a href=#489 id=489 data-nosnippet>489</a>    lookups: ProofContribution,
-<a href=#490 id=490 data-nosnippet>490</a>    equality: ProofContribution,
-<a href=#491 id=491 data-nosnippet>491</a>    vanishing: ProofContribution,
-<a href=#492 id=492 data-nosnippet>492</a>    multiopen: ProofContribution,
-<a href=#493 id=493 data-nosnippet>493</a>    polycomm: ProofContribution,
-<a href=#494 id=494 data-nosnippet>494</a>    _marker: PhantomData&lt;G&gt;,
-<a href=#495 id=495 data-nosnippet>495</a>}
-<a href=#496 id=496 data-nosnippet>496</a>
-<a href=#497 id=497 data-nosnippet>497</a><span class="kw">impl</span>&lt;G: PrimeGroup&gt; From&lt;ProofSize&lt;G&gt;&gt; <span class="kw">for </span>usize {
-<a href=#498 id=498 data-nosnippet>498</a>    <span class="kw">fn </span>from(proof: ProofSize&lt;G&gt;) -&gt; <span class="self">Self </span>{
-<a href=#499 id=499 data-nosnippet>499</a>        <span class="kw">let </span>point = G::Repr::default().as_ref().len();
-<a href=#500 id=500 data-nosnippet>500</a>        <span class="kw">let </span>scalar = &lt;G::Scalar <span class="kw">as </span>PrimeField&gt;::Repr::default().as_ref().len();
-<a href=#501 id=501 data-nosnippet>501</a>
-<a href=#502 id=502 data-nosnippet>502</a>        proof.instance.len(point, scalar)
-<a href=#503 id=503 data-nosnippet>503</a>            + proof.advice.len(point, scalar)
-<a href=#504 id=504 data-nosnippet>504</a>            + proof.fixed.len(point, scalar)
-<a href=#505 id=505 data-nosnippet>505</a>            + proof.lookups.len(point, scalar)
-<a href=#506 id=506 data-nosnippet>506</a>            + proof.equality.len(point, scalar)
-<a href=#507 id=507 data-nosnippet>507</a>            + proof.vanishing.len(point, scalar)
-<a href=#508 id=508 data-nosnippet>508</a>            + proof.multiopen.len(point, scalar)
-<a href=#509 id=509 data-nosnippet>509</a>            + proof.polycomm.len(point, scalar)
-<a href=#510 id=510 data-nosnippet>510</a>    }
-<a href=#511 id=511 data-nosnippet>511</a>}
-<a href=#512 id=512 data-nosnippet>512</a>
-<a href=#513 id=513 data-nosnippet>513</a><span class="attr">#[cfg(test)]
-<a href=#514 id=514 data-nosnippet>514</a></span><span class="kw">mod </span>tests {
-<a href=#515 id=515 data-nosnippet>515</a>    <span class="kw">use </span>pasta_curves::{Eq, Fp};
-<a href=#516 id=516 data-nosnippet>516</a>
-<a href=#517 id=517 data-nosnippet>517</a>    <span class="kw">use </span><span class="kw">crate</span>::circuit::SimpleFloorPlanner;
-<a href=#518 id=518 data-nosnippet>518</a>
-<a href=#519 id=519 data-nosnippet>519</a>    <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#520 id=520 data-nosnippet>520</a>
-<a href=#521 id=521 data-nosnippet>521</a>    <span class="attr">#[test]
-<a href=#522 id=522 data-nosnippet>522</a>    </span><span class="kw">fn </span>circuit_cost_without_permutation() {
-<a href=#523 id=523 data-nosnippet>523</a>        <span class="kw">const </span>K: u32 = <span class="number">4</span>;
-<a href=#524 id=524 data-nosnippet>524</a>
-<a href=#525 id=525 data-nosnippet>525</a>        <span class="kw">struct </span>MyCircuit;
-<a href=#526 id=526 data-nosnippet>526</a>        <span class="kw">impl </span>Circuit&lt;Fp&gt; <span class="kw">for </span>MyCircuit {
-<a href=#527 id=527 data-nosnippet>527</a>            <span class="kw">type </span>Config = ();
-<a href=#528 id=528 data-nosnippet>528</a>            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
-<a href=#529 id=529 data-nosnippet>529</a>
-<a href=#530 id=530 data-nosnippet>530</a>            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
-<a href=#531 id=531 data-nosnippet>531</a>                <span class="self">Self
-<a href=#532 id=532 data-nosnippet>532</a>            </span>}
-<a href=#533 id=533 data-nosnippet>533</a>
-<a href=#534 id=534 data-nosnippet>534</a>            <span class="kw">fn </span>configure(_meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;Fp&gt;) -&gt; <span class="self">Self</span>::Config {}
-<a href=#535 id=535 data-nosnippet>535</a>
-<a href=#536 id=536 data-nosnippet>536</a>            <span class="kw">fn </span>synthesize(
-<a href=#537 id=537 data-nosnippet>537</a>                <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#538 id=538 data-nosnippet>538</a>                _config: <span class="self">Self</span>::Config,
-<a href=#539 id=539 data-nosnippet>539</a>                _layouter: <span class="kw">impl </span><span class="kw">crate</span>::circuit::Layouter&lt;Fp&gt;,
-<a href=#540 id=540 data-nosnippet>540</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
-<a href=#541 id=541 data-nosnippet>541</a>                <span class="prelude-val">Ok</span>(())
-<a href=#542 id=542 data-nosnippet>542</a>            }
-<a href=#543 id=543 data-nosnippet>543</a>        }
-<a href=#544 id=544 data-nosnippet>544</a>        CircuitCost::&lt;Eq, MyCircuit&gt;::measure(K, <span class="kw-2">&amp;</span>MyCircuit).proof_size(<span class="number">1</span>);
-<a href=#545 id=545 data-nosnippet>545</a>    }
-<a href=#546 id=546 data-nosnippet>546</a>}
+<a href=#453 id=453 data-nosnippet>453</a><span class="kw">impl </span>Mul&lt;usize&gt; <span class="kw">for </span>ProofContribution {
+<a href=#454 id=454 data-nosnippet>454</a>    <span class="kw">type </span>Output = <span class="self">Self</span>;
+<a href=#455 id=455 data-nosnippet>455</a>
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="kw">fn </span>mul(<span class="self">self</span>, instances: usize) -&gt; <span class="self">Self</span>::Output {
+<a href=#457 id=457 data-nosnippet>457</a>        <span class="self">Self </span>{
+<a href=#458 id=458 data-nosnippet>458</a>            commitments: <span class="self">self</span>.commitments * instances,
+<a href=#459 id=459 data-nosnippet>459</a>            evaluations: <span class="self">self</span>.evaluations * instances,
+<a href=#460 id=460 data-nosnippet>460</a>        }
+<a href=#461 id=461 data-nosnippet>461</a>    }
+<a href=#462 id=462 data-nosnippet>462</a>}
+<a href=#463 id=463 data-nosnippet>463</a>
+<a href=#464 id=464 data-nosnippet>464</a><span class="doccomment">/// The marginal size of a Halo 2 proof, broken down into its contributing factors.
+<a href=#465 id=465 data-nosnippet>465</a></span><span class="attr">#[derive(Debug)]
+<a href=#466 id=466 data-nosnippet>466</a></span><span class="kw">pub struct </span>MarginalProofSize&lt;G: PrimeGroup&gt; {
+<a href=#467 id=467 data-nosnippet>467</a>    instance: ProofContribution,
+<a href=#468 id=468 data-nosnippet>468</a>    advice: ProofContribution,
+<a href=#469 id=469 data-nosnippet>469</a>    lookups: ProofContribution,
+<a href=#470 id=470 data-nosnippet>470</a>    equality: ProofContribution,
+<a href=#471 id=471 data-nosnippet>471</a>    _marker: PhantomData&lt;G&gt;,
+<a href=#472 id=472 data-nosnippet>472</a>}
+<a href=#473 id=473 data-nosnippet>473</a>
+<a href=#474 id=474 data-nosnippet>474</a><span class="kw">impl</span>&lt;G: PrimeGroup&gt; From&lt;MarginalProofSize&lt;G&gt;&gt; <span class="kw">for </span>usize {
+<a href=#475 id=475 data-nosnippet>475</a>    <span class="kw">fn </span>from(proof: MarginalProofSize&lt;G&gt;) -&gt; <span class="self">Self </span>{
+<a href=#476 id=476 data-nosnippet>476</a>        <span class="kw">let </span>point = G::Repr::default().as_ref().len();
+<a href=#477 id=477 data-nosnippet>477</a>        <span class="kw">let </span>scalar = &lt;G::Scalar <span class="kw">as </span>PrimeField&gt;::Repr::default().as_ref().len();
+<a href=#478 id=478 data-nosnippet>478</a>
+<a href=#479 id=479 data-nosnippet>479</a>        proof.instance.len(point, scalar)
+<a href=#480 id=480 data-nosnippet>480</a>            + proof.advice.len(point, scalar)
+<a href=#481 id=481 data-nosnippet>481</a>            + proof.lookups.len(point, scalar)
+<a href=#482 id=482 data-nosnippet>482</a>            + proof.equality.len(point, scalar)
+<a href=#483 id=483 data-nosnippet>483</a>    }
+<a href=#484 id=484 data-nosnippet>484</a>}
+<a href=#485 id=485 data-nosnippet>485</a>
+<a href=#486 id=486 data-nosnippet>486</a><span class="doccomment">/// The size of a Halo 2 proof, broken down into its contributing factors.
+<a href=#487 id=487 data-nosnippet>487</a></span><span class="attr">#[derive(Debug)]
+<a href=#488 id=488 data-nosnippet>488</a></span><span class="kw">pub struct </span>ProofSize&lt;G: PrimeGroup&gt; {
+<a href=#489 id=489 data-nosnippet>489</a>    instance: ProofContribution,
+<a href=#490 id=490 data-nosnippet>490</a>    advice: ProofContribution,
+<a href=#491 id=491 data-nosnippet>491</a>    fixed: ProofContribution,
+<a href=#492 id=492 data-nosnippet>492</a>    lookups: ProofContribution,
+<a href=#493 id=493 data-nosnippet>493</a>    equality: ProofContribution,
+<a href=#494 id=494 data-nosnippet>494</a>    vanishing: ProofContribution,
+<a href=#495 id=495 data-nosnippet>495</a>    multiopen: ProofContribution,
+<a href=#496 id=496 data-nosnippet>496</a>    polycomm: ProofContribution,
+<a href=#497 id=497 data-nosnippet>497</a>    _marker: PhantomData&lt;G&gt;,
+<a href=#498 id=498 data-nosnippet>498</a>}
+<a href=#499 id=499 data-nosnippet>499</a>
+<a href=#500 id=500 data-nosnippet>500</a><span class="kw">impl</span>&lt;G: PrimeGroup&gt; From&lt;ProofSize&lt;G&gt;&gt; <span class="kw">for </span>usize {
+<a href=#501 id=501 data-nosnippet>501</a>    <span class="kw">fn </span>from(proof: ProofSize&lt;G&gt;) -&gt; <span class="self">Self </span>{
+<a href=#502 id=502 data-nosnippet>502</a>        <span class="kw">let </span>point = G::Repr::default().as_ref().len();
+<a href=#503 id=503 data-nosnippet>503</a>        <span class="kw">let </span>scalar = &lt;G::Scalar <span class="kw">as </span>PrimeField&gt;::Repr::default().as_ref().len();
+<a href=#504 id=504 data-nosnippet>504</a>
+<a href=#505 id=505 data-nosnippet>505</a>        proof.instance.len(point, scalar)
+<a href=#506 id=506 data-nosnippet>506</a>            + proof.advice.len(point, scalar)
+<a href=#507 id=507 data-nosnippet>507</a>            + proof.fixed.len(point, scalar)
+<a href=#508 id=508 data-nosnippet>508</a>            + proof.lookups.len(point, scalar)
+<a href=#509 id=509 data-nosnippet>509</a>            + proof.equality.len(point, scalar)
+<a href=#510 id=510 data-nosnippet>510</a>            + proof.vanishing.len(point, scalar)
+<a href=#511 id=511 data-nosnippet>511</a>            + proof.multiopen.len(point, scalar)
+<a href=#512 id=512 data-nosnippet>512</a>            + proof.polycomm.len(point, scalar)
+<a href=#513 id=513 data-nosnippet>513</a>    }
+<a href=#514 id=514 data-nosnippet>514</a>}
+<a href=#515 id=515 data-nosnippet>515</a>
+<a href=#516 id=516 data-nosnippet>516</a><span class="attr">#[cfg(test)]
+<a href=#517 id=517 data-nosnippet>517</a></span><span class="kw">mod </span>tests {
+<a href=#518 id=518 data-nosnippet>518</a>    <span class="kw">use </span>pasta_curves::{Eq, Fp};
+<a href=#519 id=519 data-nosnippet>519</a>
+<a href=#520 id=520 data-nosnippet>520</a>    <span class="kw">use </span><span class="kw">crate</span>::circuit::SimpleFloorPlanner;
+<a href=#521 id=521 data-nosnippet>521</a>
+<a href=#522 id=522 data-nosnippet>522</a>    <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#523 id=523 data-nosnippet>523</a>
+<a href=#524 id=524 data-nosnippet>524</a>    <span class="attr">#[test]
+<a href=#525 id=525 data-nosnippet>525</a>    </span><span class="kw">fn </span>circuit_cost_without_permutation() {
+<a href=#526 id=526 data-nosnippet>526</a>        <span class="kw">const </span>K: u32 = <span class="number">4</span>;
+<a href=#527 id=527 data-nosnippet>527</a>
+<a href=#528 id=528 data-nosnippet>528</a>        <span class="kw">struct </span>MyCircuit;
+<a href=#529 id=529 data-nosnippet>529</a>        <span class="kw">impl </span>Circuit&lt;Fp&gt; <span class="kw">for </span>MyCircuit {
+<a href=#530 id=530 data-nosnippet>530</a>            <span class="kw">type </span>Config = ();
+<a href=#531 id=531 data-nosnippet>531</a>            <span class="kw">type </span>FloorPlanner = SimpleFloorPlanner;
+<a href=#532 id=532 data-nosnippet>532</a>
+<a href=#533 id=533 data-nosnippet>533</a>            <span class="kw">fn </span>without_witnesses(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="self">Self </span>{
+<a href=#534 id=534 data-nosnippet>534</a>                <span class="self">Self
+<a href=#535 id=535 data-nosnippet>535</a>            </span>}
+<a href=#536 id=536 data-nosnippet>536</a>
+<a href=#537 id=537 data-nosnippet>537</a>            <span class="kw">fn </span>configure(_meta: <span class="kw-2">&amp;mut </span>ConstraintSystem&lt;Fp&gt;) -&gt; <span class="self">Self</span>::Config {}
+<a href=#538 id=538 data-nosnippet>538</a>
+<a href=#539 id=539 data-nosnippet>539</a>            <span class="kw">fn </span>synthesize(
+<a href=#540 id=540 data-nosnippet>540</a>                <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#541 id=541 data-nosnippet>541</a>                _config: <span class="self">Self</span>::Config,
+<a href=#542 id=542 data-nosnippet>542</a>                _layouter: <span class="kw">impl </span><span class="kw">crate</span>::circuit::Layouter&lt;Fp&gt;,
+<a href=#543 id=543 data-nosnippet>543</a>            ) -&gt; <span class="prelude-ty">Result</span>&lt;(), Error&gt; {
+<a href=#544 id=544 data-nosnippet>544</a>                <span class="prelude-val">Ok</span>(())
+<a href=#545 id=545 data-nosnippet>545</a>            }
+<a href=#546 id=546 data-nosnippet>546</a>        }
+<a href=#547 id=547 data-nosnippet>547</a>        CircuitCost::&lt;Eq, MyCircuit&gt;::measure(K, <span class="kw-2">&amp;</span>MyCircuit).proof_size(<span class="number">1</span>);
+<a href=#548 id=548 data-nosnippet>548</a>    }
+<a href=#549 id=549 data-nosnippet>549</a>}
 </code></pre></div></section></main></body></html>
