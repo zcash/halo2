@@ -179,13 +179,13 @@ pub fn range_check<F: PrimeField>(word: Expression<F>, range: usize) -> Expressi
 ///
 /// # Panics
 ///
-/// We are returning a `Vec<u8>` which means the window size is limited to
-/// <= 8 bits.
+/// We are returning a `Vec<u8>` which means the window size must be in `1..=8`.
 pub fn decompose_word<F: PrimeFieldBits>(
     word: &F,
     word_num_bits: usize,
     window_num_bits: usize,
 ) -> Vec<u8> {
+    assert!(window_num_bits > 0, "window_num_bits must be non-zero");
     assert!(window_num_bits <= 8);
 
     // Pad bits to multiple of window_num_bits
@@ -450,6 +450,12 @@ mod tests {
             // Check that original scalar is recovered from decomposition
             assert_eq!(scalar, pallas::Scalar::from_repr(bytes.try_into().unwrap()).unwrap());
         }
+    }
+
+    #[test]
+    #[should_panic(expected = "window_num_bits must be non-zero")]
+    fn test_decompose_word_rejects_zero_window() {
+        decompose_word(&pallas::Scalar::ONE, pallas::Scalar::NUM_BITS as usize, 0);
     }
 
     #[test]
