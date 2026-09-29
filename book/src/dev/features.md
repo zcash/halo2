@@ -55,7 +55,7 @@ None currently.
 <tr><th>Feature flag</th><th>Removed in</th><th>Notes</th></tr>
 <tr>
   <td><code>unstable-sha256-gadget</code></td>
-  <td>0.5.0</td>
+  <td>0.6.0</td>
   <td>
     The SHA-256 Table16 gadget was removed due to multiple soundness issues
     (missing carry range checks in the compression function, missing copy
