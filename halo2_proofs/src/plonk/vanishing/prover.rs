@@ -1,12 +1,11 @@
 use std::iter;
 
 use ff::Field;
-use group::Curve;
 use rand_core::Rng;
 
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, CurveAffine},
+    arithmetic::{eval_polynomial, CurveAffine, CurveExt},
     plonk::{ChallengeX, ChallengeY, Error},
     poly::{
         self,
@@ -50,7 +49,9 @@ impl<C: CurveAffine> Argument<C> {
         let random_blind = Blind(C::Scalar::random(&mut rng));
 
         // Commit
-        let c = params.commit(&random_poly, random_blind).to_affine();
+        let c = params
+            .commit(&random_poly, random_blind)
+            .to_affine_vartime();
         transcript.write_point(c)?;
 
         Ok(Committed {
@@ -105,7 +106,7 @@ impl<C: CurveAffine> Committed<C> {
             .map(|(h_piece, blind)| params.commit(h_piece, *blind))
             .collect();
         let mut h_commitments = vec![C::identity(); h_commitments_projective.len()];
-        C::Curve::batch_normalize(&h_commitments_projective, &mut h_commitments);
+        C::Curve::batch_normalize_vartime(&h_commitments_projective, &mut h_commitments);
         let h_commitments = h_commitments;
 
         // Hash each h(X) piece

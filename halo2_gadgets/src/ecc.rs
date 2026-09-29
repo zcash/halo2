@@ -644,17 +644,16 @@ impl<C: CurveAffine, EccChip: EccInstructions<C>> FixedPointShort<C, EccChip> {
 #[cfg(test)]
 pub(crate) mod tests {
     use ff::PrimeField;
-    use group::{Curve, CurveAffine as _, Group};
+    use group::{CurveAffine as _, Group};
     use rand::{rand_core::UnwrapErr, rngs::SysRng};
-    use std::marker::PhantomData;
+    use std::{marker::PhantomData, sync::LazyLock};
 
     use halo2_proofs::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         dev::MockProver,
         plonk::{Circuit, ConstraintSystem, Error},
     };
-    use lazy_static::lazy_static;
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use super::{
         chip::{
@@ -679,13 +678,12 @@ pub(crate) mod tests {
     #[derive(Debug, Eq, PartialEq, Clone)]
     pub(crate) struct Short;
 
-    lazy_static! {
-        static ref BASE: pallas::Affine = pallas::Point::generator().to_affine();
-        static ref ZS_AND_US: Vec<(u64, [pallas::Base; H])> =
-            find_zs_and_us(*BASE, NUM_WINDOWS).unwrap();
-        static ref ZS_AND_US_SHORT: Vec<(u64, [pallas::Base; H])> =
-            find_zs_and_us(*BASE, NUM_WINDOWS_SHORT).unwrap();
-    }
+    static BASE: LazyLock<pallas::Affine> =
+        LazyLock::new(|| pallas::Point::generator().to_affine_vartime());
+    static ZS_AND_US: LazyLock<Vec<(u64, [pallas::Base; H])>> =
+        LazyLock::new(|| find_zs_and_us(*BASE, NUM_WINDOWS).unwrap());
+    static ZS_AND_US_SHORT: LazyLock<Vec<(u64, [pallas::Base; H])>> =
+        LazyLock::new(|| find_zs_and_us(*BASE, NUM_WINDOWS_SHORT).unwrap());
 
     impl FullWidth {
         pub(crate) fn from_pallas_generator() -> Self {
@@ -884,7 +882,7 @@ pub(crate) mod tests {
             config.lookup_config.load_range_check_table(&mut layouter)?;
 
             // Generate a random non-identity point P
-            let p_val = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine(); // P
+            let p_val = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine_vartime(); // P
             let p = super::NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "P"),
@@ -898,7 +896,7 @@ pub(crate) mod tests {
             )?;
 
             // Generate a random non-identity point Q
-            let q_val = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine(); // Q
+            let q_val = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine_vartime(); // Q
             let q = super::NonIdentityPoint::new(
                 chip.clone(),
                 layouter.namespace(|| "Q"),

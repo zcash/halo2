@@ -79,7 +79,7 @@ bits. Inside the gate, we check that $$b_1 + 2^5 \cdot b_2 = z_{1,b}.$$
 We also recover the subpiece $b_0$ using $(b, z_{1,b})$:
 $$
 \begin{aligned}
-z_{1,b} &= \frac{b - b_{0..=10}}{2^{10}}\\
+z_{1,b} &= \frac{b - b_0}{2^{10}}\\
         \implies b_0 &= b - (z_{1,b} \cdot 2^{10}).
 \end{aligned}
 $$

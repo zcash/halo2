@@ -30,7 +30,9 @@ mod hash_to_point;
 
 /// Configuration for the Sinsemilla hash chip
 ///
-/// If `allow_init_from_private_point` is true, the chip can compute a hash from a private point.
+/// If `allow_init_from_private_point` is true, the chip can compute a hash from a private point,
+/// which the surrounding circuit must constrain as
+/// [`SinsemillaInstructions::hash_to_point_with_private_init`] requires.
 /// However, compared to when `allow_init_from_private_point` is set to false,
 /// computing the hash from a public point will take one additional row.
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -158,7 +160,9 @@ where
 
     /// Creates the Sinsemilla chip
     ///
-    /// If `allow_init_from_private_point` is true, the chip can compute a hash from a private point.
+    /// If `allow_init_from_private_point` is true, the chip can compute a hash from a private point,
+    /// which the surrounding circuit must constrain as
+    /// [`SinsemillaInstructions::hash_to_point_with_private_init`] requires.
     /// However, compared to when `allow_init_from_private_point` is set to false,
     /// computing the hash from a public point will take one additional row.
     ///

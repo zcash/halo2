@@ -23,9 +23,6 @@
 
 pub mod ecc;
 pub mod poseidon;
-#[cfg(feature = "unstable-sha256-gadget")]
-#[cfg_attr(docsrs, doc(cfg(feature = "unstable-sha256-gadget")))]
-pub mod sha256;
 pub mod sinsemilla;
 pub mod utilities;
 
