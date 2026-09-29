@@ -35,10 +35,10 @@
             const path_to_root = "../";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "../searchindex-2b63c490.js";
+            window.path_to_searchindex_js = "../searchindex-19f949ee.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="../toc-1f9ef8f0.js"></script>
+        <script src="../toc-0215ae61.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -224,16 +224,26 @@ feature flag is removed and the feature becomes part of the main maintained code
 as a candidate for inclusion.</p>
 </blockquote>
 <h2 id="in-progress-features"><a class="header" href="#in-progress-features">In-progress features</a></h2>
-<div class="table-wrapper">
+<p>None currently.</p>
+<h2 id="removed-features"><a class="header" href="#removed-features">Removed features</a></h2>
 <table>
-<thead>
-<tr><th>Feature flag</th><th>Stage</th><th>Notes</th></tr>
-</thead>
-<tbody>
-<tr><td><code>unstable-sha256-gadget</code></td><td><code>nightly</code></td><td>The SHA-256 gadget and chip.</td></tr>
-</tbody>
+<tr><th>Feature flag</th><th>Removed in</th><th>Notes</th></tr>
+
+<tr>
+  <td><code>unstable-sha256-gadget</code></td>
+  <td>0.6.0</td>
+  <td>
+    The SHA-256 Table16 gadget was removed due to multiple soundness issues
+    (missing carry range checks in the compression function, missing copy
+    constraints on final-round outputs, and missing boolean constraints on
+    schedule decomposition bits). These allowed a malicious prover to forge
+    arbitrary SHA-256 digests. The code will be republished separately as an
+    instructive example of an unsound circuit implementation.
+  </td>
+</tr>
+
 </table>
-</div>
+
 
                     </main>
 
