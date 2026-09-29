@@ -673,8 +673,8 @@ impl<F: PrimeFieldBits + VartimeField, const K: usize> LookupRangeCheck<F, K>
     /// # Rationale
     ///
     /// While it is possible to avoid duplicated rows by using tags and storing them in an advice
-    /// column, as done in the spread table of the SHA-256 gadget, applying this technique to the
-    /// range check lookup table would significantly increase complexity.
+    /// column, as the spread table of the former SHA-256 gadget did, applying this technique to
+    /// the range check lookup table would significantly increase complexity.
     ///
     /// Indeed, in the range check lookup tables, tags are currently computed on the fly and are not
     /// stored in advice columns. Adopting the no duplicated rows approach would require modifying

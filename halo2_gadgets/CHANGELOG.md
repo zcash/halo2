@@ -36,6 +36,22 @@ and this project adheres to Rust's notion of
   - `EccInstructions::witness_point_non_id_from_constant`
   - `NonIdentityPoint::new_from_constant`
 
+### Removed
+- The `unstable-sha256-gadget` feature and `halo2_gadgets::sha256` module have
+  been removed due to multiple soundness vulnerabilities in the SHA-256 Table16
+  circuit implementation:
+  - Missing carry range checks in compression gates `s_h_prime`, `s_a_new`, and
+    `s_e_new`.
+  - Missing copy constraints on final-round outputs.
+  - Missing boolean constraints on schedule decomposition bits.
+
+  The carry range check issue has been confirmed exploitable, allowing a
+  malicious prover to forge arbitrary SHA-256 digests.
+
+  The gadget was feature-gated as unstable and was not used in Zcash (Orchard
+  uses Sinsemilla and Poseidon; Sapling and Sprout do not use Halo 2). Known
+  affected downstream users have been notified.
+
 ## [0.5.0] - 2026-06-02
 
 ### Added
