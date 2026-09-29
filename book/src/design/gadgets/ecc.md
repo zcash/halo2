@@ -3,16 +3,18 @@
 ## `EccChip`
 
 `halo2_gadgets` provides a chip that implements `EccInstructions` using 10 advice columns.
-The chip is currently restricted to the Pallas curve, but will be extended to support the
-[Vesta curve](https://github.com/zcash/halo2/issues/578) in the near future.
+The chip is restricted to the Pallas curve, whose base field is $\mathbb{F}_p$ and whose
+scalar field is $\mathbb{F}_q$ (see
+[The Pasta primes](../../background/fields.md#the-pasta-primes)). Support for the Vesta
+curve is tracked in [issue #578](https://github.com/zcash/halo2/issues/578).
 
 ### Chip assumptions
 
 A non-exhaustive list of assumptions made by `EccChip`:
 - $0$ is not an $x$-coordinate of a valid point on the curve.
-  - Holds for Pallas because $5$ is not square in $\mathbb{F}_q$.
+  - Holds for Pallas because $5$ is not square in $\mathbb{F}_p$.
 - $0$ is not a $y$-coordinate of a valid point on the curve.
-  - Holds for Pallas because $-5$ is not a cube in $\mathbb{F}_q$.
+  - Holds for Pallas because $-5$ is not a cube in $\mathbb{F}_p$.
 
 ### Layout
 

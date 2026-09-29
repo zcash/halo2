@@ -210,10 +210,10 @@ As mentioned in the [Fields](./fields.md) section, we can interpret the least si
 bit of a field element as its "sign", since its additive inverse will always have the
 opposite LSB. So we record the LSB of the $y$-coordinate as `sign`.
 
-Pallas and Vesta are defined over the $\mathbb{F}_p$ and $\mathbb{F}_q$ fields, which
-elements can be expressed in $255$ bits. This conveniently leaves one unused bit in a
-32-byte representation. We pack the $y$-coordinate `sign` bit into the highest bit in
-the representation of the $x$-coordinate:
+Pallas and Vesta are defined over the [fields](fields.md#the-pasta-primes) $\mathbb{F}_p$
+and $\mathbb{F}_q$ respectively, whose elements can be expressed in $255$ bits. This
+conveniently leaves one unused bit in a 32-byte representation. We pack the $y$-coordinate
+`sign` bit into the highest bit in the representation of the $x$-coordinate:
 
 ```text
          <----------------------------------- x --------------------------------->
@@ -239,40 +239,42 @@ If `sign == ysign`, we already have the correct sign and simply return the curve
 $(x, y)$. Otherwise, we negate $y$ and return $(x, -y)$.
 
 ## Cycles of curves
-Let $E_p$ be an elliptic curve over a finite field $\mathbb{F}_p,$ where $p$ is a prime.
-We denote this by $E_p/\mathbb{F}_p.$ and we denote the group of points of $E_p$ over
-$\mathbb{F}_p,$ with order $q = \#E(\mathbb{F}_p).$ For this curve, we call $\mathbb{F}_p$
-the "base field" and  $\mathbb{F}_q$ the "scalar field".
+Let $E_q$ be an elliptic curve over a finite field $\mathbb{F}_q,$ where $q$ is a prime.
+We denote this by $E_q/\mathbb{F}_q$. The corresponding group of points has order
+$p = \#E_q$. For this curve, we call $\mathbb{F}_q$ the "base field" and $\mathbb{F}_p$
+the "scalar field".
 
-We instantiate our proof system over the elliptic curve $E_p/\mathbb{F}_p$. This allows us
-to prove statements about $\mathbb{F}_q$-arithmetic circuit satisfiability.
+We instantiate our proof system over the elliptic curve $E_q/\mathbb{F}_q$. This allows us
+to prove statements about $\mathbb{F}_p$-arithmetic circuit satisfiability. This is the
+situation in the Orchard protocol, where we use Halo 2 over the **Vesta** curve to prove
+statements over $\mathbb{F}_p$, making arithmetic on the Pallas "application curve" more
+efficient to compute in a circuit.
 
-> **(aside) If our curve $E_p$ is over $\mathbb{F}_p,$ why is the arithmetic circuit instead in $\mathbb{F}_q$?**
+> **(aside) If our curve $E_q$ is over $\mathbb{F}_q,$ why is the arithmetic circuit instead in $\mathbb{F}_p$?** <br/>
 > The proof system is basically working on encodings of the scalars in the circuit (or
 > more precisely, commitments to polynomials whose coefficients are scalars). The scalars
-> are in $\mathbb{F}_q$ when their encodings/commitments are elliptic curve points in
-> $E_p/\mathbb{F}_p$.
+> are in $\mathbb{F}_p$ when their encodings/commitments are elliptic curve points in
+> $E_q/\mathbb{F}_q$.
 
 However, most of the verifier's arithmetic computations are over the base field
-$\mathbb{F}_p,$ and are thus efficiently expressed as an $\mathbb{F}_p$-arithmetic
+$\mathbb{F}_q,$ and are thus efficiently expressed as an $\mathbb{F}_q$-arithmetic
 circuit.
 
-> **(aside) Why are the verifier's computations (mainly) over $\mathbb{F}_p$?**
+> **(aside) Why are the verifier's computations (mainly) over $\mathbb{F}_q$?** <br/>
 > The Halo 2 verifier actually has to perform group operations using information output by
 > the circuit. Group operations like point doubling and addition use arithmetic in
-> $\mathbb{F}_p$, because the coordinates of points are in $\mathbb{F}_p.$ 
+> $\mathbb{F}_q$, because the coordinates of points are in $\mathbb{F}_q.$
 
-This motivates us to construct another curve with scalar field $\mathbb{F}_p$, which has
-an $\mathbb{F}_p$-arithmetic circuit that can efficiently verify proofs from the first
-curve. As a bonus, if this second curve had base field $E_q/\mathbb{F}_q,$ it would
-generate proofs that could be efficiently verified in the first curve's
-$\mathbb{F}_q$-arithmetic circuit. In other words, we instantiate a second proof system
-over $E_q/\mathbb{F}_q,$ forming a 2-cycle with the first:
+This motivates us to construct another curve with scalar field $\mathbb{F}_q$, which has
+an $\mathbb{F}_q$-arithmetic circuit that can efficiently verify proofs from the first
+curve. As a bonus, if this second curve were $E_p$ with base field $\mathbb{F}_p,$ it
+would generate proofs that could be efficiently verified in the first curve's
+$\mathbb{F}_p$-arithmetic circuit. In other words, we instantiate a second proof system
+over $E_p/\mathbb{F}_p,$ forming a 2-cycle with the first.
 
-![](https://i.imgur.com/bNMyMRu.png)
-
-### TODO: Pallas-Vesta curves
-Reference: https://github.com/zcash/pasta
+For further explanation of how this works, watch Daira‑Emma Hopwood's section of hir
+[presentation](https://www.youtube.com/watch?v=YlTt12s7vGE&t=2066s) with Ying Tong Lai
+for the ZK Seoul Meetup.
 
 ## Hashing to curves
 
@@ -280,18 +282,26 @@ Sometimes it is useful to be able to produce a random point on an elliptic curve
 $E_p/\mathbb{F}_p$ corresponding to some input, in such a way that no-one will know its
 discrete logarithm (to any other base).
 
-This is described in detail in the [Internet draft on Hashing to Elliptic Curves][cfrg-hash-to-curve].
-Several algorithms can be used depending on efficiency and security requirements. The
-framework used in the Internet Draft makes use of several functions:
+This is described in [RFC 9380: Hashing to Elliptic Curves](https://www.rfc-editor.org/rfc/rfc9380.html).
+(The Zcash Protocol Specification references an
+[earlier Internet Draft](https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/10/?include-text=1),
+but the RFC is equivalent to that draft.)
+
+Several algorithms can be used depending on efficiency and security requirements.
+The one used by the Orchard protocol is called Simplified SWU [^sswu], using the
+isogeny-based optimizations that [^sswu-bls12381] introduced for BLS12-381. The
+framework used in the RFC makes use of several functions:
 
 * ``hash_to_field``: takes a byte sequence input and maps it to a element in the base
   field $\mathbb{F}_p$
 * ``map_to_curve``: takes an $\mathbb{F}_p$ element and maps it to $E_p$.
 
-[cfrg-hash-to-curve]: https://datatracker.ietf.org/doc/draft-irtf-cfrg-hash-to-curve/?include_text=1
-
-### TODO: Simplified SWU
-Reference: https://eprint.iacr.org/2019/403.pdf
+For much more detail on the Simplified SWU construction and how its security can be
+modelled formally, see the
+[Group-Hash Indifferentiability](https://zcash.github.io/ironwood/formal-verification/group-hash-indifferentiability.html)
+page of the Ironwood book.
 
 ## References
-[^complete-formulae]: [Renes, J., Costello, C., & Batina, L. (2016, May). "Complete addition formulas for prime order elliptic curves." In Annual International Conference on the Theory and Applications of Cryptographic Techniques (pp. 403-428). Springer, Berlin, Heidelberg.](https://eprint.iacr.org/2015/1060)
+[^complete-formulae]: [Joost Renes, Craig Costello, and Lejla Batina. "Complete addition formulas for prime order elliptic curves." IACR eprint 2015/1060, May 2016. Also published in the Annual International Conference on the Theory and Applications of Cryptographic Techniques (pp. 403-428). Springer, Berlin, Heidelberg.](https://eprint.iacr.org/2015/1060)
+[^sswu]: [RFC 9380 section 6.6.2: Simplified Shallue-van de Woestijne-Ulas Method.](https://www.rfc-editor.org/rfc/rfc9380.html#name-simplified-shallue-van-de-w)
+[^sswu-bls12381]: [Riad S. Wahby and Dan Boneh. "Fast and simple constant-time hashing to the BLS12-381 elliptic curve." IACR eprint 2019/403, revised September 2019.](https://eprint.iacr.org/2019/403)
