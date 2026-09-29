@@ -11,7 +11,7 @@ use crate::{
     sinsemilla::primitives::{self as sinsemilla, SINSEMILLA_S},
     utilities::lookup_range_check::{LookupRangeCheck, PallasLookupRangeCheck},
 };
-use pasta_curves::pallas;
+use pasta_curves::{arithmetic::VartimeField, pallas};
 
 /// Table containing independent generators S[0..2^k]
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -89,7 +89,7 @@ impl GeneratorTableConfig {
         layouter: &mut impl Layouter<pallas::Base>,
     ) -> Result<(), Error>
     where
-        F: PrimeFieldBits,
+        F: PrimeFieldBits + VartimeField,
     {
         lookup_config.load(self, layouter)
     }

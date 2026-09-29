@@ -1,4 +1,5 @@
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 
 use super::super::{
     commitment::{Guard, Params, MSM},
@@ -108,7 +109,7 @@ where
                 let r_poly = lagrange_interpolate(points, evals);
                 let r_eval = eval_polynomial(&r_poly, *x_3);
                 let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
-                    eval * &(*x_3 - point).invert().unwrap()
+                    eval * &(*x_3 - point).invert_vartime().unwrap()
                 });
                 msm_eval * &(*x_2) + &eval
             },

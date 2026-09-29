@@ -2,6 +2,7 @@ use std::borrow::Borrow;
 use std::ops::{Add, Mul, Neg, Sub};
 
 use group::ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 
 use crate::plonk::{Assigned, Error};
 
@@ -698,6 +699,19 @@ impl<F: Field> Value<Assigned<F>> {
     pub fn evaluate(self) -> Value<F> {
         Value {
             inner: self.inner.map(|v| v.evaluate()),
+        }
+    }
+}
+
+impl<F: VartimeField> Value<Assigned<F>> {
+    /// Evaluates this value directly, performing an unbatched inversion if necessary.
+    ///
+    /// If the denominator is zero, the returned value is zero.
+    ///
+    /// Unlike [`Value::evaluate`], this will use a variable-time inversion.
+    pub fn evaluate_vartime(self) -> Value<F> {
+        Value {
+            inner: self.inner.map(|v| v.evaluate_vartime()),
         }
     }
 }

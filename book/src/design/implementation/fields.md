@@ -1,10 +1,11 @@
 # Fields
 
-The [Pasta curves](https://electriccoin.co/blog/the-pasta-curves-for-halo-2-and-beyond/)
-that we use in `halo2` are designed to be highly 2-adic, meaning that a large $2^S$
-[multiplicative subgroup](../../background/fields.md#multiplicative-subgroups) exists in
-each field. That is, we can write $p - 1 \equiv 2^S \cdot T$ with $T$ odd. For both Pallas
-and Vesta, $S = 32$; this helps to simplify the field implementations.
+The [Pasta curves](https://web.archive.org/web/20240105075728/https://electriccoin.co/blog/the-pasta-curves-for-halo-2-and-beyond/)
+that we use in `halo2` are designed to have highly 2-adic scalar fields, meaning that
+each scalar field, say $\mathbb{F}_p$, has a large
+[multiplicative subgroup](../../background/fields.md#multiplicative-subgroups) of order
+$2^S$. That is, we can write <span style="white-space: nowrap">$p - 1 \equiv 2^S \cdot T$</span>
+with $T$ odd. For both fields, $S = 32$; this helps to simplify the field implementations.
 
 ## Sarkar square-root algorithm (table-based variant)
 

@@ -8,12 +8,49 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 ### Changed
 - The minimum supported Rust version is now 1.88.
-- Migrated to `ff 0.14`, `group 0.14` and `rand 0.10`.
+- Migrated to `ff 0.14`, `group 0.14`, `rand 0.10`, `pasta_curves 0.6`,
+  `sinsemilla 0.2`.
+- The following APIs now have a `pasta_curves::arithmetic::VartimeField` bound
+  and make use of variable-time inversions for improved performance:
+  - `halo2_gadgets::utilities`:
+    - `RangeConstrained::witness_short`
+    - `decompose_running_sum::RunningSumConfig`
+    - `lookup_range_check::LookupRangeCheck`
+- The following APIs now use the new `pasta_curves::arithmetic::VartimeField`
+  bound on `pasta_curves::arithmetic::CurveAffine::{Base, ScalarExt}` to use
+  variable-time inversions for improved performance:
+  - `halo2_gadgets::ecc::chip`:
+    - `constants::compute_lagrange_coeffs`
+    - `EccPoint::{point, x, y}`
+    - `NonIdentityEccPoint::{point, x, y}`
+- The following APIs now use the new `pasta_curves::arithmetic::CurveExt`
+  variable-time methods for improved performance:
+  - `halo2_gadgets::ecc`:
+    - `chip::constants::*`
+    - `FixedPoint::mul`
+    - `FixedPointBaseField::mul`
+    - `FixedPointShort::mul`
 
 ### Added
 - `halo2_gadgets::ecc`:
   - `EccInstructions::witness_point_non_id_from_constant`
   - `NonIdentityPoint::new_from_constant`
+
+### Removed
+- The `unstable-sha256-gadget` feature and `halo2_gadgets::sha256` module have
+  been removed due to multiple soundness vulnerabilities in the SHA-256 Table16
+  circuit implementation:
+  - Missing carry range checks in compression gates `s_h_prime`, `s_a_new`, and
+    `s_e_new`.
+  - Missing copy constraints on final-round outputs.
+  - Missing boolean constraints on schedule decomposition bits.
+
+  The carry range check issue has been confirmed exploitable, allowing a
+  malicious prover to forge arbitrary SHA-256 digests.
+
+  The gadget was feature-gated as unstable and was not used in Zcash (Orchard
+  uses Sinsemilla and Poseidon; Sapling and Sprout do not use Halo 2). Known
+  affected downstream users have been notified.
 
 ## [0.5.0] - 2026-06-02
 

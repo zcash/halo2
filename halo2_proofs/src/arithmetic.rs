@@ -2,10 +2,7 @@
 //! field and polynomial arithmetic.
 
 pub use ff::Field;
-use group::{
-    ff::{BatchInvert, PrimeField},
-    Group as _, GroupOpsOwned, ScalarMulOwned,
-};
+use group::{ff::PrimeField, Group as _, GroupOpsOwned, ScalarMulOwned};
 use maybe_rayon::prelude::*;
 pub use pasta_curves::arithmetic::*;
 
@@ -376,7 +373,7 @@ fn log2_floor(num: usize) -> u32 {
 /// Returns coefficients of an n - 1 degree polynomial given a set of n points
 /// and their evaluations. This function will panic if two values in `points`
 /// are the same.
-pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
+pub fn lagrange_interpolate<F: VartimeField>(points: &[F], evals: &[F]) -> Vec<F> {
     assert_eq!(points.len(), evals.len());
     if points.len() == 1 {
         // Constant polynomial
@@ -396,7 +393,10 @@ pub fn lagrange_interpolate<F: Field>(points: &[F], evals: &[F]) -> Vec<F> {
             denoms.push(denom);
         }
         // Compute (x_j - x_k)^(-1) for each j != i
-        denoms.iter_mut().flat_map(|v| v.iter_mut()).batch_invert();
+        denoms
+            .iter_mut()
+            .flat_map(|v| v.iter_mut())
+            .batch_invert_vartime();
 
         let mut final_poly = vec![F::ZERO; points.len()];
         for (j, (denoms, eval)) in denoms.into_iter().zip(evals.iter()).enumerate() {

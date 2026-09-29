@@ -38,7 +38,21 @@ Important notes:
 
 Finite fields will be useful later for constructing [polynomials](polynomials.md) and
 [elliptic curves](curves.md). Elliptic curves are examples of groups, which we discuss
-next.
+below.
+
+## The Pasta primes
+
+Apart from the generic usage above, this book uses $p$ and $q$ for the two Pasta primes:
+$p$ is the modulus of the Pallas base field and $q$ is the modulus of the Vesta base
+field, where
+$$
+\begin{aligned}
+p &= 2^{254} + 45560315531419706090280762371685220353, \\
+q &= 2^{254} + 45560315531506369815346746415080538113.
+\end{aligned}
+$$
+Pallas and Vesta form a [cycle of curves](curves.md#cycles-of-curves): the scalar field of
+Pallas is $\mathbb{F}_q$, and the scalar field of Vesta is $\mathbb{F}_p$.
 
 ## Groups
 
