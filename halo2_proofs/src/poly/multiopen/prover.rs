@@ -11,7 +11,7 @@ use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;
-use group::Curve;
+use pasta_curves::arithmetic::CurveExt;
 use rand_core::Rng;
 use std::hash::Hash;
 use std::io;
@@ -94,7 +94,9 @@ where
         .unwrap();
 
     let q_prime_blind = Blind(C::Scalar::random(&mut rng));
-    let q_prime_commitment = params.commit(&q_prime_poly, q_prime_blind).to_affine();
+    let q_prime_commitment = params
+        .commit(&q_prime_poly, q_prime_blind)
+        .to_affine_vartime();
 
     transcript.write_point(q_prime_commitment)?;
 

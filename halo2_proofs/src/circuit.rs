@@ -3,6 +3,7 @@
 use std::{fmt, marker::PhantomData};
 
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 
 use crate::plonk::{Advice, Any, Assigned, Column, Error, Fixed, Instance, Selector, TableColumn};
 
@@ -133,6 +134,22 @@ impl<F: Field> AssignedCell<Assigned<F>, F> {
     pub fn evaluate(self) -> AssignedCell<F, F> {
         AssignedCell {
             value: self.value.evaluate(),
+            cell: self.cell,
+            _marker: Default::default(),
+        }
+    }
+}
+
+impl<F: VartimeField> AssignedCell<Assigned<F>, F> {
+    /// Evaluates this assigned cell's value directly, performing an unbatched inversion
+    /// if necessary.
+    ///
+    /// If the denominator is zero, the returned cell's value is zero.
+    ///
+    /// Unlike [`AssignedCell::evaluate`], this will use a variable-time inversion.
+    pub fn evaluate_vartime(self) -> AssignedCell<F, F> {
+        AssignedCell {
+            value: self.value.evaluate_vartime(),
             cell: self.cell,
             _marker: Default::default(),
         }

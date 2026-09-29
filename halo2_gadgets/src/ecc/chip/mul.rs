@@ -262,7 +262,7 @@ impl<Lookup: PallasLookupRangeCheck> Config<Lookup> {
                 #[cfg(test)]
                 // Check that the correct multiple is obtained.
                 {
-                    use group::Curve;
+                    use pasta_curves::arithmetic::CurveExt;
 
                     let base = base.point();
                     let alpha = alpha
@@ -271,9 +271,9 @@ impl<Lookup: PallasLookupRangeCheck> Config<Lookup> {
                     let real_mul = base.zip(alpha).map(|(base, alpha)| base * alpha);
                     let result = result.point();
 
-                    real_mul
-                        .zip(result)
-                        .assert_if_known(|(real_mul, result)| &real_mul.to_affine() == result);
+                    real_mul.zip(result).assert_if_known(|(real_mul, result)| {
+                        &real_mul.to_affine_vartime() == result
+                    });
                 }
 
                 let zs = {
@@ -460,15 +460,12 @@ fn decompose_for_scalar_mul(scalar: Value<&pallas::Base>) -> Vec<Value<bool>> {
 
 #[cfg(test)]
 pub mod tests {
-    use group::{
-        ff::{Field, PrimeField},
-        Curve,
-    };
+    use group::ff::{Field, PrimeField};
     use halo2_proofs::{
         circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::CurveExt, pallas};
     use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
     use crate::{
@@ -503,7 +500,7 @@ pub mod tests {
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
-                Value::known((base_val * scalar).to_affine()),
+                Value::known((base_val * scalar).to_affine_vartime()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
@@ -606,7 +603,7 @@ pub mod tests {
                 UtilitiesInstructions,
             },
         };
-        use group::{Curve, Group};
+        use group::Group;
         use halo2_proofs::{
             circuit::{Layouter, SimpleFloorPlanner, Value},
             plonk::{
@@ -614,7 +611,7 @@ pub mod tests {
                 FloorPlanner, Instance, Selector,
             },
         };
-        use pasta_curves::pallas;
+        use pasta_curves::{arithmetic::CurveExt, pallas};
         use std::collections::BTreeSet;
 
         /// An `Assignment` that records the copy constraints and selector enables, so a test
@@ -778,7 +775,7 @@ pub mod tests {
                 let base = NonIdentityPoint::new(
                     chip.clone(),
                     layouter.namespace(|| "base"),
-                    Value::known(pallas::Point::generator().to_affine()),
+                    Value::known(pallas::Point::generator().to_affine_vartime()),
                 )?;
                 let scalar = chip.load_private(
                     layouter.namespace(|| "scalar"),

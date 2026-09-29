@@ -94,6 +94,11 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// decomposition in the form of intermediate values in a cumulative
     /// sum.
     /// The initial point `Q` is a private point.
+    ///
+    /// The surrounding circuit must constrain `Q` to be the output of an independent group
+    /// hash, domain-separated from other uses of the group hash. A `Q` that the prover could
+    /// choose freely would let the prover choose the hash's output. The public variant,
+    /// [`hash_to_point`](Self::hash_to_point), takes a fixed `Q` of that form.
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     fn hash_to_point_with_private_init(
@@ -347,6 +352,9 @@ where
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     /// Evaluate the Sinsemilla hash of `message` from the private initial point `Q`.
+    ///
+    /// The surrounding circuit must constrain `Q` to be the output of an independent group
+    /// hash, as [`SinsemillaInstructions::hash_to_point_with_private_init`] requires.
     pub fn hash_to_point_with_private_init(
         &self,
         layouter: impl Layouter<C::Base>,
@@ -445,6 +453,9 @@ where
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     /// Evaluates the Sinsemilla hash of `message` from the private initial point `Q`.
+    ///
+    /// The surrounding circuit must constrain `Q` to be the output of an independent group
+    /// hash, as [`SinsemillaInstructions::hash_to_point_with_private_init`] requires.
     pub fn hash_with_private_init(
         &self,
         layouter: impl Layouter<C::Base>,
@@ -547,8 +558,8 @@ pub(crate) mod tests {
         },
     };
 
-    use group::{ff::Field, Curve};
-    use pasta_curves::pallas;
+    use group::ff::Field;
+    use pasta_curves::{arithmetic::CurveExt, pallas};
 
     use std::convert::TryInto;
     use std::marker::PhantomData;
@@ -558,8 +569,8 @@ pub(crate) mod tests {
 
     static COMMIT_DOMAIN: LazyLock<sinsemilla::CommitDomain> =
         LazyLock::new(|| sinsemilla::CommitDomain::new(PERSONALIZATION));
-    static Q: LazyLock<pallas::Affine> = LazyLock::new(|| COMMIT_DOMAIN.Q().to_affine());
-    static R: LazyLock<pallas::Affine> = LazyLock::new(|| COMMIT_DOMAIN.R().to_affine());
+    static Q: LazyLock<pallas::Affine> = LazyLock::new(|| COMMIT_DOMAIN.Q().to_affine_vartime());
+    static R: LazyLock<pallas::Affine> = LazyLock::new(|| COMMIT_DOMAIN.R().to_affine_vartime());
     static R_ZS_AND_US: LazyLock<Vec<(u64, [pallas::Base; H])>> =
         LazyLock::new(|| find_zs_and_us(*R, NUM_WINDOWS).unwrap());
 
@@ -733,7 +744,7 @@ pub(crate) mod tests {
                         let point = merkle_crh
                             .hash_to_point(l.into_iter().chain(left).chain(right))
                             .unwrap();
-                        point.to_affine()
+                        point.to_affine_vartime()
                     },
                 );
 
@@ -785,7 +796,7 @@ pub(crate) mod tests {
                 let expected_result = message.map(|message| {
                     let domain = sinsemilla::CommitDomain::new(PERSONALIZATION);
                     let point = domain.commit(message.into_iter(), &r_val).unwrap();
-                    point.to_affine()
+                    point.to_affine_vartime()
                 });
 
                 NonIdentityPoint::new(

@@ -1,6 +1,7 @@
 use std::iter;
 
 use ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 
 use crate::{
     arithmetic::CurveAffine,
@@ -95,7 +96,7 @@ impl<C: CurveAffine> PartiallyEvaluated<C> {
         xn: C::Scalar,
     ) -> Evaluated<'_, C> {
         let expected_h_eval = expressions.fold(C::Scalar::ZERO, |h_eval, v| h_eval * &*y + &v);
-        let expected_h_eval = expected_h_eval * ((xn - C::Scalar::ONE).invert().unwrap());
+        let expected_h_eval = expected_h_eval * ((xn - C::Scalar::ONE).invert_vartime().unwrap());
 
         let h_commitment =
             self.h_commitments

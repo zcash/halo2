@@ -221,7 +221,7 @@ impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRangeCheck> Config<
         // Check that the correct multiple is obtained.
         {
             use super::super::FixedPoint;
-            use group::Curve;
+            use pasta_curves::arithmetic::CurveExt;
 
             let scalar = &scalar
                 .base_field_elem()
@@ -232,7 +232,7 @@ impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRangeCheck> Config<
 
             real_mul
                 .zip(result)
-                .assert_if_known(|(real_mul, result)| &real_mul.to_affine() == result);
+                .assert_if_known(|(real_mul, result)| &real_mul.to_affine_vartime() == result);
         }
 
         // We want to enforce canonicity of a 255-bit base field element, α.
@@ -380,15 +380,12 @@ impl<Fixed: FixedPoints<pallas::Affine>, Lookup: PallasLookupRangeCheck> Config<
 
 #[cfg(test)]
 pub mod tests {
-    use group::{
-        ff::{Field, PrimeField},
-        Curve,
-    };
+    use group::ff::{Field, PrimeField};
     use halo2_proofs::{
         circuit::{Chip, Layouter, Value},
         plonk::Error,
     };
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::CurveExt, pallas};
     use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
     use crate::{
@@ -435,7 +432,7 @@ pub mod tests {
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
-                Value::known((base_val * scalar).to_affine()),
+                Value::known((base_val * scalar).to_affine_vartime()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }

@@ -1,12 +1,18 @@
 use std::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use group::ff::Field;
+use pasta_curves::arithmetic::VartimeField;
 
 /// A value assigned to a cell within a circuit.
 ///
 /// Stored as a fraction, so the backend can use batch inversion.
 ///
 /// A denominator of zero maps to an assigned value of zero.
+///
+/// Note that while [`Assigned::evaluate`] uses a constant-time inversion, this is only
+/// useful when called directly in your own circuit code. Cells that have deferred
+/// inversions at the point they are passed to the proving system, will have those cells
+/// inverted using either [`Assigned::evaluate_vartime`] or variable-time batch inversion.
 #[derive(Clone, Copy, Debug)]
 pub enum Assigned<F> {
     /// The field element zero.
@@ -350,18 +356,39 @@ impl<F: Field> Assigned<F> {
     /// necessary.
     ///
     /// If the denominator is zero, this returns zero.
+    ///
+    /// See the note about usage in the [`Assigned`] docs.
     pub fn evaluate(self) -> F {
+        self.evaluate_inner(|numerator, denominator| {
+            numerator * denominator.invert().unwrap_or(F::ZERO)
+        })
+    }
+
+    #[inline(always)]
+    fn evaluate_inner(self, evaluate_rational: impl FnOnce(F, F) -> F) -> F {
         match self {
             Self::Zero => F::ZERO,
             Self::Trivial(x) => x,
-            Self::Rational(numerator, denominator) => {
-                if denominator == F::ONE {
-                    numerator
-                } else {
-                    numerator * denominator.invert().unwrap_or(F::ZERO)
-                }
-            }
+            Self::Rational(numerator, denominator) => evaluate_rational(numerator, denominator),
         }
+    }
+}
+
+impl<F: VartimeField> Assigned<F> {
+    /// Evaluates this assigned value directly, performing an unbatched inversion if
+    /// necessary.
+    ///
+    /// If the denominator is zero, this returns zero.
+    ///
+    /// Unlike [`Assigned::evaluate`], this will use a variable-time inversion.
+    pub fn evaluate_vartime(self) -> F {
+        self.evaluate_inner(|numerator, denominator| {
+            if denominator == F::ONE {
+                numerator
+            } else {
+                numerator * denominator.invert_vartime().unwrap_or(F::ZERO)
+            }
+        })
     }
 }
 
@@ -451,7 +478,7 @@ mod proptests {
     };
 
     use group::ff::Field;
-    use pasta_curves::Fp;
+    use pasta_curves::{arithmetic::VartimeField, Fp};
     use proptest::{collection::vec, prelude::*, sample::select};
 
     use super::Assigned;
@@ -463,7 +490,7 @@ mod proptests {
         fn inv0(&self) -> Self;
     }
 
-    impl<F: Field> UnaryOperand for F {
+    impl<F: VartimeField> UnaryOperand for F {
         fn double(&self) -> Self {
             self.double()
         }
@@ -477,7 +504,7 @@ mod proptests {
         }
 
         fn inv0(&self) -> Self {
-            self.invert().unwrap_or(F::ZERO)
+            self.invert_vartime().unwrap_or(F::ZERO)
         }
     }
 
@@ -624,7 +651,7 @@ mod proptests {
         #[test]
         fn operation_commutativity((values, operations) in arb_testcase()) {
             // Evaluate the values at the start.
-            let elements: Vec<_> = values.iter().cloned().map(|v| v.evaluate()).collect();
+            let elements: Vec<_> = values.iter().cloned().map(|v| v.evaluate_vartime()).collect();
 
             // Apply the operations to both the deferred and evaluated values.
             fn evaluate<F: UnaryOperand + BinaryOperand>(
@@ -660,7 +687,7 @@ mod proptests {
 
             // The two should be equal, i.e. deferred inversion should commute with the
             // list of operations.
-            assert_eq!(deferred_result.evaluate(), evaluated_result);
+            assert_eq!(deferred_result.evaluate_vartime(), evaluated_result);
         }
     }
 }

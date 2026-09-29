@@ -21,6 +21,18 @@
 //!
 //! This means that $2^K$ has to be at most `degree_bound - 1` in order for
 //! the range check constraint to stay within the degree bound.
+//!
+//! # Overflow and uniqueness of decomposition
+//!
+//! When $K \cdot W \geq \lceil \log_2 p \rceil$ (where $p$ is the field modulus),
+//! the decomposition can represent integers in $[0, 2^{K \cdot W})$, which is
+//! larger than $[0, p)$.  This means a single field element may admit more than
+//! one valid decomposition: for any $x$ with $p + x < 2^{K \cdot W}$, both the
+//! base-$2^K$ representation of $x$ and that of $p + x$ satisfy the constraints.
+//!
+//! This is by design.  If your use case requires a *canonical* (unique)
+//! decomposition, you must add an overflow check external to this gadget,
+//! for example by constraining $\alpha < p$ via a comparison gadget.
 
 use ff::PrimeFieldBits;
 use halo2_proofs::{
@@ -28,6 +40,7 @@ use halo2_proofs::{
     plonk::{Advice, Column, ConstraintSystem, Constraints, Error, Selector},
     poly::Rotation,
 };
+use pasta_curves::arithmetic::VartimeField;
 
 use super::range_check;
 
@@ -52,7 +65,9 @@ pub struct RunningSumConfig<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> {
     _marker: PhantomData<F>,
 }
 
-impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW_NUM_BITS> {
+impl<F: PrimeFieldBits + VartimeField, const WINDOW_NUM_BITS: usize>
+    RunningSumConfig<F, WINDOW_NUM_BITS>
+{
     /// Returns the q_range_check selector of this [`RunningSumConfig`].
     pub(crate) fn q_range_check(&self) -> Selector {
         self.q_range_check
@@ -101,6 +116,10 @@ impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
     /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
+    ///
+    /// Note: when `WINDOW_NUM_BITS * num_windows >= F::NUM_BITS`, the
+    /// decomposition is not unique.  See the [module-level documentation](self)
+    /// for details.
     pub fn witness_decompose(
         &self,
         region: &mut Region<'_, F>,
@@ -118,6 +137,10 @@ impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW
     ///
     /// `strict` = true constrains the final running sum to be zero, i.e.
     /// constrains alpha to be within WINDOW_NUM_BITS * num_windows bits.
+    ///
+    /// Note: when `WINDOW_NUM_BITS * num_windows >= F::NUM_BITS`, the
+    /// decomposition is not unique.  See the [module-level documentation](self)
+    /// for details.
     pub fn copy_decompose(
         &self,
         region: &mut Region<'_, F>,
@@ -175,7 +198,11 @@ impl<F: PrimeFieldBits, const WINDOW_NUM_BITS: usize> RunningSumConfig<F, WINDOW
         // Assign running sum `z_{i+1}` = (z_i - k_i) / (2^K) for i = 0..=n-1.
         // Outside of this helper, z_0 = alpha must have already been loaded into the
         // `z` column at `offset`.
-        let two_pow_k_inv = Value::known(F::from(1 << WINDOW_NUM_BITS as u64).invert().unwrap());
+        let two_pow_k_inv = Value::known(
+            F::from(1 << WINDOW_NUM_BITS as u64)
+                .invert_vartime()
+                .unwrap(),
+        );
         for (i, word) in words.iter().enumerate() {
             // z_next = (z_cur - word) / (2^K)
             let z_next = {
@@ -236,7 +263,7 @@ mod tests {
         }
 
         impl<
-                F: PrimeFieldBits,
+                F: PrimeFieldBits + VartimeField,
                 const WORD_NUM_BITS: usize,
                 const WINDOW_NUM_BITS: usize,
                 const NUM_WINDOWS: usize,

@@ -30,7 +30,14 @@ $\textsf{Hash}(M)$:
 
 Let $\textsf{ShortHash}(M)$ be the $x$-coordinate of $\textsf{Hash}(M)$. (This assumes that $\mathbb{G}$ is a prime-order elliptic curve in short Weierstrass form, as is the case for Pallas and Vesta.)
 
-> It is slightly more efficient to express a double-and-add $[2] A + R$ as $(A + R) + A$. We also use incomplete additions: it is shown in the [Sinsemilla security argument](https://zips.z.cash/protocol/protocol.pdf#sinsemillasecurity) that in the case where $\mathbb{G}$ is a prime-order short Weierstrass elliptic curve, an exceptional case for addition would lead to finding a discrete logarithm, which can be assumed to occur with negligible probability even for adversarial input.
+> It is slightly more efficient to express a double-and-add $[2] A + R$ as $(A + R) + A$.
+> We also use incomplete additions: it is shown in the
+> [Sinsemilla security argument](https://zips.z.cash/protocol/protocol.pdf#sinsemillasecurity)
+> that in the case where $\mathbb{G}$ is a prime-order short Weierstrass elliptic curve,
+> an exceptional case for addition would yield a nontrivial discrete logarithm relation
+> between the generators, which is assumed to be infeasible to find even for adversarial
+> input. The protocol specification defines the result of such an exceptional case to be
+> $\bot$.
 
 ### Use as a commitment scheme
 Choose another generator $H$ independently of $Q$ and $P[0..2^k - 1]$.
@@ -103,18 +110,24 @@ Output: $(x_{A,n},\, y_{A,n})$.
 ## PLONK / Halo 2 constraints
 
 ### Message decomposition
-We have an $n$-bit message $m = m_1 + 2^k m_2 + ... + 2^{k\cdot (n-1)} m_n$. (Note that the message words are 1-indexed as in the [protocol spec](https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash).)
+We have a $kn$-bit message $m = m_1 + 2^k m_2 + \cdots + 2^{k\cdot (n-1)} m_n$. (Note that
+the message words are 1-indexed as in the
+[protocol spec](https://zips.z.cash/protocol/nu5.pdf#concretesinsemillahash).)
 
-Initialise the running sum $z_0 = \alpha$ and define $z_{i + 1} := \frac{z_{i} - m_{i+1}}{2^K}$. We will end up with $z_n = 0.$
+Initialise the running sum $z_0 = m$ and define
+$z_{i + 1} := \frac{z_{i} - m_{i+1}}{2^k}$. We will end up with $z_n = 0.$
 
 Rearranging gives us an expression for each word of the original message
 $m_{i+1} = z_{i} - 2^k \cdot z_{i + 1}$, which we can look up in the table. We position
 $z_{i}$ and $z_{i + 1}$ in adjacent rows of the same column, so we can sequentially apply
 the constraint across the entire message.
 
-In other words, $z_{n-i} = \sum\limits_{h=0}^{i-1} 2^{kh} \cdot m_{h+1}$.
+In other words, $z_i = \sum\limits_{h=i}^{n-1} 2^{k(h-i)} \cdot m_{h+1}$.
 
-> For a little-endian decomposition as used here, the running sum is initialized to the scalar and ends at 0. For a big-endian decomposition as used in [variable-base scalar multiplication](https://hackmd.io/o9EzZBwxSWSi08kQ_fMIOw), the running sum would start at 0 and end with recovering the original scalar.
+> For a little-endian decomposition as used here, the running sum is initialized to the
+> scalar and ends at 0. For a big-endian decomposition as used in
+> [variable-base scalar multiplication](ecc/var-base-scalar-mul.md), the running sum would
+> start at 0 and end with recovering the original scalar.
 
 ### Efficient packing
 
@@ -248,7 +261,7 @@ $$
 \end{array}
 $$
 
-This increases the degree of the lookup argument to $6$.
+This increases the degree of the lookup argument to $7$.
 
 $$
 \begin{array}{|c|l|}
@@ -257,6 +270,6 @@ $$
 4   & q_{S4} \cdot (2 \cdot y_Q - Y_{A,0}) = 0 \\\hline
 6   & q_{S1,i} \Rightarrow (m_{i+1},\, x_{P,i},\, y_{P,i}) \in \mathcal{P} \\\hline
 3   & q_{S1,i} \cdot \big(\lambda_{2,i}^2 - (x_{A,i+1} + x_{R,i} + x_{A,i})\big) \\\hline
-5   & q_{S1,i} \cdot \left(4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (2 \cdot Y_{A,i} + (2 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
+6   & q_{S1,i} \cdot \left(4 \cdot \lambda_{2,i} \cdot (x_{A,i} - x_{A,i+1}) - (2 \cdot Y_{A,i} + (2 - q_{S3,i}) \cdot Y_{A,i+1} + 2 \cdot q_{S3,i} \cdot y_{A,n})\right) = 0 \\\hline
 \end{array}
 $$

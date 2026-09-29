@@ -206,7 +206,8 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
         // tested at the circuit-level.
         {
             use super::super::FixedPoint;
-            use group::{ff::PrimeField, Curve};
+            use group::ff::PrimeField;
+            use pasta_curves::arithmetic::CurveExt;
 
             scalar
                 .magnitude
@@ -234,7 +235,7 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
                         };
                         let real_mul = base.generator() * scalar;
 
-                        &real_mul.to_affine() == result
+                        &real_mul.to_affine_vartime() == result
                     }
                 });
         }
@@ -307,14 +308,14 @@ impl<Fixed: FixedPoints<pallas::Affine>> Config<Fixed> {
 
 #[cfg(test)]
 pub mod tests {
-    use group::{ff::PrimeField, Curve, Group};
+    use group::{ff::PrimeField, Group};
     use halo2_proofs::{
         arithmetic::CurveAffine,
         circuit::{AssignedCell, Chip, Layouter, SimpleFloorPlanner, Value},
         dev::{FailureLocation, MockProver, VerifyFailure},
         plonk::{Any, Circuit, ConstraintSystem, Error},
     };
-    use pasta_curves::pallas;
+    use pasta_curves::{arithmetic::CurveExt, pallas};
     use rand::{rand_core::UnwrapErr, rngs::SysRng};
     use std::marker::PhantomData;
 
@@ -370,7 +371,7 @@ pub mod tests {
             let expected = NonIdentityPoint::new(
                 chip,
                 layouter.namespace(|| "expected point"),
-                Value::known((base_val * scalar_val).to_affine()),
+                Value::known((base_val * scalar_val).to_affine_vartime()),
             )?;
             result.constrain_equal(layouter.namespace(|| "constrain result"), &expected)
         }
@@ -692,7 +693,7 @@ pub mod tests {
 
                 let negation_check_y = {
                     *(Short.generator() * pallas::Scalar::from(magnitude_u64))
-                        .to_affine()
+                        .to_affine_vartime()
                         .coordinates()
                         .unwrap()
                         .y()
@@ -758,7 +759,7 @@ pub mod tests {
         mut layouter: impl Layouter<pallas::Base>,
     ) -> Result<(), Error> {
         // Generate a random non-identity point P
-        let p_val = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine();
+        let p_val = pallas::Point::random(&mut UnwrapErr(SysRng)).to_affine_vartime();
         let p = Point::new(
             chip.clone(),
             layouter.namespace(|| "P"),
@@ -777,7 +778,7 @@ pub mod tests {
         let identity = Point::new(
             chip.clone(),
             layouter.namespace(|| "identity"),
-            Value::known(pallas::Point::identity().to_affine()),
+            Value::known(pallas::Point::identity().to_affine_vartime()),
         )?;
 
         // Create -1 and 1 scalars
@@ -910,7 +911,7 @@ pub mod tests {
             // Generate a random non-identity point
             let point = pallas::Point::random(&mut UnwrapErr(SysRng));
             let circuit: MyMulSignCircuit<Lookup> = MyMulSignCircuit {
-                base: Value::known(point.to_affine()),
+                base: Value::known(point.to_affine_vartime()),
                 sign: Value::known(pallas::Base::zero()),
                 _lookup_marker: PhantomData,
             };
@@ -942,11 +943,11 @@ pub mod tests {
                         cell_values: vec![
                             (
                                 ((Any::Advice, 1).into(), 0).into(),
-                                format_value(*point.to_affine().coordinates().unwrap().y()),
+                                format_value(*point.to_affine_vartime().coordinates().unwrap().y()),
                             ),
                             (
                                 ((Any::Advice, 3).into(), 0).into(),
-                                format_value(*point.to_affine().coordinates().unwrap().y()),
+                                format_value(*point.to_affine_vartime().coordinates().unwrap().y()),
                             ),
                             (((Any::Advice, 4).into(), 0).into(), "0".to_string()),
                         ],

@@ -1,12 +1,12 @@
 //! Constants required for the ECC chip.
 
 use arrayvec::ArrayVec;
-use group::{
-    ff::{Field, PrimeField},
-    Curve,
-};
+use group::ff::{Field, PrimeField};
 use halo2_proofs::arithmetic::lagrange_interpolate;
-use pasta_curves::{arithmetic::CurveAffine, pallas};
+use pasta_curves::{
+    arithmetic::{CurveAffine, CurveExt},
+    pallas,
+};
 
 /// Window size for fixed-base scalar multiplication
 pub const FIXED_BASE_WINDOW_SIZE: usize = 3;
@@ -48,7 +48,7 @@ fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; 
                     // scalar = (k+2)*(8^w)
                     let scalar = C::Scalar::from(k as u64 + 2)
                         * C::Scalar::from(H as u64).pow([w as u64, 0, 0, 0]);
-                    (base * scalar).to_affine()
+                    (base * scalar).to_affine_vartime()
                 })
                 .collect::<ArrayVec<C, H>>()
                 .into_inner()
@@ -69,7 +69,7 @@ fn compute_window_table<C: CurveAffine>(base: C, num_windows: usize) -> Vec<[C; 
                 let scalar = C::Scalar::from(k as u64)
                     * C::Scalar::from(H as u64).pow([(num_windows - 1) as u64, 0, 0, 0])
                     - sum;
-                (base * scalar).to_affine()
+                (base * scalar).to_affine_vartime()
             })
             .collect::<ArrayVec<C, H>>()
             .into_inner()
@@ -197,7 +197,7 @@ pub fn test_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) {
                 let point = base
                     * C::Scalar::from(bits as u64 + 2)
                     * C::Scalar::from(H as u64).pow([idx as u64, 0, 0, 0]);
-                let x = *point.to_affine().coordinates().unwrap().x();
+                let x = *point.to_affine_vartime().coordinates().unwrap().x();
 
                 // Check that the interpolated x-coordinate matches the actual one.
                 assert_eq!(x, interpolated_x);
@@ -219,7 +219,7 @@ pub fn test_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) {
             * C::Scalar::from(H as u64).pow([(num_windows - 1) as u64, 0, 0, 0])
             - offset;
         let point = base * scalar;
-        let x = *point.to_affine().coordinates().unwrap().x();
+        let x = *point.to_affine_vartime().coordinates().unwrap().x();
 
         // Check that the interpolated x-coordinate matches the actual one.
         assert_eq!(x, interpolated_x);
@@ -229,8 +229,11 @@ pub fn test_lagrange_coeffs<C: CurveAffine>(base: C, num_windows: usize) {
 #[cfg(test)]
 mod tests {
     use ff::FromUniformBytes;
-    use group::{ff::Field, Curve, Group};
-    use pasta_curves::{arithmetic::CurveAffine, pallas};
+    use group::{ff::Field, Group};
+    use pasta_curves::{
+        arithmetic::{CurveAffine, CurveExt},
+        pallas,
+    };
     use proptest::prelude::*;
     use rand::{rand_core::UnwrapErr, rngs::SysRng};
 
@@ -252,7 +255,7 @@ mod tests {
         fn lagrange_coeffs(
             base in arb_point(),
         ) {
-            test_lagrange_coeffs(base.to_affine(), NUM_WINDOWS);
+            test_lagrange_coeffs(base.to_affine_vartime(), NUM_WINDOWS);
         }
     }
 
@@ -260,11 +263,11 @@ mod tests {
     fn zs_and_us() {
         let base = pallas::Point::random(&mut UnwrapErr(SysRng));
         let (z, u): (Vec<u64>, Vec<[pallas::Base; H]>) =
-            find_zs_and_us(base.to_affine(), NUM_WINDOWS)
+            find_zs_and_us(base.to_affine_vartime(), NUM_WINDOWS)
                 .unwrap()
                 .into_iter()
                 .unzip();
-        let window_table = compute_window_table(base.to_affine(), NUM_WINDOWS);
+        let window_table = compute_window_table(base.to_affine_vartime(), NUM_WINDOWS);
 
         for ((u, z), window_points) in u.iter().zip(z.iter()).zip(window_table) {
             for (u, point) in u.iter().zip(window_points.iter()) {
