@@ -6,6 +6,8 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.4.0] - 2026-09-29
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_honest_with_proof_bytes`
   and `dump_vesta_lean_fixture_match_only_with_proof_bytes` (behind the

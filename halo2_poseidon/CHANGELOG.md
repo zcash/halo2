@@ -6,6 +6,8 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.2.0] - 2026-09-29
 ### Changed
 - The minimum supported Rust version is now 1.88.
 - Migrated to `ff 0.14`, `group 0.14`, `pasta_curves 0.6`.
