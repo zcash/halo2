@@ -15,9 +15,9 @@ repository = "https://github.com/zcash/halo2"
 
 [workspace.dependencies]
 # Intra-workspace dependencies
-halo2_proofs = { version = "0.3", path = "halo2_proofs", default-features = false }
-halo2_poseidon = { version = "0.1", path = "halo2_poseidon", default-features = false }
-halo2_gadgets = { version = "0.5", path = "halo2_gadgets", default-features = false }
+halo2_proofs = { version = "0.4", path = "halo2_proofs", default-features = false }
+halo2_poseidon = { version = "0.2", path = "halo2_poseidon", default-features = false }
+halo2_gadgets = { version = "0.6", path = "halo2_gadgets", default-features = false }
 
 # Cryptography
 bitvec = { version = "1", default-features = false }
