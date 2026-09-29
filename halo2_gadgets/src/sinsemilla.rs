@@ -94,6 +94,11 @@ pub trait SinsemillaInstructions<C: CurveAffine, const K: usize, const MAX_WORDS
     /// decomposition in the form of intermediate values in a cumulative
     /// sum.
     /// The initial point `Q` is a private point.
+    ///
+    /// The surrounding circuit must constrain `Q` to be the output of an independent group
+    /// hash, domain-separated from other uses of the group hash. A `Q` that the prover could
+    /// choose freely would let the prover choose the hash's output. The public variant,
+    /// [`hash_to_point`](Self::hash_to_point), takes a fixed `Q` of that form.
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     fn hash_to_point_with_private_init(
@@ -347,6 +352,9 @@ where
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     /// Evaluate the Sinsemilla hash of `message` from the private initial point `Q`.
+    ///
+    /// The surrounding circuit must constrain `Q` to be the output of an independent group
+    /// hash, as [`SinsemillaInstructions::hash_to_point_with_private_init`] requires.
     pub fn hash_to_point_with_private_init(
         &self,
         layouter: impl Layouter<C::Base>,
@@ -445,6 +453,9 @@ where
     #[allow(non_snake_case)]
     #[allow(clippy::type_complexity)]
     /// Evaluates the Sinsemilla hash of `message` from the private initial point `Q`.
+    ///
+    /// The surrounding circuit must constrain `Q` to be the output of an independent group
+    /// hash, as [`SinsemillaInstructions::hash_to_point_with_private_init`] requires.
     pub fn hash_with_private_init(
         &self,
         layouter: impl Layouter<C::Base>,
