@@ -22,10 +22,13 @@ and this project adheres to Rust's notion of
   `transcript_repr`. The exporter re-hashes it and checks the scalar before
   emitting, so a consumer can recompute the key digest and read the pinned
   fields instead of trusting the captured scalar.
+- `halo2_proofs::circuit::AssignedCell::evaluate_vartime`
+- `halo2_proofs::circuit::Value::evaluate_vartime`
+- `halo2_proofs::plonk::Assigned::evaluate_vartime`
 
 ### Changed
 - The minimum supported Rust version is now 1.88.
-- Migrated to `ff 0.14`, `group 0.14` and `rand_core 0.10`.
+- Migrated to `ff 0.14`, `group 0.14`, `rand_core 0.10`, `pasta_curves 0.6`.
 - `halo2_proofs::plonk::create_proof` now has an `R: rand_core::Rng` bound,
   replacing the deprecated `rand_core::RngCore`. `Rng` is the infallible half
   of the new fallible RNG interface, so a fallible source such as
@@ -33,11 +36,26 @@ and this project adheres to Rust's notion of
   on failure, matching the old `rand_core::OsRng` behaviour).
 - The `batch` feature flag now enables an optional `rand` dependency with its
   `sys_rng` feature, instead of `rand_core/getrandom`.
-- `halo2_proofs::circuit::floor_planner::V1` no longer fails with
-  `Error::NotEnoughColumnsForConstants` when the constants do not fit into the
-  gaps of the constants columns within the planned rows: the remaining
-  constants are now placed in the rows following the planned circuit. Circuits
-  that previously synthesized successfully are laid out exactly as before.
+- The following APIs now have a `pasta_curves::arithmetic::VartimeField` bound
+  and make use of variable-time inversions for improved performance:
+  - `halo2_proofs::arithmetic::lagrange_interpolate`
+  - `halo2_proofs::dev::MockProver`
+  - `halo2_proofs::plonk::FloorPlanner::synthesize`
+  - `halo2_proofs::poly::EvaluationDomain::{new, l_i_range}`
+- The following APIs now use the new `pasta_curves::arithmetic::VartimeField`
+  bound on `pasta_curves::arithmetic::CurveAffine::ScalarExt` to use
+  variable-time inversions for improved performance:
+  - `halo2_proofs::plonk::{keygen_pk, keygen_vk, create_proof, verify_proof}`
+- The following APIs now use the new `pasta_curves::arithmetic::CurveExt`
+  variable-time methods for improved performance:
+  - `halo2_proofs::plonk`:
+    - `VerifyingKey::dump_vesta_lean_fixture`
+    - `VerifyingKey::dump_vesta_lean_fixture_match_only`
+    - `{keygen_vk, create_proof, verify_proof}`
+  - `halo2_proofs::poly::commitment`:
+    - `Params::new`
+    - `{create_proof, verify_proof}`
+    - `Guard::compute_g`
 
 ## [0.3.5] - 2026-08-02
 ### Added
