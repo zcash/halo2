@@ -1,7 +1,12 @@
 use super::Expression;
 use ff::Field;
 
-/// This describes a selector and where it is activated.
+/// Describes a selector's activation pattern and degree budget.
+///
+/// Only selectors with `max_degree > 0` are eligible for combining.
+/// A `max_degree` of 0 indicates either a complex (non-simple) selector
+/// or a simple selector that does not appear in any gate; such selectors
+/// are allocated their own dedicated fixed column without combining.
 #[derive(Debug, Clone)]
 pub struct SelectorDescription {
     /// The selector that this description references, by index.
@@ -31,21 +36,59 @@ pub struct SelectorAssignment<F> {
     pub expression: Expression<F>,
 }
 
-/// This function takes a vector that defines each selector as well as a closure
-/// used to allocate new fixed columns, and returns the assignment of each
-/// combination as well as details about each selector assignment.
+/// Combines compatible simple selectors into shared fixed columns.
 ///
-/// This function takes
-/// * `selectors`, a vector of `SelectorDescription`s that describe each
-///   selector
-/// * `max_degree`, the maximum allowed degree of any gate
-/// * `allocate_fixed_columns`, a closure that constructs a new fixed column and
-///   queries it at Rotation::cur(), returning the expression
+/// # Background
 ///
-/// and returns `Vec<Vec<F>>` containing the assignment of each new fixed column
-/// (which each correspond to a combination) as well as a vector of
-/// `SelectorAssignment` that the caller can use to perform the necessary
-/// substitutions to the constraint system.
+/// Every simple selector `s_i` appears in gate expressions only in the
+/// factored form `s_i * t_{i,j}` where `t_{i,j}` contains no simple
+/// selectors (this invariant is enforced by the `Expression` arithmetic
+/// operators).  The optimization replaces each virtual boolean selector
+/// with an expression over a shared fixed column `q` that evaluates to
+/// nonzero exactly on the rows where that selector is active.
+///
+/// # Combining strategy
+///
+/// Multiple selectors that are never simultaneously active (i.e., their
+/// activation patterns are disjoint) can share the same fixed column.
+/// If selectors `s_1, ..., s_m` are combined into one column `q`, the
+/// column is assigned distinct nonzero "roots" `r_1, ..., r_m` on each
+/// selector's active rows (and 0 elsewhere).  Each selector is then
+/// replaced by the expression:
+///
+/// ```text
+///   q * prod_{k=1..m, k != i} (r_k - q)
+/// ```
+///
+/// This expression is nonzero iff `q = r_i` (i.e., selector `i` is active),
+/// and zero when `q = 0` (no selector active) or `q = r_k` for `k != i`.
+/// The substitution expression has degree `m` (one factor of `q` plus
+/// `m - 1` factors from the product).
+///
+/// # Degree budget
+///
+/// For a gate `s_i * t_{i,j} = 0` of total degree `d`, the selector
+/// `s_i` contributes degree 1.  After substitution, the selector is
+/// replaced by an expression of degree `m`, so the gate becomes degree
+/// `(d - 1) + m`.  We require `(d - 1) + m <= max_degree`, i.e.,
+/// `m <= max_degree - (d - 1)`.  This is enforced by the combination
+/// loop below.
+///
+/// # Arguments
+///
+/// * `selectors` - a vector of `SelectorDescription`s describing each
+///   selector's activation pattern and degree budget.
+/// * `max_degree` - the maximum allowed degree of any gate expression.
+/// * `allocate_fixed_column` - a closure that allocates a new fixed column
+///   and returns the `Expression` for querying it at `Rotation::cur()`.
+///
+/// # Returns
+///
+/// A pair of:
+/// * `Vec<Vec<F>>` - the assignment of each new fixed column (one per
+///   combination).
+/// * `Vec<SelectorAssignment<F>>` - the expression substitutions for
+///   each selector.
 ///
 /// This function is completely deterministic.
 pub fn process<F: Field, E>(
@@ -68,8 +111,11 @@ where
     let mut combination_assignments = vec![];
     let mut selector_assignments = vec![];
 
-    // All provided selectors of degree 0 are assumed to be either concrete
-    // selectors or do not appear in a gate. Let's address these first.
+    // Selectors with max_degree 0 are either complex (non-simple) selectors
+    // or simple selectors not used in any gate.  In either case they cannot
+    // participate in combining: complex selectors may appear in sums (not
+    // just as a multiplicative factor), and unused selectors have no gate
+    // to benefit from.  Each gets its own fixed column.
     selectors.retain(|selector| {
         if selector.max_degree == 0 {
             // This is a complex selector, or a selector that does not appear in any
@@ -95,11 +141,13 @@ where
         }
     });
 
-    // All of the remaining `selectors` are simple. Let's try to combine them.
-    // First, we compute the exclusion matrix that has (j, k) = true if selector
-    // j and selector k conflict -- that is, they are both enabled on the same
-    // row. This matrix is symmetric and the diagonal entries are false, so we
-    // only need to store the lower triangular entries.
+    // All remaining selectors are simple (max_degree > 0).  We try to combine
+    // them into shared fixed columns.  Two selectors can share a column only
+    // if their activations are disjoint (never both enabled on the same row).
+    //
+    // We compute a lower-triangular exclusion matrix: entry (j, k) is true
+    // when selectors j and k conflict (both active on some row).  The matrix
+    // is symmetric with false diagonal, so the lower triangle suffices.
     let mut exclusion_matrix = (0..selectors.len())
         .map(|i| vec![false; i])
         .collect::<Vec<_>>();
