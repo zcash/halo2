@@ -3,8 +3,8 @@ use pasta_curves::arithmetic::CurveExt;
 use std::iter;
 
 use super::{
-    commit_instance, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
-    ChallengeY, Error, VerifyingKey,
+    vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, ChallengeY, Error,
+    VerifyingKey,
 };
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
@@ -108,7 +108,11 @@ pub fn verify_proof<
             .map(|instance| {
                 instance
                     .iter()
-                    .map(|instance| commit_instance(params, instance).to_affine_vartime())
+                    .map(|instance| {
+                        params
+                            .commit_lagrange_instance(instance)
+                            .to_affine_vartime()
+                    })
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>()
@@ -116,7 +120,7 @@ pub fn verify_proof<
         let instance_commitments_projective = instances
             .iter()
             .flat_map(|instance| instance.iter())
-            .map(|instance| commit_instance(params, instance))
+            .map(|instance| params.commit_lagrange_instance(instance))
             .collect::<Vec<_>>();
         let mut normalized_commitments = vec![C::identity(); instance_commitments_projective.len()];
         C::Curve::batch_normalize_vartime(
@@ -373,7 +377,7 @@ pub fn verify_proof<
 
 #[cfg(test)]
 mod tests {
-    use super::{commit_instance, verify_proof, SingleVerifier, MIN_BATCH_NORMALIZE};
+    use super::{verify_proof, SingleVerifier, MIN_BATCH_NORMALIZE};
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         pasta::{EqAffine, Fp},
@@ -450,7 +454,7 @@ mod tests {
             }
 
             assert_eq!(
-                commit_instance(&params, &instance),
+                params.commit_lagrange_instance(&instance),
                 params.commit_lagrange(&padded, Blind::default()),
             );
         }

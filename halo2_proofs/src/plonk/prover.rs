@@ -8,8 +8,8 @@ use super::{
         Advice, Any, Assignment, Circuit, Column, ConstraintSystem, Fixed, FloorPlanner, Instance,
         Selector,
     },
-    commit_instance, lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta,
-    ChallengeX, ChallengeY, Error, ProvingKey,
+    lookup, permutation, vanishing, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
+    ChallengeY, Error, ProvingKey,
 };
 use crate::{
     arithmetic::{eval_polynomial, CurveAffine, CurveExt},
@@ -91,7 +91,7 @@ pub fn create_proof<
                 .collect::<Result<Vec<_>, _>>()?;
             let instance_commitments_projective: Vec<_> = instance
                 .iter()
-                .map(|values| commit_instance(params, values))
+                .map(|values| params.commit_lagrange_instance(values))
                 .collect();
             let mut instance_commitments =
                 vec![C::identity(); instance_commitments_projective.len()];
@@ -744,7 +744,7 @@ fn test_commit_instance() {
         }
 
         assert_eq!(
-            commit_instance(&params, instance),
+            params.commit_lagrange_instance(instance),
             params.commit_lagrange(&poly, Blind::default())
         );
     }
