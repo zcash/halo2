@@ -149,6 +149,28 @@ impl<C: CurveAffine> Params<C> {
         best_multiexp::<C>(&tmp_scalars, &tmp_bases)
     }
 
+    /// This commits to an instance polynomial using its evaluations over the $2^k$ size
+    /// evaluation domain. The commitment has no blinding factor, because instance
+    /// polynomials are public.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `instance.len() <= 1 << k`.
+    pub(crate) fn commit_lagrange_instance(&self, instance: &[C::Scalar]) -> C::Curve {
+        assert!(instance.len() <= self.n as usize);
+
+        let mut tmp_scalars = Vec::with_capacity(instance.len() + 1);
+        let mut tmp_bases = Vec::with_capacity(instance.len() + 1);
+
+        tmp_scalars.extend(instance);
+        tmp_scalars.push(Blind::default().0);
+
+        tmp_bases.extend(&self.g_lagrange[..instance.len()]);
+        tmp_bases.push(self.w);
+
+        best_multiexp::<C>(&tmp_scalars, &tmp_bases)
+    }
+
     /// Generates an empty multiscalar multiplication struct using the
     /// appropriate params.
     pub fn empty_msm(&self) -> MSM<'_, C> {

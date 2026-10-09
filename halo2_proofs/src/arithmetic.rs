@@ -209,7 +209,7 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
     let mut multi_buckets: Vec<BoothBuckets<C>> =
         vec![BoothBuckets::new(c); booth_window_count(&coeffs, c)];
     let num_threads = multicore::current_num_threads();
-    if coeffs.len() > num_threads {
+    if should_parallelize_multiexp(coeffs.len(), num_threads) {
         multi_buckets
             .par_iter_mut()
             .enumerate()
@@ -233,6 +233,12 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
                 sum + bucket
             })
     }
+}
+
+fn should_parallelize_multiexp(num_coeffs: usize, num_threads: usize) -> bool {
+    // The parallel algorithm shifts each window result independently. With a
+    // single worker, this only adds doublings compared to serial evaluation.
+    num_threads > 1 && num_coeffs > num_threads
 }
 
 /// Performs a radix-$2$ Fast-Fourier Transformation (FFT) on a vector of size
@@ -697,6 +703,13 @@ fn test_multiexp_booth_boundaries() {
         .map(|_| EpAffine::from(Ep::random(&mut rng)))
         .collect::<Vec<_>>();
     assert_multiexp_matches_naive(&fq_coeffs, &fq_bases);
+}
+
+#[test]
+fn test_multiexp_algorithm_selection() {
+    assert!(!should_parallelize_multiexp(usize::MAX, 1));
+    assert!(!should_parallelize_multiexp(2, 2));
+    assert!(should_parallelize_multiexp(3, 2));
 }
 
 #[test]
