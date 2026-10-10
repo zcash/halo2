@@ -404,12 +404,9 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
             .iter()
             .enumerate()
             .map(|(index, (name, row))| {
-                format!(
-                    "⟨{}, {:?}, {}⟩",
-                    index,
-                    name,
-                    row.expect("every recorded region must touch a row")
-                )
+                // An empty region never touches a row. Use the same zero sentinel as
+                // `render_layout_json` instead of panicking.
+                format!("⟨{}, {:?}, {}⟩", index, name, row.unwrap_or(0))
             })
             .collect::<Vec<_>>();
         let columns = permutation_columns
@@ -609,5 +606,32 @@ impl SigmaAssembly {
         let left_mapping = self.mapping[left_column][left_row];
         self.mapping[left_column][left_row] = self.mapping[right_column][right_row];
         self.mapping[right_column][right_row] = left_mapping;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::Fp;
+
+    use super::{CircuitFixtureRecorder, LeanEnvironment};
+    use crate::plonk::{Assignment, ConstraintSystem};
+
+    #[test]
+    fn layout_renderers_accept_an_empty_region() {
+        let meta = ConstraintSystem::<Fp>::default();
+        let mut recorder = CircuitFixtureRecorder::<Fp>::default();
+        recorder.enter_region(|| "empty");
+        recorder.exit_region();
+
+        let environment = LeanEnvironment {
+            fixture_import: "Fixtures.Layout",
+            fixture_namespace: "Fixtures",
+            open_namespace: "Layout",
+        };
+        let lean = recorder.render_layout_lean(&meta, 4, "-- header", "layout", environment, false);
+        assert!(lean.contains("regions := [⟨0, \"empty\", 0⟩]"), "{lean}");
+
+        let json = recorder.render_layout_json(&meta, 4, &[]);
+        assert!(json.contains("\"regions\":[[0,\"empty\",0]]"), "{json}");
     }
 }
