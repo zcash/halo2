@@ -221,11 +221,10 @@ impl<F: PrimeFieldBits + VartimeField, const WINDOW_NUM_BITS: usize>
             z = z_next;
             zs.push(z.clone());
         }
-        assert_eq!(zs.len(), num_windows + 1);
 
         if strict {
             // Constrain the final running sum output to be zero.
-            region.constrain_constant(zs.last().unwrap().cell(), F::ZERO)?;
+            region.constrain_constant(zs[num_windows].cell(), F::ZERO)?;
         }
 
         Ok(RunningSum(zs))
