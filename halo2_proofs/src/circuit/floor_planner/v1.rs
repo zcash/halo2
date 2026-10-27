@@ -86,7 +86,10 @@ impl FloorPlanner for V1 {
             .max()
             .unwrap_or(0);
 
-        // - Position the constants within those rows.
+        // - Position the constants within those rows, preferring the gaps left between
+        //   regions. If the gaps are not enough, continue in the rows following the
+        //   planned circuit (which are free in every column) using the first constants
+        //   column.
         let fixed_allocations: Vec<_> = constants
             .into_iter()
             .map(|c| {
@@ -99,12 +102,20 @@ impl FloorPlanner for V1 {
                 )
             })
             .collect();
+        let overflow_column = fixed_allocations.first().map(|(c, _)| *c);
         let constant_positions = || {
-            fixed_allocations.iter().flat_map(|(c, a)| {
-                let c = *c;
-                a.free_intervals(0, Some(first_unassigned_row))
-                    .flat_map(move |e| e.range().unwrap().map(move |i| (c, i)))
-            })
+            fixed_allocations
+                .iter()
+                .flat_map(|(c, a)| {
+                    let c = *c;
+                    a.free_intervals(0, Some(first_unassigned_row))
+                        .flat_map(move |e| e.range().unwrap().map(move |i| (c, i)))
+                })
+                .chain(
+                    overflow_column
+                        .into_iter()
+                        .flat_map(move |c| (first_unassigned_row..).map(move |i| (c, i))),
+                )
         };
 
         // Second pass:
@@ -116,7 +127,7 @@ impl FloorPlanner for V1 {
         }
 
         // - Assign the constants.
-        if constant_positions().count() < plan.constants.len() {
+        if overflow_column.is_none() && !plan.constants.is_empty() {
             return Err(Error::NotEnoughColumnsForConstants);
         }
         for ((fixed_column, fixed_row), (value, advice)) in constant_positions().zip(plan.constants)
@@ -527,5 +538,69 @@ mod tests {
             MockProver::run(3, &circuit, vec![]).unwrap_err(),
             Error::NotEnoughColumnsForConstants,
         ));
+    }
+
+    #[test]
+    fn more_constants_than_planned_rows() {
+        #[derive(Clone)]
+        struct MyConfig {
+            a: Column<Advice>,
+            b: Column<Advice>,
+        }
+
+        struct MyCircuit {}
+
+        impl Circuit<vesta::Scalar> for MyCircuit {
+            type Config = MyConfig;
+            type FloorPlanner = super::V1;
+
+            fn without_witnesses(&self) -> Self {
+                MyCircuit {}
+            }
+
+            fn configure(meta: &mut crate::plonk::ConstraintSystem<vesta::Scalar>) -> Self::Config {
+                let a = meta.advice_column();
+                let b = meta.advice_column();
+                let constants = meta.fixed_column();
+                meta.enable_equality(a);
+                meta.enable_equality(b);
+                meta.enable_constant(constants);
+                MyConfig { a, b }
+            }
+
+            fn synthesize(
+                &self,
+                config: Self::Config,
+                mut layouter: impl crate::circuit::Layouter<vesta::Scalar>,
+            ) -> Result<(), crate::plonk::Error> {
+                // A single-row region that needs two constants: only one free row exists
+                // in the constants column within the planned rows, so the second
+                // constant must be placed after them.
+                layouter.assign_region(
+                    || "assign constants",
+                    |mut region| {
+                        region.assign_advice_from_constant(
+                            || "one",
+                            config.a,
+                            0,
+                            vesta::Scalar::one(),
+                        )?;
+                        region.assign_advice_from_constant(
+                            || "two",
+                            config.b,
+                            0,
+                            vesta::Scalar::from(2),
+                        )?;
+                        Ok(())
+                    },
+                )?;
+
+                Ok(())
+            }
+        }
+
+        let circuit = MyCircuit {};
+        let prover = MockProver::run(4, &circuit, vec![]).unwrap();
+        assert_eq!(prover.verify(), Ok(()));
     }
 }
