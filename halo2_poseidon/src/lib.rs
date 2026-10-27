@@ -419,7 +419,10 @@ impl<F: PrimeField, const RATE: usize, const L: usize> Domain<F, RATE> for Const
         // of RATE. On its own this would not be sponge-compliant padding, but the
         // Poseidon authors encode the constant length into the capacity element, ensuring
         // that inputs of different lengths do not share the same permutation.
-        let k = L.div_ceil(RATE);
+        //
+        // An empty message is padded to a single all-zero block, so that the sponge
+        // still absorbs (and permutes) exactly once before squeezing.
+        let k = core::cmp::max(1, L.div_ceil(RATE));
         iter::repeat(F::ZERO).take(k * RATE - L)
     }
 }
@@ -466,6 +469,8 @@ impl<F: PrimeField, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, cons
     Hash<F, S, ConstantLength<L>, T, RATE>
 {
     /// Hashes the given input.
+    ///
+    /// An empty message (`L = 0`) is hashed as a single all-zero block.
     pub fn hash(mut self, message: [F; L]) -> F {
         for value in message
             .into_iter()
@@ -496,6 +501,20 @@ mod tests {
         // The result should be equivalent to just directly applying the permutation and
         // taking the first state element as the output.
         let mut state = [message[0], message[1], pallas::Base::from_u128(2 << 64)];
+        permute::<_, OrchardNullifier, 3, 2>(&mut state, &mds, &round_constants);
+        assert_eq!(state[0], result);
+    }
+
+    #[test]
+    fn empty_message() {
+        let (round_constants, mds, _) = OrchardNullifier::constants();
+
+        let hasher = Hash::<_, OrchardNullifier, ConstantLength<0>, 3, 2>::init();
+        let result = hasher.hash([]);
+
+        // An empty message is padded to a single all-zero block, so the result is
+        // one permutation of the initial state (with capacity element 0 * 2^64 = 0).
+        let mut state = [pallas::Base::zero(); 3];
         permute::<_, OrchardNullifier, 3, 2>(&mut state, &mds, &round_constants);
         assert_eq!(state[0], result);
     }
