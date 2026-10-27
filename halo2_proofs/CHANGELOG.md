@@ -23,6 +23,11 @@ and this project adheres to Rust's notion of
 - `halo2_proofs::arithmetic::best_multiexp` now uses serial window
   accumulation when only one worker is available.
 
+### Fixed
+- `halo2_proofs::dev::CircuitFixtureRecorder::render_layout_lean` no longer
+  panics on a circuit that contains an empty region; it renders the same zero
+  start-row sentinel as the JSON renderer.
+
 ## [0.4.0] - 2026-09-29
 ### Added
 - `halo2_proofs::plonk::VerifyingKey::dump_vesta_lean_fixture_honest_with_proof_bytes`
