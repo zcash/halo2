@@ -111,9 +111,10 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
         let result = {
             let region: &mut dyn RegionLayouter<F> = &mut region;
             assignment(region.into())
-        }?;
+        };
         let constants_to_assign = region.constants;
         self.cs.exit_region();
+        let result = result?;
 
         // Assign constants. For the simple floor planner, we assign constants in order in
         // the first `constants` column.
@@ -157,12 +158,13 @@ impl<'a, F: Field, CS: Assignment<F> + 'a> Layouter<F> for SingleChipLayouter<'a
         // Assign table cells.
         self.cs.enter_region(name);
         let mut table = SimpleTableLayouter::new(self.cs, &self.table_columns);
-        {
+        let result = {
             let table: &mut dyn TableLayouter<F> = &mut table;
             assignment(table.into())
-        }?;
+        };
         let default_and_assigned = table.default_and_assigned;
         self.cs.exit_region();
+        result?;
 
         // Check that all table columns have the same length `first_unused`,
         // and all cells up to that length are assigned.
