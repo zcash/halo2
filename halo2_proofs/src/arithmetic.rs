@@ -23,67 +23,6 @@ where
 {
 }
 
-/// Extension trait for batch-inverting field elements and multiplying every
-/// inverse by a common scale.
-#[cfg(any(test, feature = "batch"))]
-pub(crate) trait BatchInvertAndScale<F: Field> {
-    /// Like [`ff::BatchInvert::batch_invert`], but multiplies every nonzero inverse
-    /// by `scale`. Zero-valued elements remain zero.
-    ///
-    /// For nonzero inputs `x_i`, this replaces each input with
-    /// `scale * x_i.invert()`. The same `scale` is applied to every inverse;
-    /// distinct per-element scales cannot be fused into the shared backward
-    /// pass.
-    ///
-    /// Returns the inverse of the product of all nonzero field elements,
-    /// without the scale applied.
-    fn batch_inverse_and_scale(self, scale: F) -> F;
-}
-
-#[cfg(any(test, feature = "batch"))]
-impl<'a, F, I> BatchInvertAndScale<F> for I
-where
-    F: Field,
-    I: IntoIterator<Item = &'a mut F>,
-{
-    fn batch_inverse_and_scale(self, scale: F) -> F {
-        let mut iter = self.into_iter();
-        let Some(first) = iter.next() else {
-            return F::ONE;
-        };
-        let first_value = *first;
-        let first_is_zero = first_value.is_zero();
-        let mut acc = F::conditional_select(&first_value, &F::ONE, first_is_zero);
-        let mut products = Vec::with_capacity(iter.size_hint().0);
-        for value in iter {
-            let current = *value;
-            products.push((acc, value));
-            acc = F::conditional_select(&(acc * current), &acc, current.is_zero());
-        }
-
-        acc = acc.invert().unwrap();
-        let product_inverse = acc;
-
-        // Applying the scale once here carries it through the backward pass,
-        // instead of multiplying every resulting inverse separately.
-        acc *= scale;
-        for (product, value) in products.into_iter().rev() {
-            let skip = value.is_zero();
-            let inverse = product * acc;
-            acc = F::conditional_select(&(acc * *value), &acc, skip);
-            *value = F::conditional_select(&inverse, value, skip);
-        }
-
-        // The first prefix is one, and the accumulator is dead after
-        // producing its inverse, so both endpoint multiplications are
-        // unnecessary.
-        let inverse = F::conditional_select(&acc, &*first, first_is_zero);
-        *first = inverse;
-
-        product_inverse
-    }
-}
-
 #[derive(Clone, Copy)]
 enum Bucket<C: CurveAffine> {
     None,
@@ -558,69 +497,12 @@ pub fn lagrange_interpolate<F: VartimeField>(points: &[F], evals: &[F]) -> Vec<F
 }
 
 #[cfg(test)]
-use group::ff::BatchInvert;
-
-#[cfg(test)]
 use rand::rngs::SysRng;
 #[cfg(test)]
 use rand_core::UnwrapErr;
 
 #[cfg(test)]
 use crate::pasta::{Ep, EpAffine, Eq, EqAffine, Fp, Fq};
-
-#[test]
-fn test_batch_inverse_and_scale() {
-    let original = [Fp::ZERO, Fp::from(2), Fp::from(3), Fp::ZERO, Fp::from(5)];
-    let scale = Fp::from(7);
-    let mut values = original;
-
-    let product_inverse = values.iter_mut().batch_inverse_and_scale(scale);
-    let expected_product = original
-        .iter()
-        .filter(|value| !value.is_zero_vartime())
-        .product::<Fp>()
-        .invert()
-        .unwrap();
-
-    assert_eq!(product_inverse, expected_product);
-    for (value, original) in values.iter().zip(original) {
-        let expected = original
-            .invert()
-            .map(|inverse| inverse * scale)
-            .unwrap_or(Fp::ZERO);
-        assert_eq!(*value, expected);
-    }
-}
-
-#[test]
-fn test_batch_inverse_and_scale_boundaries() {
-    let mut empty: [Fq; 0] = [];
-    assert_eq!(
-        empty.iter_mut().batch_inverse_and_scale(Fq::from(9)),
-        Fq::ONE
-    );
-
-    let mut singleton = [Fq::from(4)];
-    let singleton_inverse = Fq::from(4).invert().unwrap();
-    assert_eq!(
-        singleton.iter_mut().batch_inverse_and_scale(Fq::from(9)),
-        singleton_inverse
-    );
-    assert_eq!(singleton, [singleton_inverse * Fq::from(9)]);
-
-    let original = [Fq::ZERO, Fq::from(2), Fq::from(3)];
-    let mut scaled = original;
-    let product_inverse = scaled.iter_mut().batch_inverse_and_scale(Fq::ZERO);
-    assert_eq!(product_inverse, Fq::from(6).invert().unwrap());
-    assert_eq!(scaled, [Fq::ZERO; 3]);
-
-    let mut inverted = original;
-    let mut expected = original;
-    let expected_product_inverse = expected.iter_mut().batch_invert();
-    let product_inverse = inverted.iter_mut().batch_inverse_and_scale(Fq::ONE);
-    assert_eq!(product_inverse, expected_product_inverse);
-    assert_eq!(inverted, expected);
-}
 
 #[cfg(test)]
 fn assert_multiexp_matches_naive<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) {
