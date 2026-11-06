@@ -179,6 +179,35 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
         }
         commitments
     }
+
+    /// Commits every column, splitting the columns into one contiguous chunk
+    /// per worker. Each chunk runs [`Self::commit_batch`] on its own
+    /// accumulators, so the result is identical to one serial call.
+    ///
+    /// A chunk never drops below the lockstep threshold, so splitting never
+    /// moves a column from the lockstep path to per-column commitments.
+    fn commit_batch_parallel(
+        &self,
+        params: &Params<C>,
+        instances: &[&[C::Scalar]],
+    ) -> Vec<C::Curve> {
+        let chunk_len = instances
+            .len()
+            .div_ceil(crate::multicore::current_num_threads())
+            .max(MIN_LOCKSTEP_INSTANCE_COLUMNS);
+        if chunk_len >= instances.len() {
+            return self.commit_batch(params, instances);
+        }
+        (0..instances.len().div_ceil(chunk_len))
+            .into_par_iter()
+            .map(|chunk| {
+                let start = chunk * chunk_len;
+                let end = (start + chunk_len).min(instances.len());
+                self.commit_batch(params, &instances[start..end])
+            })
+            .collect::<Vec<_>>()
+            .concat()
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -263,7 +292,7 @@ fn compute_batch_instance_commitments<C: CurveAffine>(
         .flat_map(|instances| instances.iter())
         .map(Vec::as_slice)
         .collect::<Vec<_>>();
-    let projective = table.commit_batch(params, &instances);
+    let projective = table.commit_batch_parallel(params, &instances);
     let mut affine = vec![C::identity(); projective.len()];
     C::Curve::batch_normalize_vartime(&projective, &mut affine);
     let mut affine = affine.into_iter();
