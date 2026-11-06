@@ -19,6 +19,20 @@ You can disable `rayon` by disabling the `"multicore"` feature.
 Warning! Halo2 will lose access to parallelism if you disable the `"multicore"` feature.
 This will significantly degrade performance.
 
+## Verifier performance
+
+Verification batches multi-opening denominators into one inversion and expands
+IPA generator coefficients directly into their owned MSM allocation. Batch
+verification applies each proof's random weight during coefficient generation
+and coalesces buffered commitment terms once before the final MSM.
+
+The `plonk_verifier` Criterion benchmark measures single and batch verification
+with an Orchard-shaped instance layout (not the full Orchard circuit):
+
+```sh
+RAYON_NUM_THREADS=4 cargo bench -p halo2_proofs --bench plonk_verifier
+```
+
 ## License
 
 Licensed under either of

@@ -1,6 +1,7 @@
 use group::ff::{Field, FromUniformBytes};
 use pasta_curves::arithmetic::CurveAffine;
 use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
 
 use super::{verify_proof, VerificationStrategy};
 use crate::{
@@ -19,9 +20,6 @@ use crate::multicore::{IndexedParallelIterator, ParallelIterator};
 #[derive(Debug)]
 struct BatchStrategy<'params, C: CurveAffine> {
     msm: MSM<'params, C>,
-    // The common coefficient for every term in this proof's verifier
-    // equation. Applying different coefficients to different terms would
-    // change the equation instead of merely weighting it within the batch.
     batching_scalar: C::Scalar,
 }
 
@@ -41,12 +39,8 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy
         self,
         f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
     ) -> Result<Self::Output, Error> {
-        let BatchStrategy {
-            msm,
-            batching_scalar,
-        } = self;
-        let guard = f(msm)?;
-        Ok(guard.use_challenges_with_scale(batching_scalar))
+        let guard = f(self.msm)?;
+        Ok(guard.use_challenges_with_scale(self.batching_scalar))
     }
 }
 
@@ -108,18 +102,15 @@ where
                     .collect();
                 let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
-                // Every proof and instance is already owned by this batch, so
-                // the prover has fixed all equations before these coefficients
-                // are chosen. Fix the first coefficient at one; every later
-                // equation receives an independent random coefficient rho_i.
-                // This prevents invalid equations from cancelling each other,
-                // except with negligible probability.
-                let rho_i = if i == 0 {
+                // All proof equations are fixed before sampling these independent
+                // weights. Fix the first weight at one; randomize every later
+                // equation so invalid proofs cannot deliberately cancel.
+                let rho = if i == 0 {
                     C::Scalar::ONE
                 } else {
-                    C::Scalar::try_random(&mut SysRng).expect("system randomness must be available")
+                    C::Scalar::random(&mut UnwrapErr(SysRng))
                 };
-                let strategy = BatchStrategy::new(params, rho_i);
+                let strategy = BatchStrategy::new(params, rho);
                 let mut transcript = Blake2bRead::init(&item.proof[..]);
                 verify_proof(params, vk, strategy, &instances, &mut transcript).map_err(|e| {
                     tracing::debug!("Batch item {} failed verification: {}", i, e);
