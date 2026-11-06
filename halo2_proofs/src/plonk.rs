@@ -177,3 +177,31 @@ type ChallengeY<F> = ChallengeScalar<F, Y>;
 #[derive(Clone, Copy, Debug)]
 struct X;
 type ChallengeX<F> = ChallengeScalar<F, X>;
+
+/// Computes `base^(2^exponent)` using the public exponent directly.
+fn pow_by_power_of_two<F: Field + 'static>(base: F, exponent: u32) -> F {
+    let mut base = base;
+    for _ in 0..exponent {
+        base = base.square();
+    }
+    base
+}
+
+#[cfg(test)]
+mod power_of_two_tests {
+    use super::pow_by_power_of_two;
+    use pasta_curves::{Fp, Fq};
+
+    #[test]
+    fn matches_repeated_field_squaring() {
+        let fp = Fp::from(0x9e37_79b9_7f4a_7c15);
+        let fq = Fq::from(0x0123_4567_89ab_cdef);
+
+        for exponent in [0, 1, 2, 11, 64] {
+            let expected_fp = (0..exponent).fold(fp, |value, _| value.square());
+            let expected_fq = (0..exponent).fold(fq, |value, _| value.square());
+            assert_eq!(pow_by_power_of_two(fp, exponent), expected_fp);
+            assert_eq!(pow_by_power_of_two(fq, exponent), expected_fq);
+        }
+    }
+}

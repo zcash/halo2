@@ -241,7 +241,7 @@ pub fn verify_proof<
     // commitments open to the correct values.
     let vanishing = {
         // x^n
-        let xn = x.pow([params.n, 0, 0, 0]);
+        let xn = super::pow_by_power_of_two(*x, params.k);
 
         let blinding_factors = vk.cs.blinding_factors();
         let l_evals = vk
@@ -499,5 +499,43 @@ mod tests {
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
         verify_proof(&params, pk.get_vk(), strategy, &instances, &mut transcript)
             .expect("proof verification should not fail");
+
+        #[cfg(feature = "batch")]
+        {
+            use ff::Field;
+
+            use super::BatchVerifier;
+
+            let owned_instances = public_inputs
+                .iter()
+                .map(|values| vec![values.clone()])
+                .collect::<Vec<_>>();
+            let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(Vec::new());
+            create_proof(&params, &pk, &circuits, &instances, UnwrapErr(SysRng), &mut transcript)
+                .expect("second proof generation should not fail");
+            let second_proof = transcript.finalize();
+            let check = || {
+                let mut one = BatchVerifier::new();
+                one.add_proof(owned_instances.clone(), proof.clone());
+                assert!(one.finalize(&params, pk.get_vk()));
+                let mut two = BatchVerifier::new();
+                two.add_proof(owned_instances.clone(), proof.clone());
+                two.add_proof(owned_instances.clone(), second_proof.clone());
+                assert!(two.finalize(&params, pk.get_vk()));
+                let mut invalid_instances = owned_instances.clone();
+                invalid_instances[0][0][0] += Fp::ONE;
+                let mut invalid = BatchVerifier::new();
+                invalid.add_proof(invalid_instances, proof.clone());
+                assert!(!invalid.finalize(&params, pk.get_vk()));
+            };
+            check();
+            check();
+            #[cfg(feature = "multicore")]
+            maybe_rayon::ThreadPoolBuilder::new()
+                .num_threads(1)
+                .build()
+                .unwrap()
+                .install(check);
+        }
     }
 }
