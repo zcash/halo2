@@ -19,6 +19,10 @@ and this project adheres to Rust's notion of
 - Verifying keys share a compiled gate-expression plan across clones. Verification
   evaluates fixed-only subexpressions once per proof without changing the pinned
   key, transcript, or constraint fold order.
+- Batch verification caches bounded instance-commitment window tables in the
+  parameters and evaluates public instance columns in lockstep across proofs.
+  Larger columns retain the generic MSM path; parameter serialization and
+  transcript commitments are unchanged.
 
 ## [0.4.1] - 2026-10-26
 ### Changed

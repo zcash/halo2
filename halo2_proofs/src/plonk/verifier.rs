@@ -66,23 +66,14 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifie
     }
 }
 
-/// Returns a boolean indicating whether or not the proof is valid
-pub fn verify_proof<
-    'params,
-    C: CurveAffine,
-    E: EncodedChallenge<C>,
-    T: TranscriptRead<C, E>,
-    V: VerificationStrategy<'params, C>,
->(
-    params: &'params Params<C>,
+fn validate_instances<C: CurveAffine, I: AsRef<[S]>, S: AsRef<[C::Scalar]>>(
+    params: &Params<C>,
     vk: &VerifyingKey<C>,
-    strategy: V,
-    instances: &[&[&[C::Scalar]]],
-    transcript: &mut T,
-) -> Result<V::Output, Error> {
+    instances: &[I],
+) -> Result<(), Error> {
     // Check that instances matches the expected number of instance columns
     for instances in instances.iter() {
-        if instances.len() != vk.cs.num_instance_columns {
+        if instances.as_ref().len() != vk.cs.num_instance_columns {
             return Err(Error::InvalidInstances);
         }
     }
@@ -90,19 +81,26 @@ pub fn verify_proof<
     let max_instance_len = params.n as usize - (vk.cs.blinding_factors() + 1);
     if instances
         .iter()
-        .flat_map(|instance| instance.iter())
-        .any(|instance| instance.len() > max_instance_len)
+        .flat_map(|instance| instance.as_ref().iter())
+        .any(|instance| instance.as_ref().len() > max_instance_len)
     {
         return Err(Error::InstanceTooLarge);
     }
 
+    Ok(())
+}
+
+fn compute_instance_commitments<C: CurveAffine>(
+    params: &Params<C>,
+    instances: &[&[&[C::Scalar]]],
+) -> Vec<Vec<C>> {
     let batch_normalize = instances
         .iter()
         .flat_map(|instance| instance.iter())
         .take(MIN_BATCH_NORMALIZE)
         .count()
         == MIN_BATCH_NORMALIZE;
-    let instance_commitments = if !batch_normalize {
+    if !batch_normalize {
         instances
             .iter()
             .map(|instance| {
@@ -139,8 +137,43 @@ pub fn verify_proof<
             .collect::<Vec<_>>();
         assert!(normalized_commitments.next().is_none());
         instance_commitments
-    };
+    }
+}
 
+/// Returns a boolean indicating whether or not the proof is valid
+pub fn verify_proof<
+    'params,
+    C: CurveAffine,
+    E: EncodedChallenge<C>,
+    T: TranscriptRead<C, E>,
+    V: VerificationStrategy<'params, C>,
+>(
+    params: &'params Params<C>,
+    vk: &VerifyingKey<C>,
+    strategy: V,
+    instances: &[&[&[C::Scalar]]],
+    transcript: &mut T,
+) -> Result<V::Output, Error> {
+    validate_instances(params, vk, instances)?;
+    let instance_commitments = compute_instance_commitments(params, instances);
+    verify_proof_with_instance_commitments(params, vk, strategy, instance_commitments, transcript)
+}
+
+// The callers validate instance shapes before computing these commitments.
+// Their nested order is the transcript's circuit/column order.
+fn verify_proof_with_instance_commitments<
+    'params,
+    C: CurveAffine,
+    E: EncodedChallenge<C>,
+    T: TranscriptRead<C, E>,
+    V: VerificationStrategy<'params, C>,
+>(
+    params: &'params Params<C>,
+    vk: &VerifyingKey<C>,
+    strategy: V,
+    instance_commitments: Vec<Vec<C>>,
+    transcript: &mut T,
+) -> Result<V::Output, Error> {
     let num_proofs = instance_commitments.len();
 
     // Hash verification key into transcript
