@@ -1,5 +1,5 @@
 use ff::Field;
-use pasta_curves::arithmetic::VartimeField;
+use pasta_curves::arithmetic::{VartimeBatchInvert, VartimeField};
 
 use super::super::{
     commitment::{Guard, Params, MSM},
@@ -9,8 +9,72 @@ use super::{
     construct_intermediate_sets, ChallengeX1, ChallengeX2, ChallengeX3, ChallengeX4,
     CommitmentReference, Query, VerifierQuery,
 };
-use crate::arithmetic::{eval_polynomial, lagrange_interpolate, CurveAffine};
+use crate::arithmetic::CurveAffine;
 use crate::transcript::{EncodedChallenge, TranscriptRead};
+
+/// Evaluates the multi-point quotient with one inversion for all Lagrange
+/// denominators and vanishing polynomials, without allocating interpolants.
+fn compute_msm_eval<F: VartimeField>(
+    point_sets: &[Vec<F>],
+    q_eval_sets: &[Vec<F>],
+    proof_evals: &[F],
+    x_2: F,
+    x_3: F,
+) -> F {
+    assert_eq!(point_sets.len(), q_eval_sets.len());
+    assert_eq!(point_sets.len(), proof_evals.len());
+    let count = point_sets.iter().map(|points| points.len() + 1).sum();
+    let mut denominators = Vec::with_capacity(count);
+    for points in point_sets {
+        for (j, x_j) in points.iter().enumerate() {
+            let denominator = points
+                .iter()
+                .enumerate()
+                .filter(|(k, _)| *k != j)
+                .fold(F::ONE, |acc, (_, x_k)| acc * (*x_j - x_k));
+            assert!(
+                !denominator.is_zero_vartime(),
+                "point sets must contain distinct points"
+            );
+            denominators.push(denominator);
+        }
+        let vanishing = points.iter().fold(F::ONE, |acc, point| acc * (x_3 - point));
+        // Preserve the previous verifier's failure on a zero denominator.
+        assert!(
+            !vanishing.is_zero_vartime(),
+            "verifier challenge must differ from query points"
+        );
+        denominators.push(vanishing);
+    }
+    denominators.iter_mut().batch_invert_vartime();
+    let mut inverses = denominators.into_iter();
+    point_sets.iter().zip(q_eval_sets).zip(proof_evals).fold(
+        F::ZERO,
+        |acc, ((points, evals), proof_eval)| {
+            assert_eq!(points.len(), evals.len());
+            let r_eval =
+                points
+                    .iter()
+                    .enumerate()
+                    .zip(evals)
+                    .fold(F::ZERO, |r_eval, ((j, _), eval)| {
+                        let numerator = points
+                            .iter()
+                            .enumerate()
+                            .filter(|(k, _)| *k != j)
+                            .fold(F::ONE, |acc, (_, point)| acc * (x_3 - point));
+                        let inverse = inverses
+                            .next()
+                            .expect("one denominator per interpolation point");
+                        r_eval + *eval * numerator * inverse
+                    });
+            let inverse = inverses
+                .next()
+                .expect("one vanishing denominator per point set");
+            acc * x_2 + (*proof_eval - r_eval) * inverse
+        },
+    )
+}
 
 /// Verify a multi-opening proof
 pub fn verify_proof<
@@ -99,21 +163,7 @@ where
 
     // We can compute the expected msm_eval at x_3 using the u provided
     // by the prover and from x_2
-    let msm_eval = point_sets
-        .iter()
-        .zip(q_eval_sets.iter())
-        .zip(u.iter())
-        .fold(
-            C::Scalar::ZERO,
-            |msm_eval, ((points, evals), proof_eval)| {
-                let r_poly = lagrange_interpolate(points, evals);
-                let r_eval = eval_polynomial(&r_poly, *x_3);
-                let eval = points.iter().fold(*proof_eval - &r_eval, |eval, point| {
-                    eval * &(*x_3 - point).invert_vartime().unwrap()
-                });
-                msm_eval * &(*x_2) + &eval
-            },
-        );
+    let msm_eval = compute_msm_eval(&point_sets, &q_eval_sets, &u, *x_2, *x_3);
 
     // Sample a challenge x_4 that we will use to collapse the openings of
     // the various remaining polynomials at x_3 together.
@@ -148,3 +198,6 @@ impl<'a, 'b, C: CurveAffine> Query<C::Scalar> for VerifierQuery<'a, 'b, C> {
         self.commitment
     }
 }
+
+#[cfg(test)]
+mod tests;

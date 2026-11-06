@@ -7,6 +7,12 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Changed
+- Verification batches multi-opening denominators into one inversion and avoids
+  redundant IPA coefficient and MSM allocations. Batch verification applies
+  random weights during coefficient generation and coalesces commitment terms
+  once before the final MSM.
+
 ## [0.4.1] - 2026-10-26
 ### Changed
 - `halo2_proofs::arithmetic::best_multiexp` now uses signed Booth recoding to
