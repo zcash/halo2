@@ -6,10 +6,16 @@
 use super::{Coeff, LagrangeCoeff, Polynomial};
 use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, CurveExt};
 use crate::helpers::CurveRead;
+#[cfg(feature = "batch")]
+use crate::{INSTANCE_WINDOW_ENTRIES_PER_BASE, InstanceWindowTable, MAX_CACHED_INSTANCE_ROWS};
 
 use ff::{Field, PrimeField};
 use group::Group;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
+#[cfg(feature = "batch")]
+use std::sync::Mutex;
+#[cfg(feature = "batch")]
+use std::{fmt, sync::Arc};
 
 mod msm;
 mod prover;
@@ -22,7 +28,8 @@ pub use verifier::{verify_proof, Accumulator, Guard};
 use std::io;
 
 /// These are the public parameters for the polynomial commitment scheme.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
+#[cfg_attr(not(feature = "batch"), derive(Debug))]
 pub struct Params<C: CurveAffine> {
     pub(crate) k: u32,
     pub(crate) n: u64,
@@ -30,6 +37,81 @@ pub struct Params<C: CurveAffine> {
     pub(crate) g_lagrange: Vec<C>,
     pub(crate) w: C,
     pub(crate) u: C,
+    #[cfg(feature = "batch")]
+    instance_window_cache: InstanceWindowCache<C>,
+}
+
+#[cfg(feature = "batch")]
+#[derive(Clone)]
+struct InstanceWindowCache<C>(Arc<Mutex<Option<Arc<Vec<C>>>>>);
+
+#[cfg(feature = "batch")]
+impl<C> Default for InstanceWindowCache<C> {
+    fn default() -> Self {
+        Self(Arc::new(Mutex::new(None)))
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<C> InstanceWindowCache<C> {
+    fn get_or_grow(&self, base_count: usize, initialize: impl FnOnce() -> Vec<C>) -> Arc<Vec<C>> {
+        let required_len = base_count
+            .checked_mul(INSTANCE_WINDOW_ENTRIES_PER_BASE)
+            .expect("instance window table length fits in usize");
+        let mut table = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(table) = table.as_ref().filter(|table| table.len() >= required_len) {
+            return Arc::clone(table);
+        }
+
+        let initialized = Arc::new(initialize());
+        assert_eq!(initialized.len(), required_len);
+        *table = Some(Arc::clone(&initialized));
+        initialized
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<C: CurveAffine> fmt::Debug for Params<C> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Params")
+            .field("k", &self.k)
+            .field("n", &self.n)
+            .field("g", &self.g)
+            .field("g_lagrange", &self.g_lagrange)
+            .field("w", &self.w)
+            .field("u", &self.u)
+            .finish()
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<C: CurveAffine> InstanceWindowTable<C> for Params<C> {
+    fn instance_window_table(&self, base_count: usize) -> Arc<Vec<C>> {
+        assert!(base_count <= MAX_CACHED_INSTANCE_ROWS);
+        assert!(base_count <= self.g_lagrange.len());
+
+        self.instance_window_cache.get_or_grow(base_count, || {
+            let capacity = base_count
+                .checked_mul(INSTANCE_WINDOW_ENTRIES_PER_BASE)
+                .expect("instance window table length fits in usize");
+            let mut projective = Vec::with_capacity(capacity);
+            for base in &self.g_lagrange[..base_count] {
+                let mut multiple = C::Curve::from(*base);
+                for _ in 0..INSTANCE_WINDOW_ENTRIES_PER_BASE {
+                    projective.push(multiple);
+                    multiple += *base;
+                }
+            }
+
+            let mut affine = vec![C::identity(); projective.len()];
+            C::Curve::batch_normalize_vartime(&projective, &mut affine);
+            affine
+        })
+    }
 }
 
 impl<C: CurveAffine> Params<C> {
@@ -110,6 +192,8 @@ impl<C: CurveAffine> Params<C> {
             g_lagrange,
             w,
             u,
+            #[cfg(feature = "batch")]
+            instance_window_cache: InstanceWindowCache::default(),
         }
     }
 
@@ -223,6 +307,8 @@ impl<C: CurveAffine> Params<C> {
             g_lagrange,
             w,
             u,
+            #[cfg(feature = "batch")]
+            instance_window_cache: InstanceWindowCache::default(),
         })
     }
 }
@@ -401,4 +487,63 @@ fn test_opening_proof() {
         let (msm_g, _accumulator) = guard.clone().use_g(g);
         assert!(msm_g.eval());
     }
+}
+
+#[cfg(feature = "batch")]
+#[test]
+fn instance_window_cache_is_shared_by_clones_only() {
+    const K: u32 = 6;
+    const BASE_COUNT: usize = 10;
+
+    use std::sync::Arc;
+
+    use crate::pasta::EqAffine;
+
+    let params = Arc::new(Params::<EqAffine>::new(K));
+    let debug_before = format!("{params:?}");
+    let mut serialized_before = vec![];
+    params.write(&mut serialized_before).unwrap();
+
+    let tables = std::thread::scope(|scope| {
+        (0..4)
+            .map(|_| {
+                let params = Arc::clone(&params);
+                scope.spawn(move || params.instance_window_table(BASE_COUNT))
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|thread| thread.join().unwrap())
+            .collect::<Vec<_>>()
+    });
+    assert_eq!(
+        tables[0].len(),
+        BASE_COUNT * INSTANCE_WINDOW_ENTRIES_PER_BASE,
+    );
+    assert!(
+        tables
+            .iter()
+            .skip(1)
+            .all(|table| Arc::ptr_eq(&tables[0], table))
+    );
+
+    let cloned = params.as_ref().clone();
+    let cloned_table = cloned.instance_window_table(BASE_COUNT);
+    assert!(Arc::ptr_eq(&tables[0], &cloned_table));
+    assert_eq!(format!("{params:?}"), debug_before);
+
+    let mut serialized_after = vec![];
+    params.write(&mut serialized_after).unwrap();
+    assert_eq!(serialized_after, serialized_before);
+
+    let deserialized = Params::<EqAffine>::read(&mut serialized_before.as_slice()).unwrap();
+    let smaller_table = params.instance_window_table(BASE_COUNT - 1);
+    assert!(Arc::ptr_eq(&tables[0], &smaller_table));
+
+    let larger_table = params.instance_window_table(BASE_COUNT + 1);
+    assert!(!Arc::ptr_eq(&tables[0], &larger_table));
+    let original_prefix = params.instance_window_table(BASE_COUNT);
+    assert!(Arc::ptr_eq(&larger_table, &original_prefix));
+
+    let deserialized_table = deserialized.instance_window_table(BASE_COUNT);
+    assert!(!Arc::ptr_eq(&larger_table, &deserialized_table));
 }
