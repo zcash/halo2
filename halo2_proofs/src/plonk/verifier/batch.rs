@@ -1,7 +1,6 @@
 use group::ff::{Field, FromUniformBytes};
 use pasta_curves::arithmetic::CurveAffine;
 use rand::rngs::SysRng;
-use rand_core::UnwrapErr;
 
 use super::{verify_proof, VerificationStrategy};
 use crate::{
@@ -20,12 +19,17 @@ use crate::multicore::{IndexedParallelIterator, ParallelIterator};
 #[derive(Debug)]
 struct BatchStrategy<'params, C: CurveAffine> {
     msm: MSM<'params, C>,
+    // The common coefficient for every term in this proof's verifier
+    // equation. Applying different coefficients to different terms would
+    // change the equation instead of merely weighting it within the batch.
+    batching_scalar: C::Scalar,
 }
 
 impl<'params, C: CurveAffine> BatchStrategy<'params, C> {
-    fn new(params: &'params Params<C>) -> Self {
+    fn new(params: &'params Params<C>, batching_scalar: C::Scalar) -> Self {
         BatchStrategy {
             msm: MSM::new(params),
+            batching_scalar,
         }
     }
 }
@@ -37,8 +41,12 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy
         self,
         f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
     ) -> Result<Self::Output, Error> {
-        let guard = f(self.msm)?;
-        Ok(guard.use_challenges())
+        let BatchStrategy {
+            msm,
+            batching_scalar,
+        } = self;
+        let guard = f(msm)?;
+        Ok(guard.use_challenges_with_scale(batching_scalar))
     }
 }
 
@@ -84,12 +92,7 @@ where
             mut acc: MSM<'params, C>,
             msm: MSM<'params, C>,
         ) -> MSM<'params, C> {
-            // Scale the MSM by a random factor to ensure that if the existing MSM has
-            // `is_zero() == false` then this argument won't be able to interfere with it
-            // to make it true, with high probability.
-            acc.scale(C::Scalar::random(&mut UnwrapErr(SysRng)));
-
-            acc.add_msm(&msm);
+            acc.add_msm_batch(msm);
             acc
         }
 
@@ -105,7 +108,18 @@ where
                     .collect();
                 let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
-                let strategy = BatchStrategy::new(params);
+                // Every proof and instance is already owned by this batch, so
+                // the prover has fixed all equations before these coefficients
+                // are chosen. Fix the first coefficient at one; every later
+                // equation receives an independent random coefficient rho_i.
+                // This prevents invalid equations from cancelling each other,
+                // except with negligible probability.
+                let rho_i = if i == 0 {
+                    C::Scalar::ONE
+                } else {
+                    C::Scalar::try_random(&mut SysRng).expect("system randomness must be available")
+                };
+                let strategy = BatchStrategy::new(params, rho_i);
                 let mut transcript = Blake2bRead::init(&item.proof[..]);
                 verify_proof(params, vk, strategy, &instances, &mut transcript).map_err(|e| {
                     tracing::debug!("Batch item {} failed verification: {}", i, e);
