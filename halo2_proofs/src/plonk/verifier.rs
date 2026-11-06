@@ -539,6 +539,48 @@ mod tests {
         verify_proof(&params, pk.get_vk(), strategy, &instances, &mut transcript)
             .expect("proof verification should not fail");
 
+        #[cfg(feature = "batch")]
+        {
+            use ff::Field;
+
+            let owned_instances = public_inputs
+                .iter()
+                .map(|values| vec![values.clone()])
+                .collect::<Vec<_>>();
+            let check = || {
+                for count in [3, 16, 128] {
+                    let mut batch = super::BatchVerifier::new();
+                    for _ in 0..count {
+                        batch.add_proof(owned_instances.clone(), proof.clone());
+                    }
+                    assert!(batch.finalize(&params, pk.get_vk()));
+                    for corrupt_proof in [false, true] {
+                        let mut batch = super::BatchVerifier::new();
+                        for index in 0..count {
+                            let mut inputs = owned_instances.clone();
+                            let mut bytes = proof.clone();
+                            if index == count - 1 {
+                                if corrupt_proof {
+                                    bytes.truncate(bytes.len() / 2);
+                                } else {
+                                    inputs[0][0][0] += Fp::ONE;
+                                }
+                            }
+                            batch.add_proof(inputs, bytes);
+                        }
+                        assert!(!batch.finalize(&params, pk.get_vk()));
+                    }
+                }
+            };
+            check();
+            #[cfg(feature = "multicore")]
+            maybe_rayon::ThreadPoolBuilder::new()
+                .num_threads(1)
+                .build()
+                .unwrap()
+                .install(check);
+        }
+
         scalar::check_tampered_and_batch_verification(
             &params,
             &pk,
