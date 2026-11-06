@@ -254,6 +254,11 @@ pub fn verify_proof<
             .fold(C::Scalar::ZERO, |acc, eval| acc + eval);
         let l_0 = l_evals[1 + blinding_factors];
 
+        // Fixed evaluations are shared across every circuit in this proof.
+        // Compute their pure gate subexpressions once, then reuse the same
+        // scratch slots for each circuit's advice and instance evaluations.
+        let mut gate_values = vk.verifier_expressions.common_values(&fixed_evals);
+
         // Compute the expected value of h(x)
         let expressions = advice_evals
             .iter()
@@ -262,23 +267,15 @@ pub fn verify_proof<
             .zip(lookups_evaluated.iter())
             .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
                 let fixed_evals = &fixed_evals;
+                let gates = vk.verifier_expressions.evaluate(
+                    &mut gate_values,
+                    fixed_evals,
+                    advice_evals,
+                    instance_evals,
+                );
                 std::iter::empty()
                     // Evaluate the circuit using the custom gates provided
-                    .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                        gate.polynomials().iter().map(move |poly| {
-                            poly.evaluate(
-                                &|scalar| scalar,
-                                &|_| panic!("virtual selectors are removed during optimization"),
-                                &|query| fixed_evals[query.index],
-                                &|query| advice_evals[query.index],
-                                &|query| instance_evals[query.index],
-                                &|a| -a,
-                                &|a, b| a + &b,
-                                &|a, b| a * &b,
-                                &|a, scalar| a * &scalar,
-                            )
-                        })
-                    }))
+                    .chain(gates)
                     .chain(permutation.expressions(
                         vk,
                         &vk.cs.permutation,
@@ -389,11 +386,11 @@ mod tests {
         pasta::{EqAffine, Fp},
         plonk::{
             create_proof, keygen_pk, keygen_vk, Advice, Circuit, Column, ConstraintSystem, Error,
-            Instance,
+            Instance, Selector,
         },
         poly::{
             commitment::{Blind, Params},
-            EvaluationDomain,
+            EvaluationDomain, Rotation,
         },
         transcript::{Blake2bRead, Blake2bWrite, Challenge255},
     };
@@ -404,6 +401,7 @@ mod tests {
     struct TestConfig {
         advice: Column<Advice>,
         instance: Column<Instance>,
+        selector: Selector,
     }
 
     #[derive(Clone)]
@@ -426,8 +424,20 @@ mod tests {
             let instance = meta.instance_column();
             meta.enable_equality(advice);
             meta.enable_equality(instance);
+            let selector = meta.complex_selector();
+            meta.create_gate("instance equality", |meta| {
+                let selector = meta.query_selector(selector);
+                let difference = meta.query_advice(advice, Rotation::cur())
+                    - meta.query_instance(instance, Rotation::cur());
+                let constraint = selector.clone() * selector * difference;
+                vec![constraint.clone(), constraint]
+            });
 
-            TestConfig { advice, instance }
+            TestConfig {
+                advice,
+                instance,
+                selector,
+            }
         }
 
         fn synthesize(
@@ -438,6 +448,7 @@ mod tests {
             let cell = layouter.assign_region(
                 || "assign instance value",
                 |mut region| {
+                    config.selector.enable(&mut region, 0)?;
                     region.assign_advice(|| "instance value", config.advice, 0, || self.value)
                 },
             )?;
@@ -478,6 +489,16 @@ mod tests {
         };
         let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
         let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
+        let vk_clone = pk.get_vk().clone();
+        assert!(std::sync::Arc::ptr_eq(
+            &pk.get_vk().verifier_expressions,
+            &vk_clone.verifier_expressions,
+        ));
+        assert_eq!(pk.get_vk().transcript_repr, vk_clone.transcript_repr);
+        assert_eq!(
+            format!("{:?}", pk.get_vk().pinned()),
+            format!("{:?}", vk_clone.pinned())
+        );
         let public_inputs = (0..MIN_BATCH_NORMALIZE)
             .map(|i| vec![Fp::from(i as u64 + 1)])
             .collect::<Vec<_>>();
@@ -505,6 +526,48 @@ mod tests {
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
         verify_proof(&params, pk.get_vk(), strategy, &instances, &mut transcript)
             .expect("proof verification should not fail");
+
+        #[cfg(feature = "batch")]
+        {
+            use ff::Field;
+
+            let owned_instances = public_inputs
+                .iter()
+                .map(|values| vec![values.clone()])
+                .collect::<Vec<_>>();
+            let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(Vec::new());
+            create_proof(
+                &params,
+                &pk,
+                &circuits,
+                &instances,
+                UnwrapErr(SysRng),
+                &mut transcript,
+            )
+            .expect("second proof generation should not fail");
+            let second_proof = transcript.finalize();
+            let check = || {
+                let mut one = super::BatchVerifier::new();
+                one.add_proof(owned_instances.clone(), proof.clone());
+                assert!(one.finalize(&params, pk.get_vk()));
+                let mut two = super::BatchVerifier::new();
+                two.add_proof(owned_instances.clone(), proof.clone());
+                two.add_proof(owned_instances.clone(), second_proof.clone());
+                assert!(two.finalize(&params, pk.get_vk()));
+                let mut invalid_instances = owned_instances.clone();
+                invalid_instances[0][0][0] += Fp::ONE;
+                let mut invalid = super::BatchVerifier::new();
+                invalid.add_proof(invalid_instances, proof.clone());
+                assert!(!invalid.finalize(&params, pk.get_vk()));
+            };
+            check();
+            #[cfg(feature = "multicore")]
+            maybe_rayon::ThreadPoolBuilder::new()
+                .num_threads(1)
+                .build()
+                .unwrap()
+                .install(check);
+        }
 
         scalar::check_tampered_and_batch_verification(
             &params,
