@@ -14,6 +14,8 @@ and this project adheres to Rust's notion of
   once before the final MSM.
 - Multiopening query sets are constructed in one traversal, preserving transcript
   order, duplicate rejection, and empty-query behavior.
+- Evaluation-domain rotations specialize 0, 1, -1, and -6, caching the sixth power
+  of the domain's inverse root while retaining arbitrary signed rotations.
 - Verifying keys share a compiled gate-expression plan across clones. Verification
   evaluates fixed-only subexpressions once per proof without changing the pinned
   key, transcript, or constraint fold order.
