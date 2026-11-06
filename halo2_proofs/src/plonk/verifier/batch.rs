@@ -108,6 +108,38 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
         C::Curve::from(params.w) + variable
     }
 
+    #[inline(never)]
+    fn commit_batch_parallel(
+        &self,
+        params: &Params<C>,
+        instances: &[&[C::Scalar]],
+    ) -> Vec<C::Curve> {
+        #[cfg(feature = "multicore")]
+        {
+            let workers = crate::multicore::current_num_threads();
+            let chunk_size = instances
+                .len()
+                .div_ceil(workers)
+                .max(MIN_LOCKSTEP_INSTANCE_COLUMNS);
+            // Bound the number of tasks by the existing pool, keeping lockstep evaluation
+            // in each task. Small proof batches bypass this helper entirely.
+            if workers > 1 && instances.len() > chunk_size {
+                return (0..instances.len().div_ceil(chunk_size))
+                    .into_par_iter()
+                    .flat_map_iter(|chunk| {
+                        let start = chunk * chunk_size;
+                        let end = (start + chunk_size).min(instances.len());
+                        self.commit_batch(params, &instances[start..end])
+                    })
+                    .collect();
+            }
+        }
+        self.commit_batch(params, instances)
+    }
+
+    // Preserve the original inlining in small-batch verification now that parallel workers
+    // also call this routine.
+    #[inline(always)]
     fn commit_batch(&self, params: &Params<C>, instances: &[&[C::Scalar]]) -> Vec<C::Curve> {
         if instances.len() < MIN_LOCKSTEP_INSTANCE_COLUMNS {
             return instances
@@ -263,7 +295,11 @@ fn compute_batch_instance_commitments<C: CurveAffine>(
         .flat_map(|instances| instances.iter())
         .map(Vec::as_slice)
         .collect::<Vec<_>>();
-    let projective = table.commit_batch(params, &instances);
+    let projective = if items.len() <= 2 {
+        table.commit_batch(params, &instances)
+    } else {
+        table.commit_batch_parallel(params, &instances)
+    };
     let mut affine = vec![C::identity(); projective.len()];
     C::Curve::batch_normalize_vartime(&projective, &mut affine);
     let mut affine = affine.into_iter();

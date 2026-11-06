@@ -592,6 +592,29 @@ mod tests {
                 let mut invalid = super::BatchVerifier::new();
                 invalid.add_proof(invalid_instances, proof.clone());
                 assert!(!invalid.finalize(&params, pk.get_vk()));
+                for count in [3, 16, 128] {
+                    let mut batch = super::BatchVerifier::new();
+                    for _ in 0..count {
+                        batch.add_proof(owned_instances.clone(), proof.clone());
+                    }
+                    assert!(batch.finalize(&params, pk.get_vk()));
+                    for corrupt_proof in [false, true] {
+                        let mut batch = super::BatchVerifier::new();
+                        for index in 0..count {
+                            let mut inputs = owned_instances.clone();
+                            let mut bytes = proof.clone();
+                            if index == count - 1 {
+                                if corrupt_proof {
+                                    bytes.truncate(bytes.len() / 2);
+                                } else {
+                                    inputs[0][0][0] += Fp::ONE;
+                                }
+                            }
+                            batch.add_proof(inputs, bytes);
+                        }
+                        assert!(!batch.finalize(&params, pk.get_vk()));
+                    }
+                }
             };
             check();
             #[cfg(feature = "multicore")]

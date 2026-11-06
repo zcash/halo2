@@ -1,6 +1,8 @@
 use ff::{Field, FromUniformBytes};
 use group::CurveAffine as _;
 use pasta_curves::{EpAffine, EqAffine, Fp, Fq};
+use rand::rngs::SysRng;
+use rand_core::{Rng, UnwrapErr};
 
 use super::{
     compute_batch_instance_commitments, signed_fixed_window_digit, signed_instance_window_count,
@@ -166,6 +168,43 @@ fn fixed_window_instance_commitments_handle_exceptional_points() {
                     assert_eq!(commitment, expected);
                     assert_eq!(table.commit(&params, instance), expected);
                 }
+            }
+        }};
+    }
+
+    check_curve!(EqAffine, Fp);
+    check_curve!(EpAffine, Fq);
+}
+
+#[test]
+fn parallel_instance_commitments_match_serial_batches() {
+    macro_rules! check_curve {
+        ($curve:ty, $scalar:ty) => {{
+            let params = Params::<$curve>::new(7);
+            let table = InstanceFixedWindowTable::new(&params, MAX_CACHED_INSTANCE_ROWS);
+            let mut rng = UnwrapErr(SysRng);
+            let batch_sizes = [0, 1, 2, 3, 16, 128]
+                .into_iter()
+                .chain((0..8).map(|_| usize::try_from(rng.next_u32() % 129).unwrap()))
+                .collect::<Vec<_>>();
+            for proof_count in batch_sizes {
+                let instances = (0..proof_count * 2)
+                    .map(|column| {
+                        let len = [0, 1, 9, 64, 65, 127][column % 6];
+                        (0..len)
+                            .map(|row| match (column + row) % 5 {
+                                0 => <$scalar>::ZERO,
+                                1 => <$scalar>::ONE,
+                                2 => -<$scalar>::ONE,
+                                _ => <$scalar>::random(&mut rng),
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .collect::<Vec<_>>();
+                let slices = instances.iter().map(Vec::as_slice).collect::<Vec<_>>();
+                let serial = table.commit_batch(&params, &slices);
+                let parallel = table.commit_batch_parallel(&params, &slices);
+                assert_eq!(parallel, serial, "{proof_count} proofs");
             }
         }};
     }

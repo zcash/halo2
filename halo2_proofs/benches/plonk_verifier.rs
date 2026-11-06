@@ -166,9 +166,9 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     #[cfg(feature = "batch")]
     {
-        let case = create_verification_case(&params, &pk, 1);
+        let case = create_verification_case(&params, &pk, 2);
         let mut group = c.benchmark_group("plonk-verifier-batch");
-        for proof_count in [1, 8, 64] {
+        for proof_count in [1, 2, 16, 64, 128] {
             group.bench_function(BenchmarkId::new("proofs", proof_count), |b| {
                 b.iter_batched(
                     || {

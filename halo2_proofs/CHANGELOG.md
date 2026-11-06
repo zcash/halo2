@@ -23,6 +23,9 @@ and this project adheres to Rust's notion of
   parameters and evaluates public instance columns in lockstep across proofs.
   Larger columns retain the generic MSM path; parameter serialization and
   transcript commitments are unchanged.
+- Batch verification distributes instance commitments for more than two proofs
+  across bounded chunks of the existing worker pool. Small batches, single-worker
+  pools, and builds without `multicore` retain serial evaluation.
 
 ## [0.4.1] - 2026-10-26
 ### Changed
