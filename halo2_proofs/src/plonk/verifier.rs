@@ -66,23 +66,23 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifie
     }
 }
 
-fn validate_instances<C: CurveAffine>(
+fn validate_instances<C: CurveAffine, I: AsRef<[S]>, S: AsRef<[C::Scalar]>>(
     params: &Params<C>,
     vk: &VerifyingKey<C>,
-    instances: &[&[&[C::Scalar]]],
+    instances: &[I],
 ) -> Result<(), Error> {
-    if instances
-        .iter()
-        .any(|instances| instances.len() != vk.cs.num_instance_columns)
-    {
-        return Err(Error::InvalidInstances);
+    // Check that instances matches the expected number of instance columns
+    for instances in instances.iter() {
+        if instances.as_ref().len() != vk.cs.num_instance_columns {
+            return Err(Error::InvalidInstances);
+        }
     }
 
     let max_instance_len = params.n as usize - (vk.cs.blinding_factors() + 1);
     if instances
         .iter()
-        .flat_map(|instance| instance.iter())
-        .any(|instance| instance.len() > max_instance_len)
+        .flat_map(|instance| instance.as_ref().iter())
+        .any(|instance| instance.as_ref().len() > max_instance_len)
     {
         return Err(Error::InstanceTooLarge);
     }
@@ -113,7 +113,7 @@ fn compute_instance_commitments<C: CurveAffine>(
                     })
                     .collect::<Vec<_>>()
             })
-            .collect()
+            .collect::<Vec<_>>()
     } else {
         let instance_commitments_projective = instances
             .iter()
@@ -134,7 +134,7 @@ fn compute_instance_commitments<C: CurveAffine>(
                     .take(instance.len())
                     .collect::<Vec<_>>()
             })
-            .collect();
+            .collect::<Vec<_>>();
         assert!(normalized_commitments.next().is_none());
         instance_commitments
     }
@@ -156,16 +156,11 @@ pub fn verify_proof<
 ) -> Result<V::Output, Error> {
     validate_instances(params, vk, instances)?;
     let instance_commitments = compute_instance_commitments(params, instances);
-    verify_proof_with_instance_commitments(
-        params,
-        vk,
-        strategy,
-        instances,
-        instance_commitments,
-        transcript,
-    )
+    verify_proof_with_instance_commitments(params, vk, strategy, instance_commitments, transcript)
 }
 
+// The callers validate instance shapes before computing these commitments.
+// Their nested order is the transcript's circuit/column order.
 fn verify_proof_with_instance_commitments<
     'params,
     C: CurveAffine,
@@ -176,18 +171,9 @@ fn verify_proof_with_instance_commitments<
     params: &'params Params<C>,
     vk: &VerifyingKey<C>,
     strategy: V,
-    instances: &[&[&[C::Scalar]]],
     instance_commitments: Vec<Vec<C>>,
     transcript: &mut T,
 ) -> Result<V::Output, Error> {
-    debug_assert_eq!(instance_commitments.len(), instances.len());
-    debug_assert!(
-        instance_commitments
-            .iter()
-            .zip(instances)
-            .all(|(commitments, instances)| commitments.len() == instances.len())
-    );
-
     let num_proofs = instance_commitments.len();
 
     // Hash verification key into transcript

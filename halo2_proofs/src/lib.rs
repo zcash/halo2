@@ -28,8 +28,3 @@ const INSTANCE_WINDOW_ENTRIES_PER_BASE: usize = 1 << (INSTANCE_WINDOW_BITS - 1);
 // one MiB while covering Orchard's ten-row instance columns.
 #[cfg(feature = "batch")]
 const MAX_CACHED_INSTANCE_ROWS: usize = 64;
-
-#[cfg(feature = "batch")]
-trait InstanceWindowTable<C: pasta_curves::arithmetic::CurveAffine> {
-    fn instance_window_table(&self, base_count: usize) -> std::sync::Arc<Vec<C>>;
-}
