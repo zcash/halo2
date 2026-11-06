@@ -12,6 +12,8 @@ and this project adheres to Rust's notion of
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms
   once before the final MSM.
+- Multiopening query sets are constructed in one traversal, preserving transcript
+  order, duplicate rejection, and empty-query behavior.
 - Verifying keys share a compiled gate-expression plan across clones. Verification
   evaluates fixed-only subexpressions once per proof without changing the pinned
   key, transcript, or constraint fold order.
