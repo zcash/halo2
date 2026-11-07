@@ -14,10 +14,25 @@ minor version bump.
 `halo2_proofs` currently uses [rayon](https://github.com/rayon-rs/rayon) for parallel
 computation. The `RAYON_NUM_THREADS` environment variable can be used to set the number of
 threads.
+The `"multicore"` feature also enables parallel Pasta curve multi-scalar multiplication.
 
 You can disable `rayon` by disabling the `"multicore"` feature.
 Warning! Halo2 will lose access to parallelism if you disable the `"multicore"` feature.
 This will significantly degrade performance.
+
+## Multi-scalar multiplication
+
+Verifier MSM evaluation and public instance commitments try the Pasta curves'
+GLV variable-time MSM backend and fall back to the generic signed-Booth
+implementation when the curve or input size is not supported. Witness-bearing
+prover commitments and IPA operations retain `arithmetic::best_multiexp`'s
+existing implementation. Ordinary scalar multiplication is unchanged.
+
+The `msm` Criterion benchmark compares the generic and hooked paths for Pallas and
+Vesta at verifier sizes of 1, 2, 8, 16, 32 and 64 terms, and at 2048 terms for
+Orchard-sized workloads. Run `cargo bench -p halo2_proofs --bench msm`; use
+`RAYON_NUM_THREADS=1` or `--no-default-features` to compare single-worker or
+non-multicore configurations.
 
 ## License
 
