@@ -397,6 +397,74 @@ fn prepared_instance_commitments_match_original_arithmetic() {
 }
 
 #[test]
+fn shared_anchor_commitments_match_unshared_prepared_sums() {
+    macro_rules! check_curve {
+        ($curve:ty, $scalar:ty) => {{
+            let mut rng = UnwrapErr(SysRng);
+            for threads in [1, 3, 8] {
+                let pool = maybe_rayon::ThreadPoolBuilder::new()
+                    .num_threads(threads)
+                    .build()
+                    .unwrap();
+                for exceptional in [false, true] {
+                    let mut params = Params::<$curve>::new(4);
+                    if exceptional {
+                        params.g_lagrange[0] = <$curve>::identity();
+                    }
+                    let table = params.glv_instance_table().unwrap();
+                    for pattern in 0..4 {
+                        let instances = (0u64..33)
+                            .map(|column| {
+                                let mut instance = (0..crate::PREPARED_INSTANCE_DENSE_ROWS)
+                                    .map(|_| <$scalar>::random(&mut rng))
+                                    .collect::<Vec<_>>();
+                                instance[0] = match pattern {
+                                    0 => <$scalar>::from(column + 1),
+                                    1 => -<$scalar>::ONE,
+                                    2 => match column % 3 {
+                                        0 => <$scalar>::ZERO,
+                                        1 => <$scalar>::ONE,
+                                        _ => <$scalar>::from(column + 100),
+                                    },
+                                    _ => <$scalar>::from(column / 2),
+                                };
+                                instance.extend((0..crate::PREPARED_INSTANCE_BOOLEAN_ROWS).map(
+                                    |flag| {
+                                        if column & (1 << flag) == 0 {
+                                            <$scalar>::ZERO
+                                        } else {
+                                            <$scalar>::ONE
+                                        }
+                                    },
+                                ));
+                                instance
+                            })
+                            .collect::<Vec<_>>();
+                        let slices = instances.iter().map(Vec::as_slice).collect::<Vec<_>>();
+                        let dense = slices
+                            .iter()
+                            .map(|column| &column[..crate::PREPARED_INSTANCE_DENSE_ROWS])
+                            .collect::<Vec<_>>();
+                        let mut unshared = table.dense.sum_batch_vartime(&dense);
+                        for (sum, column) in unshared.iter_mut().zip(&slices) {
+                            *sum = table.offsets[crate::instance_flag_mask(column).unwrap()] + *sum;
+                        }
+                        for count in [1, 2, 3, 8, 17, 33] {
+                            let shared = pool.install(|| {
+                                commit_glv_instances(&params, &slices[..count]).unwrap()
+                            });
+                            assert_eq!(shared, unshared[..count]);
+                        }
+                    }
+                }
+            }
+        }};
+    }
+    check_curve!(EqAffine, Fp);
+    check_curve!(EpAffine, Fq);
+}
+
+#[test]
 fn prepared_instances_decline_undersized_parameters() {
     let params = Params::<EqAffine>::new(3);
     assert!(params.glv_instance_table().is_none());

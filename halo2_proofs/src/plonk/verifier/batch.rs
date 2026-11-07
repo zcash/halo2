@@ -346,93 +346,57 @@ fn commit_glv_instances<C: CurveAffine>(
             .map(|chunk| {
                 let start = chunk * chunk_len;
                 let end = (start + chunk_len).min(instances.len());
-                let columns = &instances[start..end];
-                let (shared, shared_values) = shared_first_rows(columns);
-                // A column whose first row is shared leaves it out of its own
-                // sum (the shared term is added below), so only those columns'
-                // dense rows are copied, with the first row zeroed. The other
-                // columns are read in place.
-                let zeroed = columns
+                let mut dense = instances[start..end]
                     .iter()
-                    .zip(&shared)
-                    .filter(|(_, shared)| shared.is_some())
-                    .map(|(column, _)| {
-                        let mut rows: [C::Scalar; PREPARED_INSTANCE_DENSE_ROWS] = column
-                            [..PREPARED_INSTANCE_DENSE_ROWS]
-                            .try_into()
-                            .expect("checked column length");
-                        rows[0] = C::Scalar::ZERO;
-                        rows
-                    })
+                    .map(|column| &column[..PREPARED_INSTANCE_DENSE_ROWS])
                     .collect::<Vec<_>>();
-                let mut zeroed = zeroed.iter();
-                // One batched call per chunk: the dense sums and the shared
-                // first-row terms share their affine reduction and its
-                // inversions. A one-scalar sum touches only the first base.
-                let dense = columns
+                // Row zero is a public anchor. Group by canonical encoding so
+                // only repeated anchors need copied columns and an add-back.
+                let mut anchors = dense
                     .iter()
-                    .zip(&shared)
-                    .map(|(column, shared)| match shared {
-                        Some(_) => &zeroed.next().expect("one copy per shared column")[..],
-                        None => &column[..PREPARED_INSTANCE_DENSE_ROWS],
-                    })
-                    .chain(shared_values.iter().map(core::slice::from_ref))
+                    .enumerate()
+                    .map(|(index, column)| (column[0].to_repr(), index))
                     .collect::<Vec<_>>();
-                let sums = table.dense.sum_batch_vartime(&dense);
-                assert_eq!(sums.len(), dense.len(), "one prepared sum per column");
-                let (sums, shared_terms) = sums.split_at(columns.len());
-                sums.iter()
-                    .zip(&masks[start..end])
-                    .zip(&shared)
-                    .map(|((sum, &mask), shared)| {
-                        let commitment = table.offsets[mask] + sum;
-                        match shared {
-                            Some(index) => commitment + shared_terms[*index],
-                            None => commitment,
+                anchors.sort_unstable_by(|a, b| a.0.as_ref().cmp(b.0.as_ref()));
+                let mut shared = Vec::new();
+                let mut repeated = Vec::new();
+                for group in anchors.chunk_by(|a, b| a.0.as_ref() == b.0.as_ref()) {
+                    if group.len() > 1 {
+                        let shared_index = shared.len();
+                        shared.push([dense[group[0].1][0]]);
+                        for &(_, index) in group {
+                            let mut column: [C::Scalar; PREPARED_INSTANCE_DENSE_ROWS] = dense
+                                [index]
+                                .try_into()
+                                .expect("prepared columns have exactly seven dense rows");
+                            column[0] = C::Scalar::ZERO;
+                            repeated.push((index, shared_index, column));
                         }
-                    })
-                    .collect::<Vec<_>>()
+                    }
+                }
+                for (index, _, column) in &repeated {
+                    dense[*index] = column.as_slice();
+                }
+                // Evaluate the shared terms in the same affine reduction as
+                // the remaining rows; omitted trailing scalars are zero.
+                dense.extend(shared.iter().map(|anchor| anchor.as_slice()));
+                let mut sums = table.dense.sum_batch_vartime(&dense);
+                assert_eq!(sums.len(), dense.len(), "one prepared sum per column");
+                let column_count = end - start;
+                for (index, shared_index, _) in &repeated {
+                    sums[*index] = sums[*index] + sums[column_count + *shared_index];
+                }
+                sums.truncate(column_count);
+                for (sum, &mask) in sums.iter_mut().zip(&masks[start..end]) {
+                    *sum = table.offsets[mask] + *sum;
+                }
+                sums
             })
             .collect::<Vec<_>>()
             .into_iter()
             .flatten()
             .collect(),
     )
-}
-
-/// Finds the first-row values that two or more of `columns` repeat.
-///
-/// In Orchard's instance shape the first row is the anchor: every Action of a
-/// bundle commits the same one, and bundles built against the same tree state
-/// share it too, so its term $[v] L_0$ is evaluated once per repeated value.
-/// Returns, per column, the index of its value in the returned repeated
-/// values, or `None` for a value that appears only once (which stays in that
-/// column's own sum).
-///
-/// Each worker groups only its own chunk of columns. Grouping the whole batch
-/// first would put a serial pass and a second parallel stage ahead of the
-/// column sums, which costs more than a pair of columns saves on a wide pool.
-fn shared_first_rows<F: PrimeField>(columns: &[&[F]]) -> (Vec<Option<usize>>, Vec<F>) {
-    let mut shared = vec![None; columns.len()];
-    let mut values = Vec::new();
-    if columns.len() < 2 {
-        return (shared, values);
-    }
-    let reprs = columns
-        .iter()
-        .map(|column| column[0].to_repr())
-        .collect::<Vec<_>>();
-    let mut order = (0..columns.len()).collect::<Vec<_>>();
-    order.sort_unstable_by(|&a, &b| reprs[a].as_ref().cmp(reprs[b].as_ref()));
-    for run in order.chunk_by(|&a, &b| reprs[a].as_ref() == reprs[b].as_ref()) {
-        if let [first, _, ..] = run {
-            for &column in run {
-                shared[column] = Some(values.len());
-            }
-            values.push(columns[*first][0]);
-        }
-    }
-    (shared, values)
 }
 
 /// A verifier that checks multiple proofs in a batch. **This requires the
