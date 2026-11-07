@@ -18,3 +18,9 @@ pub mod transcript;
 
 pub mod dev;
 mod helpers;
+
+/// Maximum contiguous point runs recorded or retained for one proof layout.
+/// Orchard uses three runs regardless of its action count. Capping each layout
+/// bounds the 256-slot cache's range data to 128 KiB on 64-bit targets.
+#[cfg(feature = "batch")]
+const MAX_CACHED_PROOF_POINT_RUNS: usize = 32;
