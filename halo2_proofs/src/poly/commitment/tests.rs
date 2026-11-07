@@ -63,3 +63,37 @@ fn instance_window_cache_is_shared_by_clones_only() {
     );
     assert!(Arc::ptr_eq(&bounded, &cloned.instance_window_table(0)));
 }
+
+#[test]
+fn glv_instance_cache_is_shared_and_does_not_change_params() {
+    let params = Arc::new(Params::<EqAffine>::new(4));
+    let debug_before = format!("{params:?}");
+    let mut serialized_before = vec![];
+    params.write(&mut serialized_before).unwrap();
+    let tables = std::thread::scope(|scope| {
+        (0..4)
+            .map(|_| {
+                let params = Arc::clone(&params);
+                scope.spawn(move || params.glv_instance_table().unwrap())
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .map(|thread| thread.join().unwrap())
+            .collect::<Vec<_>>()
+    });
+    assert!(tables.iter().all(|table| Arc::ptr_eq(&tables[0], table)));
+    let cloned = params.as_ref().clone();
+    assert!(Arc::ptr_eq(
+        &tables[0],
+        &cloned.glv_instance_table().unwrap()
+    ));
+    assert_eq!(format!("{params:?}"), debug_before);
+    let mut serialized_after = vec![];
+    params.write(&mut serialized_after).unwrap();
+    assert_eq!(serialized_before, serialized_after);
+    let decoded = Params::<EqAffine>::read(&mut serialized_before.as_slice()).unwrap();
+    assert!(!Arc::ptr_eq(
+        &tables[0],
+        &decoded.glv_instance_table().unwrap()
+    ));
+}

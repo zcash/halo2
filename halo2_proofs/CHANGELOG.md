@@ -26,6 +26,10 @@ and this project adheres to Rust's notion of
 - Batch verification distributes instance commitments for more than two proofs
   across bounded chunks of the existing worker pool. Small batches, single-worker
   pools, and builds without `multicore` retain serial evaluation.
+- Batch verification uses reusable doubling-free sums for ten-row public instance
+  columns with seven dense values and three Boolean flags. Other shapes, flags,
+  and unsupported curves retain the generic path; default blinding, parameter
+  serialization, and transcript order are unchanged.
 
 ## [0.4.1] - 2026-10-26
 ### Changed

@@ -56,7 +56,8 @@ backtrace = { workspace = true, optional = true }
 ff.workspace = true
 group.workspace = true
 indexmap.workspace = true
-pasta_curves.workspace = true
+# Requires a pasta_curves release containing PreparedFixedBaseSum before merging.
+pasta_curves = { workspace = true, features = ["glv"] }
 rand = { workspace = true, optional = true }
 rand_core.workspace = true
 tracing.workspace = true

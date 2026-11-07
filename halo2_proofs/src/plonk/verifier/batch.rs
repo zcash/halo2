@@ -9,11 +9,13 @@ use std::sync::Arc;
 
 use super::{validate_instances, verify_proof_with_instance_commitments, VerificationStrategy};
 use crate::{
+    instance_flag_mask,
     multicore::{IntoParallelIterator, TryFoldAndReduce},
     plonk::{Error, VerifyingKey},
     poly::commitment::{Guard, Params, MSM},
     transcript::{Blake2bRead, EncodedChallenge},
     INSTANCE_WINDOW_BITS, INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS,
+    PREPARED_INSTANCE_DENSE_ROWS,
 };
 
 #[cfg(feature = "multicore")]
@@ -288,18 +290,21 @@ fn compute_batch_instance_commitments<C: CurveAffine>(
             .fold(max_cached_instance_len, usize::max);
     }
 
-    let table = InstanceFixedWindowTable::new(params, max_cached_instance_len);
+    // Build the ordinary table only when the prepared shape/backend declines.
     let instances = items
         .iter()
         .flat_map(|item| item.instances.iter())
         .flat_map(|instances| instances.iter())
         .map(Vec::as_slice)
         .collect::<Vec<_>>();
-    let projective = if items.len() <= 2 {
-        table.commit_batch(params, &instances)
-    } else {
-        table.commit_batch_parallel(params, &instances)
-    };
+    let projective = commit_glv_instances(params, &instances).unwrap_or_else(|| {
+        let table = InstanceFixedWindowTable::new(params, max_cached_instance_len);
+        if items.len() <= 2 {
+            table.commit_batch(params, &instances)
+        } else {
+            table.commit_batch_parallel(params, &instances)
+        }
+    });
     let mut affine = vec![C::identity(); projective.len()];
     C::Curve::batch_normalize_vartime(&projective, &mut affine);
     let mut affine = affine.into_iter();
@@ -315,6 +320,48 @@ fn compute_batch_instance_commitments<C: CurveAffine>(
     assert!(affine.next().is_none());
 
     Ok(commitments)
+}
+
+/// Uses the doubling-free table only when every column has Orchard's shape.
+/// Unrecognized shapes, non-Boolean flags and unsupported curves retain the
+/// generic commitment path without changing validation or blinding.
+fn commit_glv_instances<C: CurveAffine>(
+    params: &Params<C>,
+    instances: &[&[C::Scalar]],
+) -> Option<Vec<C::Curve>> {
+    if instances.is_empty() {
+        return None;
+    }
+    let masks = instances
+        .iter()
+        .map(|column| instance_flag_mask(column))
+        .collect::<Option<Vec<_>>>()?;
+    let table = params.glv_instance_table()?;
+    let chunk_len = instances
+        .len()
+        .div_ceil(crate::multicore::current_num_threads());
+    Some(
+        (0..instances.len().div_ceil(chunk_len))
+            .into_par_iter()
+            .map(|chunk| {
+                let start = chunk * chunk_len;
+                let end = (start + chunk_len).min(instances.len());
+                let dense = instances[start..end]
+                    .iter()
+                    .map(|column| &column[..PREPARED_INSTANCE_DENSE_ROWS])
+                    .collect::<Vec<_>>();
+                let mut sums = table.dense.sum_batch_vartime(&dense);
+                assert_eq!(sums.len(), dense.len(), "one prepared sum per column");
+                for (sum, &mask) in sums.iter_mut().zip(&masks[start..end]) {
+                    *sum = table.offsets[mask] + *sum;
+                }
+                sums
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
+            .collect(),
+    )
 }
 
 /// A verifier that checks multiple proofs in a batch. **This requires the

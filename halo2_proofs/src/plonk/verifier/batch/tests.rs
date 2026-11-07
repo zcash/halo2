@@ -1,12 +1,12 @@
 use ff::{Field, FromUniformBytes};
-use group::CurveAffine as _;
+use group::{Curve as _, CurveAffine as _};
 use pasta_curves::{EpAffine, EqAffine, Fp, Fq};
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
 
 use super::{
-    compute_batch_instance_commitments, signed_fixed_window_digit, signed_instance_window_count,
-    BatchItem, InstanceFixedWindowTable,
+    commit_glv_instances, compute_batch_instance_commitments, signed_fixed_window_digit,
+    signed_instance_window_count, BatchItem, InstanceFixedWindowTable,
 };
 use crate::{
     arithmetic::CurveAffine,
@@ -308,4 +308,124 @@ fn batch_instance_commitments_preserve_order_validation_and_transcript() {
         proof: vec![],
     }];
     assert!(compute_batch_instance_commitments(&params, &vk, &maximal).is_ok());
+}
+
+#[test]
+fn prepared_instance_commitments_match_original_arithmetic() {
+    macro_rules! check_curve {
+        ($curve:ty, $scalar:ty) => {{
+            let mut rng = UnwrapErr(SysRng);
+            for exceptional in [false, true] {
+                let mut params = Params::<$curve>::new(4);
+                if exceptional {
+                    let p = params.g_lagrange[0];
+                    params.g_lagrange[..7].copy_from_slice(&[
+                        <$curve>::identity(),
+                        p,
+                        -p,
+                        p,
+                        p,
+                        -p,
+                        <$curve>::identity(),
+                    ]);
+                    params.w = <$curve>::identity();
+                }
+                let instances = (0..32)
+                    .map(|column| {
+                        let mut instance = (0..crate::PREPARED_INSTANCE_DENSE_ROWS)
+                            .map(|row| match (column + row) % 6 {
+                                0 => <$scalar>::ZERO,
+                                1 => <$scalar>::ONE,
+                                2 => -<$scalar>::ONE,
+                                3 => <$scalar as ff::PrimeField>::from_u128(u128::MAX),
+                                _ => <$scalar>::random(&mut rng),
+                            })
+                            .collect::<Vec<_>>();
+                        instance.extend((0..crate::PREPARED_INSTANCE_BOOLEAN_ROWS).map(|flag| {
+                            if column & (1 << flag) == 0 {
+                                <$scalar>::ZERO
+                            } else {
+                                <$scalar>::ONE
+                            }
+                        }));
+                        instance
+                    })
+                    .collect::<Vec<_>>();
+                let slices = instances.iter().map(Vec::as_slice).collect::<Vec<_>>();
+                let ordinary =
+                    InstanceFixedWindowTable::new(&params, crate::PREPARED_INSTANCE_ROWS);
+                let domain = EvaluationDomain::new(1, 4);
+                for count in [1, 2, 3, 8, 17, instances.len()] {
+                    let prepared = commit_glv_instances(&params, &slices[..count]).unwrap();
+                    assert_eq!(prepared, ordinary.commit_batch(&params, &slices[..count]));
+                    for (instance, commitment) in instances.iter().zip(prepared) {
+                        let original = instance
+                            .iter()
+                            .zip(&params.g_lagrange)
+                            .fold(params.w.to_curve(), |sum, (scalar, base)| {
+                                sum + *base * scalar
+                            });
+                        assert_eq!(commitment, original);
+                        assert_eq!(commitment, params.commit_lagrange_instance(instance));
+                        let mut padded = domain.empty_lagrange();
+                        for (coefficient, value) in padded.iter_mut().zip(instance) {
+                            *coefficient = *value;
+                        }
+                        assert_eq!(
+                            commitment,
+                            params.commit_lagrange(&padded, Blind::default())
+                        );
+                    }
+                }
+                assert!(commit_glv_instances(&params, &[]).is_none());
+                for len in [0, 7, 9, 11, 16] {
+                    let invalid_shape = vec![<$scalar>::ZERO; len];
+                    assert!(commit_glv_instances(&params, &[&invalid_shape]).is_none());
+                }
+                for flag in 0..crate::PREPARED_INSTANCE_BOOLEAN_ROWS {
+                    for invalid in [<$scalar>::from(2), -<$scalar>::ONE] {
+                        let mut column = instances[0].clone();
+                        column[crate::PREPARED_INSTANCE_DENSE_ROWS + flag] = invalid;
+                        assert!(commit_glv_instances(&params, &[&instances[0], &column]).is_none());
+                    }
+                }
+            }
+        }};
+    }
+    check_curve!(EqAffine, Fp);
+    check_curve!(EpAffine, Fq);
+}
+
+#[test]
+fn prepared_instances_decline_undersized_parameters() {
+    let params = Params::<EqAffine>::new(3);
+    assert!(params.glv_instance_table().is_none());
+}
+
+#[test]
+fn prepared_and_fallback_batch_commitments_preserve_values() {
+    let params = Params::<EqAffine>::new(5);
+    let vk = keygen_vk(&params, &TwoInstanceColumns).unwrap();
+    for second_len in [9, 10, 11] {
+        for flag in [Fp::ZERO, Fp::ONE, Fp::from(2), -Fp::ONE] {
+            let mut first = vec![-Fp::ONE; crate::PREPARED_INSTANCE_DENSE_ROWS];
+            first.extend([Fp::ONE, Fp::ZERO, Fp::ONE]);
+            let mut second = vec![Fp::ZERO; second_len];
+            second[crate::PREPARED_INSTANCE_DENSE_ROWS] = flag;
+            let items = vec![BatchItem {
+                instances: vec![vec![first, second]],
+                proof: vec![],
+            }];
+            let commitments = compute_batch_instance_commitments(&params, &vk, &items).unwrap();
+            for (column, commitment) in items[0].instances[0].iter().zip(&commitments[0][0]) {
+                let original = column
+                    .iter()
+                    .zip(&params.g_lagrange)
+                    .fold(params.w.to_curve(), |sum, (scalar, base)| {
+                        sum + *base * scalar
+                    });
+                assert_eq!(*commitment, original.to_affine());
+            }
+        }
+    }
 }

@@ -7,11 +7,14 @@ use super::{Coeff, LagrangeCoeff, Polynomial};
 use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, CurveExt};
 use crate::helpers::CurveRead;
 #[cfg(feature = "batch")]
-use crate::{INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS};
+use crate::{
+    GlvInstanceTable, INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS,
+    PREPARED_INSTANCE_DENSE_ROWS, PREPARED_INSTANCE_OFFSETS, PREPARED_INSTANCE_ROWS,
+};
 #[cfg(feature = "batch")]
 use std::{
     fmt,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, OnceLock},
 };
 
 use ff::{Field, PrimeField};
@@ -42,6 +45,8 @@ pub struct Params<C: CurveAffine> {
     pub(crate) u: C,
     #[cfg(feature = "batch")]
     instance_window_cache: InstanceWindowCache<C>,
+    #[cfg(feature = "batch")]
+    glv_instance_cache: Arc<OnceLock<Option<Arc<GlvInstanceTable<C>>>>>,
 }
 
 #[cfg(feature = "batch")]
@@ -115,6 +120,31 @@ impl<C: CurveAffine> Params<C> {
             C::Curve::batch_normalize_vartime(&projective, &mut affine);
             affine
         })
+    }
+
+    pub(crate) fn glv_instance_table(&self) -> Option<Arc<GlvInstanceTable<C>>> {
+        self.glv_instance_cache
+            .get_or_init(|| {
+                if self.g_lagrange.len() < PREPARED_INSTANCE_ROWS {
+                    return None;
+                }
+                let dense = C::CurveExt::try_prepare_fixed_base_sum(
+                    &self.g_lagrange[..PREPARED_INSTANCE_DENSE_ROWS],
+                )?;
+                // Instance commitments use Blind::default(), whose scalar is one.
+                let offsets = std::array::from_fn::<_, PREPARED_INSTANCE_OFFSETS, _>(|mask| {
+                    self.g_lagrange[PREPARED_INSTANCE_DENSE_ROWS..PREPARED_INSTANCE_ROWS]
+                        .iter()
+                        .enumerate()
+                        .filter(|(flag, _)| mask & (1 << flag) != 0)
+                        .fold(C::Curve::from(self.w), |sum, (_, base)| sum + *base)
+                });
+                Some(Arc::new(GlvInstanceTable {
+                    dense: core::panic::AssertUnwindSafe(dense),
+                    offsets,
+                }))
+            })
+            .clone()
     }
 }
 
@@ -198,6 +228,8 @@ impl<C: CurveAffine> Params<C> {
             u,
             #[cfg(feature = "batch")]
             instance_window_cache: InstanceWindowCache::default(),
+            #[cfg(feature = "batch")]
+            glv_instance_cache: Arc::new(OnceLock::new()),
         }
     }
 
@@ -313,6 +345,8 @@ impl<C: CurveAffine> Params<C> {
             u,
             #[cfg(feature = "batch")]
             instance_window_cache: InstanceWindowCache::default(),
+            #[cfg(feature = "batch")]
+            glv_instance_cache: Arc::new(OnceLock::new()),
         })
     }
 }
