@@ -6,6 +6,11 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- Verifier MSM evaluation and public instance commitments try the curve's
+  variable-time MSM hook before the generic signed-Booth implementation. Pasta's
+  GLV backend is enabled, with parallel evaluation controlled by `multicore`.
+  Witness-bearing prover MSMs retain the existing implementation.
 
 ## [0.4.1] - 2026-10-26
 ### Changed
