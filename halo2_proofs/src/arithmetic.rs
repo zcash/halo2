@@ -187,6 +187,16 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
     acc
 }
 
+/// Multiscalar multiplication for public scalars and bases.
+///
+/// This variable-time entry point tries the curve-specific backend before the
+/// generic implementation. Witness-bearing prover operations must continue to
+/// use `best_multiexp` instead.
+pub(crate) fn best_multiexp_public<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
+    assert_eq!(coeffs.len(), bases.len());
+    C::CurveExt::try_multiexp_vartime(coeffs, bases).unwrap_or_else(|| best_multiexp(coeffs, bases))
+}
+
 /// Performs a multi-exponentiation operation.
 ///
 /// This function will panic if coeffs and bases have a different length.
@@ -513,6 +523,7 @@ fn assert_multiexp_matches_naive<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[
         .fold(C::Curve::identity(), |acc, val| acc + val);
 
     assert_eq!(best_multiexp(coeffs, bases), expected);
+    tests::assert_public_multiexp_matches_naive(coeffs, bases, expected);
 }
 
 #[cfg(test)]
@@ -560,6 +571,9 @@ fn test_multiexp() {
         assert_multiexp_matches_naive(&coeffs, &bases);
     }
 }
+
+#[cfg(test)]
+mod tests;
 
 #[test]
 fn test_booth_digit_boundaries() {

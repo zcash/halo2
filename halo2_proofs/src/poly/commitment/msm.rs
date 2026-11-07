@@ -1,5 +1,5 @@
 use super::Params;
-use crate::arithmetic::{best_multiexp, CurveAffine};
+use crate::arithmetic::{best_multiexp_public, CurveAffine};
 use ff::{Field, PrimeField};
 use group::Group;
 
@@ -241,7 +241,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         self.u_scalar = self.u_scalar.map(|a| a * &factor);
     }
 
-    /// Perform multiexp and check that it results in zero
+    /// Perform variable-time multiexp on public inputs and check that it results in zero.
     pub fn eval(mut self) -> bool {
         if !self.batched_other.is_empty() {
             self.batched_other
@@ -283,7 +283,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
         assert_eq!(scalars.len(), len);
 
-        bool::from(best_multiexp(&scalars, &bases).is_identity())
+        bool::from(best_multiexp_public(&scalars, &bases).is_identity())
     }
 
     /// Exposes the same terms evaluated by [`Self::eval`], with buffered batch

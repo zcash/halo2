@@ -4,7 +4,9 @@
 //! [halo]: https://eprint.iacr.org/2019/1021
 
 use super::{Coeff, LagrangeCoeff, Polynomial};
-use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, CurveExt};
+use crate::arithmetic::{
+    best_fft, best_multiexp, best_multiexp_public, parallelize, CurveAffine, CurveExt,
+};
 use crate::helpers::CurveRead;
 
 use ff::{Field, PrimeField};
@@ -168,7 +170,7 @@ impl<C: CurveAffine> Params<C> {
         tmp_bases.extend(&self.g_lagrange[..instance.len()]);
         tmp_bases.push(self.w);
 
-        best_multiexp::<C>(&tmp_scalars, &tmp_bases)
+        best_multiexp_public::<C>(&tmp_scalars, &tmp_bases)
     }
 
     /// Generates an empty multiscalar multiplication struct using the

@@ -79,7 +79,7 @@ rand.workspace = true
 
 [features]
 default = ["batch", "multicore"]
-multicore = ["maybe-rayon/threads"]
+multicore = ["maybe-rayon/threads", "pasta_curves/multicore"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",

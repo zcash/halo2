@@ -6,8 +6,11 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
 ### Changed
+- Verifier MSM evaluation and public instance commitments try the curve's
+  variable-time MSM hook before the generic signed-Booth implementation. Pasta's
+  GLV backend is enabled, with parallel evaluation controlled by `multicore`.
+  Witness-bearing prover MSMs retain the existing implementation.
 - Verification batches multi-opening denominators into one inversion and avoids
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms
