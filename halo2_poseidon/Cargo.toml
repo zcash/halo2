@@ -20,5 +20,8 @@ ff.workspace = true
 group.workspace = true
 pasta_curves.workspace = true
 
+[lib]
+bench = false
+
 [features]
 test-dependencies = []
