@@ -12,6 +12,30 @@ and this project adheres to Rust's notion of
   GLV backend is enabled, with parallel evaluation controlled by `multicore`.
   Witness-bearing prover MSMs retain the existing implementation.
 
+### Changed
+- Verification batches multi-opening denominators into one inversion and avoids
+  redundant IPA coefficient and MSM allocations. Batch verification applies
+  random weights during coefficient generation and coalesces commitment terms
+  once before the final MSM.
+- Multiopening query sets are constructed in one traversal, preserving transcript
+  order, duplicate rejection, and empty-query behavior.
+- Evaluation-domain rotations specialize 0, 1, -1, and -6, caching the sixth power
+  of the domain's inverse root while retaining arbitrary signed rotations.
+- Verifying keys share a compiled gate-expression plan across clones. Verification
+  evaluates fixed-only subexpressions once per proof without changing the pinned
+  key, transcript, or constraint fold order.
+- Batch verification caches bounded instance-commitment window tables in the
+  parameters and evaluates public instance columns in lockstep across proofs.
+  Larger columns retain the generic MSM path; parameter serialization and
+  transcript commitments are unchanged.
+- Batch verification distributes instance commitments for more than two proofs
+  across bounded chunks of the existing worker pool. Small batches, single-worker
+  pools, and builds without `multicore` retain serial evaluation.
+- Batch verification uses reusable doubling-free sums for ten-row public instance
+  columns with seven dense values and three Boolean flags. Other shapes, flags,
+  and unsupported curves retain the generic path; default blinding, parameter
+  serialization, and transcript order are unchanged.
+
 ## [0.4.1] - 2026-10-26
 ### Changed
 - `halo2_proofs::arithmetic::best_multiexp` now uses signed Booth recoding to

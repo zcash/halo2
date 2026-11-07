@@ -3,10 +3,8 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
-
-use indexmap::IndexMap;
 
 use super::*;
 use crate::{arithmetic::CurveAffine, transcript::ChallengeScalar};
@@ -147,129 +145,88 @@ type IntermediateSets<F, Q> = (
     Vec<Vec<F>>,
 );
 
-/// Returns `None` if `queries` contains two queries with the same point and commitment,
-/// but different evaluations.
+/// A commitment with the evaluations queried for it, before its point set is known.
+type PendingCommitment<F, Q> = (
+    <Q as Query<F>>::Commitment,
+    CommitmentData<<Q as Query<F>>::Eval, ()>,
+);
+
+/// Returns `None` if `queries` contains the same point and commitment more than once.
 fn construct_intermediate_sets<F: Field + Ord, I, Q: Query<F>>(
     queries: I,
 ) -> Option<IntermediateSets<F, Q>>
 where
     I: IntoIterator<Item = Q> + Clone,
 {
-    // Construct sets of unique commitments and corresponding information about
-    // their queries.
-    let mut commitment_map: IndexMap<Q::Commitment, CommitmentData<Option<Q::Eval>, ()>> =
-        IndexMap::new();
+    // First-seen commitment order feeds the transcript and must be deterministic.
+    // Keep a side index so batched proofs do not require linear commitment lookups.
+    let mut commitment_map: Vec<PendingCommitment<F, Q>> = Vec::new();
+    let mut commitment_indices: HashMap<Q::Commitment, usize> = HashMap::new();
 
-    // Also construct mapping from a unique point to a point_index. This defines
-    // an ordering on the points.
+    // Assign point indices in first-seen order.
     let mut point_index_map = BTreeMap::new();
+    let mut points = Vec::new();
 
-    // Iterate over all of the queries, computing the ordering of the points
-    // while also creating new commitment data.
-    for query in queries.clone() {
-        let num_points = point_index_map.len();
-        let point_idx = point_index_map
-            .entry(query.get_point())
-            .or_insert(num_points);
-
-        commitment_map
-            .entry(query.get_commitment())
-            .or_insert_with(|| CommitmentData::new(()))
-            .point_indices
-            .push(*point_idx);
-    }
-
-    // Also construct inverse mapping from point_index to the point
-    let mut inverse_point_index_map = BTreeMap::new();
-    for (&point, &point_index) in point_index_map.iter() {
-        inverse_point_index_map.insert(point_index, point);
-    }
-
-    // Construct map of unique ordered point_idx_sets to their set_idx
-    let mut point_idx_sets = BTreeMap::new();
-    // Also construct mapping from commitment to point_idx_set
-    let mut commitment_set_map = IndexMap::new();
-
-    for (commitment, commitment_data) in commitment_map.iter_mut() {
-        let mut point_index_set = BTreeSet::new();
-        // Note that point_index_set is ordered, unlike point_indices
-        for &point_index in commitment_data.point_indices.iter() {
-            point_index_set.insert(point_index);
-        }
-        let len = point_index_set.len();
-
-        // Push point_index_set to CommitmentData for the relevant commitment
-        commitment_set_map.insert(*commitment, point_index_set.clone());
-
-        let num_sets = point_idx_sets.len();
-        point_idx_sets.entry(point_index_set).or_insert(num_sets);
-
-        // Initialise empty evals vec for each unique commitment
-        commitment_data.evals = vec![None; len];
-    }
-
-    // Populate set_index, evals and points for each commitment using point_idx_sets
+    // Collect evaluations while traversing the query iterator only once.
     for query in queries {
-        // An entry for every query's commitment was added to `commitment_map` the first
-        // time we iterated through `queries`.
-        let commitment_data = commitment_map
-            .get_mut(&query.get_commitment())
-            .expect("present by construction");
+        let point = query.get_point();
+        let point_idx = *point_index_map.entry(point).or_insert_with(|| {
+            let point_idx = points.len();
+            points.push(point);
+            point_idx
+        });
 
-        // The index of the point at which the commitment is queried
-        let point_index = point_index_map.get(&query.get_point()).unwrap();
-
-        // The point_index_set at which the commitment was queried
-        let point_index_set = commitment_set_map
-            .get(&query.get_commitment())
-            .expect("present by construction");
-
-        // The set_index of the point_index_set
-        let set_index = point_idx_sets.get(point_index_set).unwrap();
-        commitment_data.set_index = *set_index;
-        let point_index_set: Vec<usize> = point_index_set.iter().cloned().collect();
-
-        // The offset of the point_index in the point_index_set
-        let point_index_in_set = point_index_set
-            .iter()
-            .position(|i| i == point_index)
-            .unwrap();
-
-        // Insert the eval using the ordering of the point_index_set
-        let eval = commitment_data
-            .evals
-            .get_mut(point_index_in_set)
-            .expect("valid index");
-        if eval.is_none() {
-            *eval = Some(query.get_eval());
-        } else {
-            // Caller tried to provide two different evaluations for the same
-            // commitment. Permitting this would be unsound.
+        let commitment = query.get_commitment();
+        let commitment_idx = *commitment_indices.entry(commitment).or_insert_with(|| {
+            commitment_map.push((commitment, CommitmentData::new(())));
+            commitment_map.len() - 1
+        });
+        let commitment_data = &mut commitment_map[commitment_idx].1;
+        if commitment_data.point_indices.contains(&point_idx) {
+            // Reject duplicate queries even when their evaluations agree.
             return None;
         }
+        commitment_data.point_indices.push(point_idx);
+        commitment_data.evals.push(query.get_eval());
     }
+
+    // Number unique point-index sets in first-seen commitment order.
+    let mut point_idx_sets = BTreeMap::new();
 
     let commitment_map = commitment_map
         .into_iter()
-        .map(|(commitment, commitment_data)| CommitmentData {
-            commitment,
-            set_index: commitment_data.set_index,
-            point_indices: commitment_data.point_indices,
-            evals: commitment_data
-                .evals
-                .into_iter()
-                .map(|eval| eval.expect("logic ensures all evals are set"))
-                .collect(),
+        .map(|(commitment, commitment_data)| {
+            let mut indexed_evals = commitment_data
+                .point_indices
+                .iter()
+                .copied()
+                .zip(commitment_data.evals)
+                .collect::<Vec<_>>();
+            indexed_evals.sort_unstable_by_key(|(point_idx, _)| *point_idx);
+
+            let point_idx_set = indexed_evals
+                .iter()
+                .map(|(point_idx, _)| *point_idx)
+                .collect::<Vec<_>>();
+            let num_sets = point_idx_sets.len();
+            let set_index = *point_idx_sets.entry(point_idx_set).or_insert(num_sets);
+
+            CommitmentData {
+                commitment,
+                set_index,
+                point_indices: commitment_data.point_indices,
+                evals: indexed_evals.into_iter().map(|(_, eval)| eval).collect(),
+            }
         })
         .collect();
 
-    // Get actual points in each point set
+    // Get actual points in each point set, sorted by global point index.
     let mut point_sets: Vec<Vec<F>> = vec![Vec::new(); point_idx_sets.len()];
-    for (point_idx_set, &set_idx) in point_idx_sets.iter() {
-        for &point_idx in point_idx_set.iter() {
-            let point = inverse_point_index_map.get(&point_idx).unwrap();
-            point_sets[set_idx].push(*point);
-        }
+    for (point_idx_set, set_idx) in point_idx_sets {
+        point_sets[set_idx] = point_idx_set
+            .into_iter()
+            .map(|point_idx| points[point_idx])
+            .collect();
     }
 
     Some((commitment_map, point_sets))
@@ -483,121 +440,4 @@ fn test_identical_queries() {
 }
 
 #[cfg(test)]
-mod proptests {
-    use group::ff::FromUniformBytes;
-    use proptest::{
-        collection::{hash_set, vec},
-        prelude::*,
-        sample::select,
-    };
-
-    use super::construct_intermediate_sets;
-    use pasta_curves::Fp;
-
-    use std::convert::TryFrom;
-
-    #[derive(Debug, Clone)]
-    struct MyQuery<F> {
-        point: F,
-        eval: F,
-        commitment: usize,
-    }
-
-    impl super::Query<Fp> for MyQuery<Fp> {
-        type Commitment = usize;
-        type Eval = Fp;
-
-        fn get_point(&self) -> Fp {
-            self.point
-        }
-
-        fn get_eval(&self) -> Self::Eval {
-            self.eval
-        }
-
-        fn get_commitment(&self) -> Self::Commitment {
-            self.commitment
-        }
-    }
-
-    prop_compose! {
-        fn arb_point()(
-            bytes in vec(any::<u8>(), 64)
-        ) -> Fp {
-            Fp::from_uniform_bytes(&<[u8; 64]>::try_from(bytes).unwrap())
-        }
-    }
-
-    prop_compose! {
-        fn arb_query(commitment: usize, point: Fp)(
-            eval in arb_point()
-        ) -> MyQuery<Fp> {
-            MyQuery {
-                point,
-                eval,
-                commitment
-            }
-        }
-    }
-
-    prop_compose! {
-        // Mapping from column index to point index.
-        fn arb_queries_inner(num_points: usize, num_cols: usize, num_queries: usize)(
-            // Use a HashSet to ensure we sample distinct (column, point) queries.
-            queries in hash_set(
-                (
-                    select((0..num_cols).collect::<Vec<_>>()),
-                    select((0..num_points).collect::<Vec<_>>()),
-                ),
-                num_queries,
-            )
-        ) -> Vec<(usize, usize)> {
-            queries.into_iter().collect()
-        }
-    }
-
-    prop_compose! {
-        fn compare_queries(
-            num_points: usize,
-            num_cols: usize,
-            num_queries: usize,
-        )(
-            points_1 in vec(arb_point(), num_points),
-            points_2 in vec(arb_point(), num_points),
-            mapping in arb_queries_inner(num_points, num_cols, num_queries)
-        )(
-            queries_1 in mapping.iter().map(|(commitment, point_idx)| arb_query(*commitment, points_1[*point_idx])).collect::<Vec<_>>(),
-            queries_2 in mapping.iter().map(|(commitment, point_idx)| arb_query(*commitment, points_2[*point_idx])).collect::<Vec<_>>(),
-        ) -> (
-            Vec<MyQuery<Fp>>,
-            Vec<MyQuery<Fp>>
-        ) {
-            (
-                queries_1,
-                queries_2,
-            )
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn test_intermediate_sets(
-            (queries_1, queries_2) in compare_queries(8, 8, 16)
-        ) {
-            let (commitment_data, _point_sets) = construct_intermediate_sets(queries_1)
-                .ok_or_else(|| TestCaseError::Fail("mismatched evals".into()))?;
-            let set_indices = commitment_data.iter().map(|data| data.set_index).collect::<Vec<_>>();
-            let point_indices = commitment_data.iter().map(|data| data.point_indices.clone()).collect::<Vec<_>>();
-
-            // It shouldn't matter what the point or eval values are; we should get
-            // the same exact point set indices and point indices again.
-            let (new_commitment_data, _new_point_sets) = construct_intermediate_sets(queries_2)
-                .ok_or_else(|| TestCaseError::Fail("mismatched evals".into()))?;
-            let new_set_indices = new_commitment_data.iter().map(|data| data.set_index).collect::<Vec<_>>();
-            let new_point_indices = new_commitment_data.iter().map(|data| data.point_indices.clone()).collect::<Vec<_>>();
-
-            assert_eq!(set_indices, new_set_indices);
-            assert_eq!(point_indices, new_point_indices);
-        }
-    }
-}
+mod proptests;

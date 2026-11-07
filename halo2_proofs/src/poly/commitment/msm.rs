@@ -1,9 +1,85 @@
 use super::Params;
 use crate::arithmetic::{best_multiexp_public, CurveAffine};
-use ff::Field;
+use ff::{Field, PrimeField};
 use group::Group;
 
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
+use std::fmt;
+
+#[derive(Clone, Copy)]
+struct CanonicalFieldKey<F: PrimeField> {
+    value: F,
+    repr: F::Repr,
+}
+
+impl<F: PrimeField> CanonicalFieldKey<F> {
+    fn new(value: F) -> Self {
+        Self {
+            value,
+            repr: value.to_repr(),
+        }
+    }
+}
+
+impl<F: PrimeField> fmt::Debug for CanonicalFieldKey<F> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.value.fmt(formatter)
+    }
+}
+
+impl<F: PrimeField> PartialEq for CanonicalFieldKey<F> {
+    fn eq(&self, other: &Self) -> bool {
+        self.repr.as_ref() == other.repr.as_ref()
+    }
+}
+
+impl<F: PrimeField> Eq for CanonicalFieldKey<F> {}
+
+impl<F: PrimeField> PartialOrd for CanonicalFieldKey<F> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<F: PrimeField> Ord for CanonicalFieldKey<F> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Any canonical byte ordering groups equal coordinates. Reversing
+        // bytes also preserves Pasta's existing little-endian field order.
+        self.repr
+            .as_ref()
+            .iter()
+            .rev()
+            .cmp(other.repr.as_ref().iter().rev())
+    }
+}
+
+type ArbitraryTerm<C> = (
+    CanonicalFieldKey<<C as CurveAffine>::Base>,
+    (<C as CurveAffine>::ScalarExt, <C as CurveAffine>::Base),
+);
+type OtherTerms<C> = BTreeMap<
+    CanonicalFieldKey<<C as CurveAffine>::Base>,
+    (<C as CurveAffine>::ScalarExt, <C as CurveAffine>::Base),
+>;
+
+fn canonicalize_other<C: CurveAffine>(terms: &mut Vec<ArbitraryTerm<C>>) {
+    // Stable sorting preserves the first encountered orientation. Coalesce
+    // in place, negating scalars when equal x coordinates have opposite y.
+    terms.sort_by_key(|a| a.0);
+    terms.dedup_by(|(x, (scalar, y)), (our_x, (our_scalar, our_y))| {
+        if x != our_x {
+            return false;
+        }
+        if y == our_y {
+            *our_scalar += *scalar;
+        } else {
+            assert!(*our_y == -*y);
+            *our_scalar -= *scalar;
+        }
+        true
+    });
+}
 
 /// A multiscalar multiplication in the polynomial commitment scheme
 #[derive(Debug, Clone)]
@@ -12,8 +88,10 @@ pub struct MSM<'a, C: CurveAffine> {
     g_scalars: Option<Vec<C::Scalar>>,
     w_scalar: Option<C::Scalar>,
     u_scalar: Option<C::Scalar>,
-    // x-coordinate -> (scalar, y-coordinate)
-    other: BTreeMap<C::Base, (C::Scalar, C::Base)>,
+    // Cached x-coordinate -> (scalar, y-coordinate).
+    other: OtherTerms<C>,
+    // Batch reductions buffer arbitrary terms for one final sort/coalesce.
+    batched_other: Vec<ArbitraryTerm<C>>,
 }
 
 impl<'a, C: CurveAffine> MSM<'a, C> {
@@ -30,23 +108,18 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
             w_scalar,
             u_scalar,
             other,
+            batched_other: Vec::new(),
         }
     }
 
     /// Add another multiexp into this one
     pub fn add_msm(&mut self, other: &Self) {
-        for (x, (scalar, y)) in other.other.iter() {
-            self.other
-                .entry(*x)
-                .and_modify(|(our_scalar, our_y)| {
-                    if our_y == y {
-                        *our_scalar += *scalar;
-                    } else {
-                        assert!(*our_y == -*y);
-                        *our_scalar -= *scalar;
-                    }
-                })
-                .or_insert((*scalar, *y));
+        for (x, (scalar, y)) in other
+            .other
+            .iter()
+            .chain(other.batched_other.iter().map(|(x, v)| (x, v)))
+        {
+            self.add_other_key(*x, *scalar, *y);
         }
 
         if let Some(g_scalars) = &other.g_scalars {
@@ -62,24 +135,43 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         }
     }
 
+    fn add_other_key(&mut self, x: CanonicalFieldKey<C::Base>, scalar: C::Scalar, y: C::Base) {
+        self.other
+            .entry(x)
+            .and_modify(|(our_scalar, our_y)| {
+                if *our_y == y {
+                    *our_scalar += scalar;
+                } else {
+                    assert!(*our_y == -y);
+                    *our_scalar -= scalar;
+                }
+            })
+            .or_insert((scalar, y));
+    }
+
+    /// Moves an MSM into the batch without repeatedly coalescing arbitrary terms.
+    #[cfg(any(test, feature = "batch"))]
+    pub(crate) fn add_msm_batch(&mut self, other: Self) {
+        self.batched_other
+            .reserve(other.other.len() + other.batched_other.len());
+        self.batched_other.extend(other.other);
+        self.batched_other.extend(other.batched_other);
+        if let Some(scalars) = other.g_scalars {
+            self.add_owned_g_scalars(scalars);
+        }
+        if let Some(scalar) = other.w_scalar {
+            self.add_to_w_scalar(scalar);
+        }
+        if let Some(scalar) = other.u_scalar {
+            self.add_to_u_scalar(scalar);
+        }
+    }
+
     /// Add arbitrary term (the scalar and the point)
     pub fn append_term(&mut self, scalar: C::Scalar, point: C) {
         if !bool::from(point.is_identity()) {
             let xy = point.coordinates().unwrap();
-            let x = *xy.x();
-            let y = *xy.y();
-
-            self.other
-                .entry(x)
-                .and_modify(|(our_scalar, our_y)| {
-                    if *our_y == y {
-                        *our_scalar += scalar;
-                    } else {
-                        assert!(*our_y == -y);
-                        *our_scalar -= scalar;
-                    }
-                })
-                .or_insert((scalar, y));
+            self.add_other_key(CanonicalFieldKey::new(*xy.x()), scalar, *xy.y());
         }
     }
 
@@ -107,6 +199,19 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         }
     }
 
+    /// Retains the owned coefficient allocation when there are no existing
+    /// generator terms. The length must be exactly `params.n`.
+    pub(super) fn add_owned_g_scalars(&mut self, scalars: Vec<C::Scalar>) {
+        assert_eq!(scalars.len(), self.params.n as usize);
+        if let Some(g_scalars) = &mut self.g_scalars {
+            for (g_scalar, scalar) in g_scalars.iter_mut().zip(scalars) {
+                *g_scalar += scalar;
+            }
+        } else {
+            self.g_scalars = Some(scalars);
+        }
+    }
+
     /// Add to `w_scalar`
     pub fn add_to_w_scalar(&mut self, scalar: C::Scalar) {
         self.w_scalar = self.w_scalar.map_or(Some(scalar), |a| Some(a + &scalar));
@@ -128,60 +233,50 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         for other in self.other.values_mut() {
             other.0 *= factor;
         }
+        for (_, (scalar, _)) in &mut self.batched_other {
+            *scalar *= factor;
+        }
 
         self.w_scalar = self.w_scalar.map(|a| a * &factor);
         self.u_scalar = self.u_scalar.map(|a| a * &factor);
     }
 
-    /// The MSM's accumulated terms as borrowed views over the private fields: the `g_scalars`
-    /// (coefficients of the SRS generators `params.g`), `w_scalar` and `u_scalar` (coefficients of
-    /// `params.w` and `params.u`), and the `other` map of accumulated commitment terms. This is the
-    /// single source of truth for what this MSM represents; both [`eval`](Self::eval) and the
-    /// fingerprint export are defined in terms of it, so the exported view cannot drift from the
-    /// evaluated one. Returning borrows keeps `eval` — the production verifier hot path — free of the
-    /// `O(params.n)` `g_scalars` copy; only the (feature-gated) fingerprint export clones.
-    #[allow(clippy::type_complexity)]
-    fn terms(
-        &self,
-    ) -> (
-        Option<&[C::Scalar]>,
-        Option<C::Scalar>,
-        Option<C::Scalar>,
-        &BTreeMap<C::Base, (C::Scalar, C::Base)>,
-    ) {
-        (
-            self.g_scalars.as_deref(),
-            self.w_scalar,
-            self.u_scalar,
-            &self.other,
-        )
-    }
-
-    /// Perform variable-time multiexp on public inputs and check that it results in zero.
-    pub fn eval(self) -> bool {
-        let (g_scalars, w_scalar, u_scalar, other) = self.terms();
-
-        let len = g_scalars.map(<[_]>::len).unwrap_or(0)
-            + w_scalar.map(|_| 1).unwrap_or(0)
-            + u_scalar.map(|_| 1).unwrap_or(0)
-            + other.len();
+    /// Perform multiexp and check that it results in zero
+    pub fn eval(mut self) -> bool {
+        if !self.batched_other.is_empty() {
+            self.batched_other
+                .extend(self.other.iter().map(|(x, v)| (*x, *v)));
+            self.other.clear();
+            canonicalize_other::<C>(&mut self.batched_other);
+        }
+        let len = self.g_scalars.as_deref().map(<[_]>::len).unwrap_or(0)
+            + self.w_scalar.map(|_| 1).unwrap_or(0)
+            + self.u_scalar.map(|_| 1).unwrap_or(0)
+            + self.other.len()
+            + self.batched_other.len();
         let mut scalars: Vec<C::Scalar> = Vec::with_capacity(len);
         let mut bases: Vec<C> = Vec::with_capacity(len);
 
-        scalars.extend(other.values().map(|(scalar, _)| *scalar));
-        bases.extend(other.iter().map(|(x, (_, y))| C::from_xy(*x, *y).unwrap()));
+        for (x, (scalar, y)) in self
+            .other
+            .iter()
+            .chain(self.batched_other.iter().map(|(x, v)| (x, v)))
+        {
+            scalars.push(*scalar);
+            bases.push(C::from_xy(x.value, *y).unwrap());
+        }
 
-        if let Some(w_scalar) = w_scalar {
+        if let Some(w_scalar) = self.w_scalar {
             scalars.push(w_scalar);
             bases.push(self.params.w);
         }
 
-        if let Some(u_scalar) = u_scalar {
+        if let Some(u_scalar) = self.u_scalar {
             scalars.push(u_scalar);
             bases.push(self.params.u);
         }
 
-        if let Some(g_scalars) = g_scalars {
+        if let Some(g_scalars) = self.g_scalars {
             scalars.extend(g_scalars);
             bases.extend(self.params.g.iter());
         }
@@ -191,11 +286,8 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         bool::from(best_multiexp_public(&scalars, &bases).is_identity())
     }
 
-    /// The MSM's accumulated terms, exposed for capturing the verifier fingerprint without consuming
-    /// it: the `g_scalars`, `w_scalar`, `u_scalar`, and the `other` terms as `(scalar, x, y)` for each
-    /// accumulated commitment point. Built from [`terms`](Self::terms) — the exact decomposition
-    /// [`eval`](Self::eval) evaluates — so the exported fingerprint is the evaluated view by
-    /// construction. The owned copies here are confined to this dev-only path.
+    /// Exposes the same terms evaluated by [`Self::eval`], with buffered batch
+    /// terms coalesced identically. Copies are confined to this dev-only path.
     #[cfg(feature = "unstable-verifier-fingerprint")]
     #[allow(clippy::type_complexity)]
     pub(crate) fn fingerprint_terms(
@@ -206,14 +298,19 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         Option<C::Scalar>,
         Vec<(C::Scalar, C::Base, C::Base)>,
     ) {
-        let (g_scalars, w_scalar, u_scalar, other) = self.terms();
+        let mut other = self.batched_other.clone();
+        other.extend(self.other.iter().map(|(x, v)| (*x, *v)));
+        canonicalize_other::<C>(&mut other);
         let other = other
-            .iter()
-            .map(|(x, (scalar, y))| (*scalar, *x, *y))
+            .into_iter()
+            .map(|(x, (scalar, y))| (scalar, x.value, y))
             .collect();
-        (g_scalars.map(<[_]>::to_vec), w_scalar, u_scalar, other)
+        (self.g_scalars.clone(), self.w_scalar, self.u_scalar, other)
     }
 }
+
+#[cfg(test)]
+mod scalar_tests;
 
 #[cfg(test)]
 mod tests {

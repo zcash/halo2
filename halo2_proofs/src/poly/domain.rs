@@ -14,6 +14,10 @@ use pasta_curves::arithmetic::{VartimeBatchInvert, VartimeField};
 
 use std::marker::PhantomData;
 
+/// The current Orchard circuit's last queried row is six rows behind the
+/// challenge point.
+const ORCHARD_LAST_ROTATION: i32 = -6;
+
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended
 /// domain of size $2^{k} * j$ with $j \neq 0$.
@@ -24,6 +28,8 @@ pub struct EvaluationDomain<F: Field> {
     extended_k: u32,
     omega: F,
     omega_inv: F,
+    /// Cached $\omega^{-6}$ for Orchard's last-row rotation, derived from this domain's root.
+    orchard_last_omega: F,
     extended_omega: F,
     extended_omega_inv: F,
     g_coset: F,
@@ -128,12 +134,16 @@ impl<F: WithSmallOrderMulGroup<3> + VartimeField> EvaluationDomain<F> {
             .chain(Some(&mut omega_inv))
             .batch_invert_vartime();
 
+        let orchard_last_omega =
+            omega_inv.pow_vartime([u64::from(ORCHARD_LAST_ROTATION.unsigned_abs())]);
+
         EvaluationDomain {
             n,
             k,
             extended_k,
             omega,
             omega_inv,
+            orchard_last_omega,
             extended_omega,
             extended_omega_inv,
             g_coset,
@@ -409,15 +419,24 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
     /// Multiplies a value by some power of $\omega$, essentially rotating over
     /// the domain.
     pub fn rotate_omega(&self, value: F, rotation: Rotation) -> F {
-        let mut point = value;
-        if rotation.0 >= 0 {
-            point *= &self.get_omega().pow_vartime([rotation.0 as u64]);
-        } else {
-            point *= &self
-                .get_omega_inv()
-                .pow_vartime([(rotation.0 as i64).unsigned_abs()]);
+        match rotation.0 {
+            0 => value,
+            1 => value * self.get_omega(),
+            -1 => value * self.get_omega_inv(),
+            ORCHARD_LAST_ROTATION => value * self.orchard_last_omega,
+            rotation if rotation > 0 => {
+                value
+                    * self
+                        .get_omega()
+                        .pow_vartime([u64::from(rotation.unsigned_abs())])
+            }
+            rotation => {
+                value
+                    * self
+                        .get_omega_inv()
+                        .pow_vartime([u64::from(rotation.unsigned_abs())])
+            }
         }
-        point
     }
 }
 
@@ -545,6 +564,9 @@ fn test_rotate() {
         eval_polynomial(&poly_rotated_prev[..], x)
     );
 }
+
+#[cfg(test)]
+mod tests;
 
 #[test]
 fn test_l_i() {
