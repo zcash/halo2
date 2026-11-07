@@ -8,6 +8,8 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 
 ### Changed
+- Final verifier MSM evaluation reconstructs previously validated affine
+  coordinates without repeating curve membership checks.
 - Verification batches multi-opening denominators into one inversion and avoids
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms

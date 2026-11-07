@@ -263,7 +263,9 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
             .chain(self.batched_other.iter().map(|(x, v)| (x, v)))
         {
             scalars.push(*scalar);
-            bases.push(C::from_xy(x.value, *y).unwrap());
+            // Coordinates came from validated nonidentity points. Merging and
+            // coalescing retain an original orientation and change only scalars.
+            bases.push(C::from_xy_unchecked(x.value, *y));
         }
 
         if let Some(w_scalar) = self.w_scalar {

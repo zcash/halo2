@@ -100,3 +100,36 @@ fn buffered_owned_msms_match_naive_sums() {
     check::<EpAffine>();
     check::<EqAffine>();
 }
+
+#[test]
+fn stored_coordinates_retain_valid_original_orientation() {
+    fn check<C: CurveAffine>() {
+        let params = Params::<C>::new(3);
+        let mut direct = params.empty_msm();
+        let mut buffered = params.empty_msm();
+        for point in [C::identity(), params.g[0], -params.g[0], params.g[1]] {
+            let mut term = params.empty_msm();
+            term.append_term(C::Scalar::ONE, point);
+            direct.add_msm(&term);
+            buffered.add_msm_batch(term);
+        }
+        for msm in [&direct, &buffered] {
+            for (x, (_, y)) in msm
+                .other
+                .iter()
+                .chain(msm.batched_other.iter().map(|(x, term)| (x, term)))
+            {
+                assert_eq!(
+                    C::from_xy_unchecked(x.value, *y),
+                    C::from_xy(x.value, *y).unwrap()
+                );
+            }
+        }
+        direct.append_term(-C::Scalar::ONE, params.g[1]);
+        buffered.append_term(-C::Scalar::ONE, params.g[1]);
+        assert!(direct.eval());
+        assert!(buffered.eval());
+    }
+    check::<EpAffine>();
+    check::<EqAffine>();
+}
