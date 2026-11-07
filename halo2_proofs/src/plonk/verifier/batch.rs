@@ -48,20 +48,31 @@ struct BatchItem<C: CurveAffine> {
     proof: Vec<u8>,
 }
 
-/// Decodes the points of `proof` at `offsets` together, ahead of reading it.
+/// Decodes the point runs of `proof` at `ranges` together, ahead of reading it.
 ///
 /// Each result equals `from_bytes` of the bytes at its offset (see
 /// [`CurveAffine::batch_decode`]); offsets past the end of the proof are
 /// skipped, and the transcript reports those reads as truncation.
-fn prefetch_points<C: CurveAffine>(proof: &[u8], offsets: &[usize]) -> Vec<(usize, Option<C>)> {
+fn prefetch_points<C: CurveAffine>(
+    proof: &[u8],
+    ranges: &[std::ops::Range<usize>],
+) -> Vec<(usize, Option<C>)> {
     let len = C::Repr::default().as_ref().len();
-    let (offsets, encodings): (Vec<usize>, Vec<C::Repr>) = offsets
+    if len == 0 {
+        return Vec::new();
+    }
+    let (offsets, encodings): (Vec<usize>, Vec<C::Repr>) = ranges
         .iter()
-        .filter_map(|&offset| {
-            let bytes = proof.get(offset..offset.checked_add(len)?)?;
-            let mut repr = C::Repr::default();
-            repr.as_mut().copy_from_slice(bytes);
-            Some((offset, repr))
+        .filter_map(|range| {
+            let bytes = proof.get(range.start..range.end.min(proof.len()))?;
+            Some((range.start, bytes))
+        })
+        .flat_map(|(start, bytes)| {
+            bytes.chunks_exact(len).enumerate().map(move |(i, bytes)| {
+                let mut repr = C::Repr::default();
+                repr.as_mut().copy_from_slice(bytes);
+                (start + i * len, repr)
+            })
         })
         .unzip();
     offsets
@@ -131,9 +142,9 @@ where
                 let layouts = vk.proof_point_layouts();
                 let circuits = item.instances.len();
                 let mut transcript = match layouts.get(circuits) {
-                    Some(offsets) => PrefetchedBlake2bRead::with_prefetched(
+                    Some(ranges) => PrefetchedBlake2bRead::with_prefetched(
                         &item.proof[..],
-                        prefetch_points(&item.proof, &offsets),
+                        prefetch_points(&item.proof, &ranges),
                     ),
                     None => PrefetchedBlake2bRead::recording(&item.proof[..]),
                 };
@@ -141,8 +152,8 @@ where
                 // `Ok` means the transcript was read completely; the proof's
                 // validity is decided by the final MSM check.
                 if result.is_ok() {
-                    if let Some(offsets) = transcript.into_recorded() {
-                        layouts.insert(circuits, offsets);
+                    if let Some(ranges) = transcript.into_recorded() {
+                        layouts.insert(circuits, ranges);
                     }
                 }
                 result.map_err(|e| {
@@ -159,5 +170,39 @@ where
             Ok(msm) => msm.eval(),
             Err(_) => false,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::{EpAffine, EqAffine};
+
+    #[test]
+    fn point_run_prefetch_skips_missing_and_partial_encodings() {
+        use group::{Curve, Group};
+
+        fn check<C: crate::arithmetic::CurveAffine>() {
+            let encoding = C::Curve::generator().to_affine().to_bytes();
+            let width = encoding.as_ref().len();
+            let mut proof = encoding.as_ref().repeat(5);
+            proof[3 * width..4 * width].fill(0xff);
+            let ranges = [0..width, 2 * width..6 * width, usize::MAX..usize::MAX];
+            for cut in 0..=proof.len() {
+                let proof = &proof[..cut];
+                let expected = [0, 2 * width, 3 * width, 4 * width]
+                    .into_iter()
+                    .filter_map(|offset| {
+                        let bytes = proof.get(offset..offset + width)?;
+                        let mut encoding = C::Repr::default();
+                        encoding.as_mut().copy_from_slice(bytes);
+                        Some((offset, Option::from(C::from_bytes(&encoding))))
+                    })
+                    .collect::<Vec<_>>();
+                assert_eq!(super::prefetch_points::<C>(proof, &ranges), expected);
+            }
+        }
+
+        check::<EpAffine>();
+        check::<EqAffine>();
     }
 }

@@ -576,11 +576,11 @@ mod tests {
         let mut wrong_instances = a.clone();
         wrong_instances.0[0][0][0] += Fp::ONE;
         assert!(!batch(vk, &[&wrong_instances]));
-        let offsets = layouts
+        let ranges = layouts
             .get(2)
             .expect("a fully read two-instance proof records its layout");
         assert!(batch(vk, &[&a]));
-        assert!(!offsets.is_empty());
+        assert!(!ranges.is_empty());
         assert!(batch(vk, &[&c]));
         assert!(layouts.get(3).is_some());
 
@@ -591,9 +591,9 @@ mod tests {
         // A point replaced by a non-point, and a truncated proof, fail with
         // and without a learned layout.
         let mut bad_point = b.clone();
-        bad_point.1[offsets[0]..offsets[0] + 32].copy_from_slice(&[0xff; 32]);
+        bad_point.1[ranges[0].start..ranges[0].start + 32].copy_from_slice(&[0xff; 32]);
         let mut truncated = b.clone();
-        truncated.1.truncate(offsets[offsets.len() / 2]);
+        truncated.1.truncate(ranges[ranges.len() / 2].start);
         let fresh = keygen();
         for vk in [vk, fresh.get_vk()] {
             assert!(!batch(vk, &[&a, &bad_point]));
@@ -603,7 +603,7 @@ mod tests {
         // A wrong layout, here every 32-byte slot including scalars, costs
         // only speed.
         let poisoned = keygen();
-        let every_slot = (0..b.1.len()).step_by(32).collect::<Vec<_>>();
+        let every_slot = std::iter::once(0..b.1.len()).collect();
         poisoned
             .get_vk()
             .proof_point_layouts()
@@ -611,5 +611,16 @@ mod tests {
         assert!(batch(poisoned.get_vk(), &[&a, &b]));
         assert!(!batch(poisoned.get_vk(), &[&a, &bad_point]));
         assert!(!batch(poisoned.get_vk(), &[&wrong_instances, &b]));
+
+        // Other shapes may evict these layouts, but relearning them must
+        // preserve both acceptance and rejection.
+        for shape in 4..4 + crate::plonk::ProofPointLayouts::MAX_SHAPES {
+            layouts.insert(shape, std::iter::once(0..32).collect());
+        }
+        assert!(layouts.get(2).is_none());
+        assert!(layouts.get(3).is_none());
+        assert!(batch(vk, &[&a, &b, &c]));
+        assert!(!batch(vk, &[&wrong_instances, &b]));
+        assert!(!batch(vk, &[&a, &bad_point]));
     }
 }

@@ -59,11 +59,11 @@ pub struct VerifyingKey<C: CurveAffine> {
     proof_point_layouts: Arc<ProofPointLayouts>,
 }
 
-/// The byte offsets of a proof's points, by the number of circuit instances
+/// The byte ranges of a proof's point runs, by the number of circuit instances
 /// the proof covers.
 ///
 /// A proof's sequence of point and scalar reads is fixed by the verifying key
-/// and its circuit-instance count, so the offsets recorded while one proof of
+/// and its circuit-instance count, so the runs recorded while one proof of
 /// a shape is read completely hold for every proof of that shape, valid or
 /// not (validity is decided later, by the batch's final check). The batch
 /// verifier uses them to decode a proof's points together before reading it;
@@ -71,7 +71,33 @@ pub struct VerifyingKey<C: CurveAffine> {
 /// was not decoded ahead decodes as usual.
 #[cfg(feature = "batch")]
 #[derive(Debug, Default)]
-pub(crate) struct ProofPointLayouts(std::sync::Mutex<Vec<(usize, Arc<[usize]>)>>);
+pub(crate) struct ProofPointLayouts(std::sync::Mutex<ProofPointLayoutCache>);
+
+/// Fixed slots replaced in insertion order, so early shapes cannot pin the
+/// cache for the verifying key's lifetime.
+#[cfg(feature = "batch")]
+#[derive(Debug)]
+struct ProofPointLayoutCache {
+    layouts: [Option<ProofPointLayout>; ProofPointLayouts::MAX_SHAPES],
+    next: usize,
+}
+
+#[cfg(feature = "batch")]
+#[derive(Debug)]
+struct ProofPointLayout {
+    circuits: usize,
+    ranges: Arc<[std::ops::Range<usize>]>,
+}
+
+#[cfg(feature = "batch")]
+impl Default for ProofPointLayoutCache {
+    fn default() -> Self {
+        Self {
+            layouts: [const { None }; ProofPointLayouts::MAX_SHAPES],
+            next: 0,
+        }
+    }
+}
 
 #[cfg(feature = "batch")]
 impl<C: CurveAffine> VerifyingKey<C> {
@@ -82,30 +108,89 @@ impl<C: CurveAffine> VerifyingKey<C> {
 
 #[cfg(feature = "batch")]
 impl ProofPointLayouts {
-    /// At most this many shapes are kept; Orchard proofs differ only in their
-    /// action count.
-    const MAX_SHAPES: usize = 32;
+    /// At most this many shapes are kept; each has at most
+    /// [`crate::MAX_CACHED_PROOF_POINT_RUNS`] runs. Orchard proofs differ only
+    /// in their action count.
+    const MAX_SHAPES: usize = 256;
 
-    pub(crate) fn get(&self, circuits: usize) -> Option<Arc<[usize]>> {
+    pub(crate) fn get(&self, circuits: usize) -> Option<Arc<[std::ops::Range<usize>]>> {
         let layouts = self
             .0
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         layouts
+            .layouts
             .iter()
-            .find(|(shape, _)| *shape == circuits)
-            .map(|(_, offsets)| Arc::clone(offsets))
+            .flatten()
+            .find(|layout| layout.circuits == circuits)
+            .map(|layout| Arc::clone(&layout.ranges))
     }
 
-    pub(crate) fn insert(&self, circuits: usize, offsets: Vec<usize>) {
+    pub(crate) fn insert(&self, circuits: usize, ranges: Vec<std::ops::Range<usize>>) {
+        if ranges.len() > crate::MAX_CACHED_PROOF_POINT_RUNS {
+            return;
+        }
         let mut layouts = self
             .0
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if layouts.len() < Self::MAX_SHAPES && !layouts.iter().any(|(shape, _)| *shape == circuits)
+        if layouts
+            .layouts
+            .iter()
+            .flatten()
+            .any(|layout| layout.circuits == circuits)
         {
-            layouts.push((circuits, offsets.into()));
+            return;
         }
+        let next = layouts.next;
+        layouts.layouts[next] = Some(ProofPointLayout {
+            circuits,
+            ranges: ranges.into(),
+        });
+        layouts.next = (next + 1) % Self::MAX_SHAPES;
+    }
+}
+
+#[cfg(all(test, feature = "batch"))]
+mod proof_point_layout_tests {
+    use super::ProofPointLayouts;
+
+    #[test]
+    fn replacement_does_not_change_in_flight_layouts() {
+        let layouts = ProofPointLayouts::default();
+        layouts.insert(0, vec![0..32, 64..96]);
+        let in_flight = layouts.get(0).unwrap();
+        // Re-learning the same shape must neither replace it nor advance
+        // the replacement cursor.
+        layouts.insert(0, std::iter::once(32..64).collect());
+        for shape in 1..ProofPointLayouts::MAX_SHAPES {
+            layouts.insert(shape, std::iter::once(shape..shape + 1).collect());
+        }
+        assert_eq!(&*layouts.get(0).unwrap(), &[0..32, 64..96]);
+        layouts.insert(
+            ProofPointLayouts::MAX_SHAPES,
+            std::iter::once(128..160).collect(),
+        );
+        assert!(layouts.get(0).is_none());
+        assert_eq!(&*in_flight, &[0..32, 64..96]);
+        let replacement = layouts.get(ProofPointLayouts::MAX_SHAPES).unwrap();
+        assert_eq!(replacement.len(), 1);
+        assert_eq!(replacement[0], 128..160);
+        assert!(layouts.get(1).is_some());
+    }
+
+    #[test]
+    fn oversized_layouts_do_not_displace_cached_shapes() {
+        let layouts = ProofPointLayouts::default();
+        let limit = crate::MAX_CACHED_PROOF_POINT_RUNS;
+        let ranges = |len| (0..len).map(|i| i * 64..i * 64 + 32).collect();
+        layouts.insert(0, ranges(limit));
+        assert_eq!(layouts.get(0).unwrap().len(), limit);
+        for shape in 1..=ProofPointLayouts::MAX_SHAPES {
+            layouts.insert(shape, ranges(limit + 1));
+            assert!(layouts.get(shape).is_none());
+        }
+        assert_eq!(layouts.get(0).unwrap().len(), limit);
     }
 }
 

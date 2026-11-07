@@ -310,7 +310,7 @@ where
     /// `(offset, decoding)` pairs in increasing offset order.
     prefetched: Vec<(usize, Option<C>)>,
     next_prefetched: usize,
-    recorded: Option<Vec<usize>>,
+    recorded: Option<Vec<std::ops::Range<usize>>>,
 }
 
 #[cfg(feature = "batch")]
@@ -331,7 +331,9 @@ where
         }
     }
 
-    /// Reads `proof`, recording the offset of every point read.
+    /// Reads `proof`, recording at most [`crate::MAX_CACHED_PROOF_POINT_RUNS`]
+    /// contiguous runs of point encodings. Larger layouts discard their ranges
+    /// and keep reading normally.
     pub(crate) fn recording(proof: &'a [u8]) -> Self {
         PrefetchedBlake2bRead {
             inner: Blake2bRead::init(proof),
@@ -342,8 +344,9 @@ where
         }
     }
 
-    /// The offsets of the points read so far, when recording.
-    pub(crate) fn into_recorded(self) -> Option<Vec<usize>> {
+    /// The ranges of contiguous point encodings read so far, when recording
+    /// and within the layout limit.
+    pub(crate) fn into_recorded(self) -> Option<Vec<std::ops::Range<usize>>> {
         self.recorded
     }
 
@@ -397,7 +400,13 @@ where
             io::Error::new(io::ErrorKind::Other, "invalid point encoding in proof")
         })?;
         if let Some(recorded) = &mut self.recorded {
-            recorded.push(offset);
+            if let Some(last) = recorded.last_mut().filter(|last| last.end == offset) {
+                last.end = self.position;
+            } else if recorded.len() == crate::MAX_CACHED_PROOF_POINT_RUNS {
+                self.recorded = None;
+            } else {
+                recorded.push(offset..self.position);
+            }
         }
         self.inner.common_point(point)?;
 
@@ -432,4 +441,75 @@ pub(crate) fn read_n_scalars<C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
     n: usize,
 ) -> io::Result<Vec<C::Scalar>> {
     (0..n).map(|_| transcript.read_scalar()).collect()
+}
+
+#[cfg(all(test, feature = "batch"))]
+mod scalar_repr_tests {
+    use super::*;
+    use crate::pasta::vesta;
+
+    type TestCurve = vesta::Affine;
+    type TestScalar = vesta::Scalar;
+    type TestTranscript<W> = Blake2bWrite<W, TestCurve, Challenge255<TestCurve>>;
+
+    #[cfg(feature = "batch")]
+    #[test]
+    fn point_run_recording_stays_bounded_without_changing_the_transcript() {
+        use group::{Curve as _, Group as _, GroupEncoding as _};
+
+        let point = vesta::Point::generator().to_affine();
+        let scalar = TestScalar::from(7);
+        let limit = crate::MAX_CACHED_PROOF_POINT_RUNS;
+        for runs in [limit, limit + 1] {
+            let mut writer = TestTranscript::init(Vec::new());
+            for _ in 0..runs {
+                writer.write_point(point).unwrap();
+                writer.write_point(point).unwrap();
+                writer.write_scalar(scalar).unwrap();
+            }
+            let proof = writer.finalize();
+            let mut plain = Blake2bRead::<_, TestCurve, Challenge255<_>>::init(&proof[..]);
+            let mut recorded = PrefetchedBlake2bRead::<TestCurve>::recording(&proof);
+            for _ in 0..runs {
+                for _ in 0..2 {
+                    assert_eq!(plain.read_point().unwrap(), recorded.read_point().unwrap());
+                }
+                assert_eq!(
+                    plain.read_scalar().unwrap(),
+                    recorded.read_scalar().unwrap()
+                );
+                assert_eq!(
+                    plain.squeeze_challenge().get_scalar(),
+                    recorded.squeeze_challenge().get_scalar(),
+                );
+            }
+            let ranges = recorded.into_recorded();
+            if runs == limit {
+                let point_bytes = point.to_bytes().as_ref().len();
+                let scalar_bytes = scalar.to_repr().as_ref().len();
+                let run_bytes = point_bytes * 2;
+                let stride = run_bytes + scalar_bytes;
+                assert_eq!(
+                    ranges.unwrap(),
+                    (0..runs)
+                        .map(|run| run * stride..run * stride + run_bytes)
+                        .collect::<Vec<_>>(),
+                );
+            } else {
+                assert!(ranges.is_none());
+            }
+        }
+
+        // A long contiguous run stays small even when its point count exceeds
+        // the limit on the number of runs.
+        let points = limit + 1;
+        let proof = point.to_bytes().as_ref().repeat(points);
+        let mut recorded = PrefetchedBlake2bRead::<TestCurve>::recording(&proof);
+        for _ in 0..points {
+            assert_eq!(recorded.read_point().unwrap(), point);
+        }
+        let ranges = recorded.into_recorded().unwrap();
+        assert_eq!(ranges.len(), 1);
+        assert_eq!(ranges[0], 0..proof.len());
+    }
 }
