@@ -1186,14 +1186,15 @@ checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "pasta_curves"
-version = "0.6.0"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ec2f82051d06ea52d7ec6a47546c592fc52392b6040e503e05a764dd10dd1de"
+checksum = "e4600446f600184497beb7dbe6edfc7a6edb5c999a75f4fd4808f4757063152f"
 dependencies = [
  "blake2b_simd",
  "ff",
  "group",
  "lazy_static",
+ "maybe-rayon",
  "rand 0.10.2",
  "static_assertions",
  "subtle",

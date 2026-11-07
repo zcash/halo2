@@ -78,8 +78,8 @@ proptest.workspace = true
 rand.workspace = true
 
 [features]
-default = ["batch", "multicore"]
-multicore = ["maybe-rayon/threads"]
+default = ["batch", "glv", "multicore"]
+multicore = ["maybe-rayon/threads", "pasta_curves/multicore"]
 dev-graph = ["plotters", "tabbycat"]
 test-dev-graph = [
     "dev-graph",
@@ -90,6 +90,7 @@ test-dev-graph = [
 gadget-traces = ["backtrace"]
 sanity-checks = []
 batch = ["dep:rand"]
+glv = ["pasta_curves/glv"]
 floor-planner-v1-legacy-pdqsort = ["halo2_legacy_pdqsort"]
 
 # In-development features

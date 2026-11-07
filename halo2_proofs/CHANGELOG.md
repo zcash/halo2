@@ -7,7 +7,14 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+### Added
+- Default-enabled `glv` feature flag that enables `pasta_curves/glv` for MSM
+  optimisations.
+
 ### Changed
+- Verifier MSM evaluation and public instance commitments try the curve's
+  variable-time MSM hook before the generic signed-Booth implementation.
+  Witness-bearing prover MSMs retain the existing implementation.
 - Verification batches multi-opening denominators into one inversion and avoids
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms
