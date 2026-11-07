@@ -7,6 +7,9 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use std::fmt;
 
+#[cfg(feature = "multicore")]
+use maybe_rayon::slice::ParallelSliceMut;
+
 #[derive(Clone, Copy)]
 struct CanonicalFieldKey<F: PrimeField> {
     value: F,
@@ -66,7 +69,10 @@ type OtherTerms<C> = BTreeMap<
 fn canonicalize_other<C: CurveAffine>(terms: &mut Vec<ArbitraryTerm<C>>) {
     // Stable sorting preserves the first encountered orientation. Coalesce
     // in place, negating scalars when equal x coordinates have opposite y.
-    terms.sort_by_key(|a| a.0);
+    #[cfg(feature = "multicore")]
+    terms.par_sort_by(|a, b| a.0.cmp(&b.0));
+    #[cfg(not(feature = "multicore"))]
+    terms.sort_by(|a, b| a.0.cmp(&b.0));
     terms.dedup_by(|(x, (scalar, y)), (our_x, (our_scalar, our_y))| {
         if x != our_x {
             return false;

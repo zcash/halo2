@@ -100,3 +100,39 @@ fn buffered_owned_msms_match_naive_sums() {
     check::<EpAffine>();
     check::<EqAffine>();
 }
+
+#[test]
+fn final_coalescing_preserves_first_orientation() {
+    fn check<C: CurveAffine>() {
+        let params = Params::<C>::new(4);
+        let mut terms = Vec::new();
+        let mut expected = std::collections::BTreeMap::new();
+        for i in 0..8192 {
+            let point = if i % 3 == 0 {
+                -params.g[i % params.g.len()]
+            } else {
+                params.g[i % params.g.len()]
+            };
+            let xy = point.coordinates().unwrap();
+            let scalar = C::Scalar::from(u64::try_from(i + 1).unwrap());
+            let x = CanonicalFieldKey::new(*xy.x());
+            let y = *xy.y();
+            terms.push((x, (scalar, y)));
+            expected
+                .entry(x)
+                .and_modify(|(sum, first_y): &mut (C::Scalar, C::Base)| {
+                    if *first_y == y {
+                        *sum += scalar;
+                    } else {
+                        *sum -= scalar;
+                    }
+                })
+                .or_insert((scalar, y));
+        }
+        super::canonicalize_other::<C>(&mut terms);
+        assert_eq!(terms, expected.into_iter().collect::<Vec<_>>());
+        super::canonicalize_other::<C>(&mut Vec::new());
+    }
+    check::<EpAffine>();
+    check::<EqAffine>();
+}

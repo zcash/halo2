@@ -8,6 +8,8 @@ and this project adheres to Rust's notion of
 ## [Unreleased]
 
 ### Changed
+- Final verifier MSM terms are sorted in parallel with `multicore`, preserving
+  stable point orientation and the serial fallback.
 - Verification batches multi-opening denominators into one inversion and avoids
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms
