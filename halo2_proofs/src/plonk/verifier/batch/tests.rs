@@ -1,12 +1,12 @@
 use ff::{Field, FromUniformBytes};
-use group::CurveAffine as _;
+use group::{Curve as _, CurveAffine as _};
 use pasta_curves::{EpAffine, EqAffine, Fp, Fq};
 use rand::rngs::SysRng;
 use rand_core::{Rng, UnwrapErr};
 
 use super::{
-    compute_batch_instance_commitments, signed_fixed_window_digit, signed_instance_window_count,
-    BatchItem, InstanceFixedWindowTable, commit_glv_instances,
+    commit_glv_instances, compute_batch_instance_commitments, signed_fixed_window_digit,
+    signed_instance_window_count, BatchItem, InstanceFixedWindowTable,
 };
 use crate::{
     arithmetic::CurveAffine,
@@ -310,95 +310,122 @@ fn batch_instance_commitments_preserve_order_validation_and_transcript() {
     assert!(compute_batch_instance_commitments(&params, &vk, &maximal).is_ok());
 }
 
-/// Orchard-shaped columns: seven full-width rows, then three flags taking
-/// every mask in turn.
-fn orchard_shaped_columns(count: u64) -> Vec<Vec<Fp>> {
-    (0..count)
-        .map(|column| {
-            let mut rows = (0..7u64)
-                .map(|row| {
-                    let mut bytes = [0; 64];
-                    let mut x = (column * 16 + row).wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1;
-                    for chunk in bytes.chunks_mut(8) {
-                        x ^= x << 13;
-                        x ^= x >> 7;
-                        x ^= x << 17;
-                        chunk.copy_from_slice(&x.to_le_bytes());
-                    }
-                    Fp::from_uniform_bytes(&bytes)
-                })
-                .collect::<Vec<_>>();
-            rows[(column % 7) as usize] = match column % 3 {
-                0 => Fp::ZERO,
-                1 => Fp::ONE,
-                _ => -Fp::ONE,
-            };
-            rows.extend((0..3).map(|flag| {
-                if (column >> flag) & 1 == 1 {
-                    Fp::ONE
-                } else {
-                    Fp::ZERO
+#[test]
+fn prepared_instance_commitments_match_original_arithmetic() {
+    macro_rules! check_curve {
+        ($curve:ty, $scalar:ty) => {{
+            let mut rng = UnwrapErr(SysRng);
+            for exceptional in [false, true] {
+                let mut params = Params::<$curve>::new(4);
+                if exceptional {
+                    let p = params.g_lagrange[0];
+                    params.g_lagrange[..7].copy_from_slice(&[
+                        <$curve>::identity(),
+                        p,
+                        -p,
+                        p,
+                        p,
+                        -p,
+                        <$curve>::identity(),
+                    ]);
+                    params.w = <$curve>::identity();
                 }
-            }));
-            rows
-        })
-        .collect()
-}
-
-#[test]
-fn glv_instance_commitments_match_fixed_window() {
-    let params = Params::<EqAffine>::new(7);
-    let table = InstanceFixedWindowTable::new(&params, 10);
-    let columns = orchard_shaped_columns(19);
-    let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
-
-    let glv = commit_glv_instances(&params, &slices).expect("Orchard-shaped columns");
-    assert_eq!(glv, table.commit_batch(&params, &slices));
-    for (column, commitment) in slices.iter().zip(&glv) {
-        assert_eq!(*commitment, params.commit_lagrange_instance(column));
+                let instances = (0..32)
+                    .map(|column| {
+                        let mut instance = (0..crate::PREPARED_INSTANCE_DENSE_ROWS)
+                            .map(|row| match (column + row) % 6 {
+                                0 => <$scalar>::ZERO,
+                                1 => <$scalar>::ONE,
+                                2 => -<$scalar>::ONE,
+                                3 => <$scalar as ff::PrimeField>::from_u128(u128::MAX),
+                                _ => <$scalar>::random(&mut rng),
+                            })
+                            .collect::<Vec<_>>();
+                        instance.extend((0..crate::PREPARED_INSTANCE_BOOLEAN_ROWS).map(|flag| {
+                            if column & (1 << flag) == 0 {
+                                <$scalar>::ZERO
+                            } else {
+                                <$scalar>::ONE
+                            }
+                        }));
+                        instance
+                    })
+                    .collect::<Vec<_>>();
+                let slices = instances.iter().map(Vec::as_slice).collect::<Vec<_>>();
+                let ordinary =
+                    InstanceFixedWindowTable::new(&params, crate::PREPARED_INSTANCE_ROWS);
+                let domain = EvaluationDomain::new(1, 4);
+                for count in [1, 2, 3, 8, 17, instances.len()] {
+                    let prepared = commit_glv_instances(&params, &slices[..count]).unwrap();
+                    assert_eq!(prepared, ordinary.commit_batch(&params, &slices[..count]));
+                    for (instance, commitment) in instances.iter().zip(prepared) {
+                        let original = instance
+                            .iter()
+                            .zip(&params.g_lagrange)
+                            .fold(params.w.to_curve(), |sum, (scalar, base)| {
+                                sum + *base * scalar
+                            });
+                        assert_eq!(commitment, original);
+                        assert_eq!(commitment, params.commit_lagrange_instance(instance));
+                        let mut padded = domain.empty_lagrange();
+                        for (coefficient, value) in padded.iter_mut().zip(instance) {
+                            *coefficient = *value;
+                        }
+                        assert_eq!(
+                            commitment,
+                            params.commit_lagrange(&padded, Blind::default())
+                        );
+                    }
+                }
+                assert!(commit_glv_instances(&params, &[]).is_none());
+                for len in [0, 7, 9, 11, 16] {
+                    let invalid_shape = vec![<$scalar>::ZERO; len];
+                    assert!(commit_glv_instances(&params, &[&invalid_shape]).is_none());
+                }
+                for flag in 0..crate::PREPARED_INSTANCE_BOOLEAN_ROWS {
+                    for invalid in [<$scalar>::from(2), -<$scalar>::ONE] {
+                        let mut column = instances[0].clone();
+                        column[crate::PREPARED_INSTANCE_DENSE_ROWS + flag] = invalid;
+                        assert!(commit_glv_instances(&params, &[&instances[0], &column]).is_none());
+                    }
+                }
+            }
+        }};
     }
+    check_curve!(EqAffine, Fp);
+    check_curve!(EpAffine, Fq);
 }
 
 #[test]
-fn glv_instance_commitments_decline_other_shapes() {
-    let params = Params::<EqAffine>::new(7);
-    let columns = orchard_shaped_columns(4);
-    let mut slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
-    assert!(commit_glv_instances(&params, &[]).is_none());
-
-    // A column of another length declines the whole batch.
-    slices[2] = &columns[2][..9];
-    assert!(commit_glv_instances(&params, &slices).is_none());
-
-    // So does a Boolean row that is neither zero nor one.
-    let mut non_boolean = columns[1].clone();
-    non_boolean[8] = Fp::from(2);
-    let slices = [columns[0].as_slice(), non_boolean.as_slice()];
-    assert!(commit_glv_instances(&params, &slices).is_none());
+fn prepared_instances_decline_undersized_parameters() {
+    let params = Params::<EqAffine>::new(3);
+    assert!(params.glv_instance_table().is_none());
 }
 
-#[cfg(feature = "multicore")]
 #[test]
-fn glv_instance_commitments_match_across_pool_widths() {
-    let params = Params::<EqAffine>::new(7);
-    let columns = orchard_shaped_columns(23);
-    let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
-    let serial = slices
-        .iter()
-        .map(|column| params.commit_lagrange_instance(column))
-        .collect::<Vec<_>>();
-    for threads in [1, 2, 3, 4, 8] {
-        let pool = maybe_rayon::ThreadPoolBuilder::new()
-            .num_threads(threads)
-            .build()
-            .expect("test thread pool builds");
-        for count in [1, 2, 5, 23] {
-            let glv = pool.install(|| commit_glv_instances(&params, &slices[..count]));
-            assert_eq!(
-                glv.as_deref(),
-                Some(&serial[..count]),
-                "threads {threads}, columns {count}"
-            );
+fn prepared_and_fallback_batch_commitments_preserve_values() {
+    let params = Params::<EqAffine>::new(5);
+    let vk = keygen_vk(&params, &TwoInstanceColumns).unwrap();
+    for second_len in [9, 10, 11] {
+        for flag in [Fp::ZERO, Fp::ONE, Fp::from(2), -Fp::ONE] {
+            let mut first = vec![-Fp::ONE; crate::PREPARED_INSTANCE_DENSE_ROWS];
+            first.extend([Fp::ONE, Fp::ZERO, Fp::ONE]);
+            let mut second = vec![Fp::ZERO; second_len];
+            second[crate::PREPARED_INSTANCE_DENSE_ROWS] = flag;
+            let items = vec![BatchItem {
+                instances: vec![vec![first, second]],
+                proof: vec![],
+            }];
+            let commitments = compute_batch_instance_commitments(&params, &vk, &items).unwrap();
+            for (column, commitment) in items[0].instances[0].iter().zip(&commitments[0][0]) {
+                let original = column
+                    .iter()
+                    .zip(&params.g_lagrange)
+                    .fold(params.w.to_curve(), |sum, (scalar, base)| {
+                        sum + *base * scalar
+                    });
+                assert_eq!(*commitment, original.to_affine());
+            }
         }
     }
 }

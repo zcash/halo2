@@ -29,9 +29,7 @@ const INSTANCE_WINDOW_ENTRIES_PER_BASE: usize = 1 << (INSTANCE_WINDOW_BITS - 1);
 #[cfg(feature = "batch")]
 const MAX_CACHED_INSTANCE_ROWS: usize = 64;
 
-// Orchard's current public instance has seven full-width field elements
-// followed by three Boolean flags. The fixed-base prover path is deliberately
-// restricted to this exact shape.
+// Orchard's public instance column has seven full-width rows and three flags.
 #[cfg(feature = "batch")]
 const PREPARED_INSTANCE_DENSE_ROWS: usize = 7;
 #[cfg(feature = "batch")]
@@ -41,40 +39,28 @@ const PREPARED_INSTANCE_ROWS: usize = PREPARED_INSTANCE_DENSE_ROWS + PREPARED_IN
 #[cfg(feature = "batch")]
 const PREPARED_INSTANCE_OFFSETS: usize = 1 << PREPARED_INSTANCE_BOOLEAN_ROWS;
 
-/// A doubling-free GLV table for the dense rows of the one-column Orchard
-/// instance shape, built lazily for batch verification.
-///
-/// `dense` evaluates the full-width rows (see
-/// [`pasta_curves::arithmetic::PreparedFixedBaseSum`]). The eight possible
-/// Boolean-row contributions are pre-added to `w` in `offsets`, indexed by
-/// [`instance_flag_mask`].
+/// Doubling-free dense sums and default-blind/Boolean offsets, shared by Params clones.
 #[cfg(feature = "batch")]
 struct GlvInstanceTable<C: pasta_curves::arithmetic::CurveAffine> {
-    // The table is immutable once built and its methods take `&self`, so a
-    // panic cannot leave it in a broken state; asserting unwind safety keeps
-    // `Params` unwind safe, as the prepared zero-check caches do.
+    // Immutable prepared tables cannot be left partially modified by a panic.
     dense: core::panic::AssertUnwindSafe<
         Box<dyn pasta_curves::arithmetic::PreparedFixedBaseSum<C::CurveExt>>,
     >,
     offsets: [C::Curve; PREPARED_INSTANCE_OFFSETS],
 }
 
-/// The bit mask of a one-column Orchard-shaped instance's Boolean rows, or
-/// `None` if any of them is neither zero nor one.
-///
-/// # Panics
-///
-/// Panics if `instance` has fewer than [`PREPARED_INSTANCE_ROWS`] rows.
+/// Returns the Boolean-row mask, declining all unrecognized shapes or flags.
 #[cfg(feature = "batch")]
 fn instance_flag_mask<F: ff::Field>(instance: &[F]) -> Option<usize> {
+    if instance.len() != PREPARED_INSTANCE_ROWS {
+        return None;
+    }
     let mut mask = 0;
-    let flags = &instance[PREPARED_INSTANCE_DENSE_ROWS
-        ..PREPARED_INSTANCE_DENSE_ROWS + PREPARED_INSTANCE_BOOLEAN_ROWS];
-    for (flag, scalar) in flags.iter().enumerate() {
+    for (flag, scalar) in instance[PREPARED_INSTANCE_DENSE_ROWS..].iter().enumerate() {
         if bool::from(scalar.is_zero()) {
             continue;
         }
-        if bool::from((*scalar - F::ONE).is_zero()) {
+        if *scalar == F::ONE {
             mask |= 1 << flag;
         } else {
             return None;

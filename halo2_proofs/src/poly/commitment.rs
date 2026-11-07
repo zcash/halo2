@@ -9,7 +9,7 @@ use crate::helpers::CurveRead;
 #[cfg(feature = "batch")]
 use crate::{
     GlvInstanceTable, INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS,
-    PREPARED_INSTANCE_BOOLEAN_ROWS, PREPARED_INSTANCE_DENSE_ROWS, PREPARED_INSTANCE_OFFSETS,
+    PREPARED_INSTANCE_DENSE_ROWS, PREPARED_INSTANCE_OFFSETS, PREPARED_INSTANCE_ROWS,
 };
 #[cfg(feature = "batch")]
 use std::{
@@ -46,7 +46,7 @@ pub struct Params<C: CurveAffine> {
     #[cfg(feature = "batch")]
     instance_window_cache: InstanceWindowCache<C>,
     #[cfg(feature = "batch")]
-    glv_instance_cache: GlvInstanceCache<C>,
+    glv_instance_cache: Arc<OnceLock<Option<Arc<GlvInstanceTable<C>>>>>,
 }
 
 #[cfg(feature = "batch")]
@@ -79,43 +79,6 @@ impl<C> InstanceWindowCache<C> {
         *table = Some(Arc::clone(&initialized));
         initialized
     }
-}
-
-/// The lazily built [`GlvInstanceTable`], shared with clones of the params.
-/// `None` records that the table is unavailable for these params.
-#[cfg(feature = "batch")]
-struct GlvInstanceCache<C: CurveAffine>(Arc<OnceLock<Option<Arc<GlvInstanceTable<C>>>>>);
-
-#[cfg(feature = "batch")]
-impl<C: CurveAffine> Default for GlvInstanceCache<C> {
-    fn default() -> Self {
-        Self(Arc::new(OnceLock::new()))
-    }
-}
-
-#[cfg(feature = "batch")]
-impl<C: CurveAffine> Clone for GlvInstanceCache<C> {
-    fn clone(&self) -> Self {
-        Self(Arc::clone(&self.0))
-    }
-}
-
-/// `w` plus each subset of the Boolean-row Lagrange bases, indexed by
-/// [`crate::instance_flag_mask`].
-#[cfg(feature = "batch")]
-fn prepared_instance_offsets<C: CurveAffine>(
-    params: &Params<C>,
-) -> [C::Curve; PREPARED_INSTANCE_OFFSETS] {
-    let mut offsets = [C::Curve::identity(); PREPARED_INSTANCE_OFFSETS];
-    for (mask, offset) in offsets.iter_mut().enumerate() {
-        *offset = C::Curve::from(params.w);
-        for flag in 0..PREPARED_INSTANCE_BOOLEAN_ROWS {
-            if mask & (1 << flag) != 0 {
-                *offset += params.g_lagrange[PREPARED_INSTANCE_DENSE_ROWS + flag];
-            }
-        }
-    }
-    offsets
 }
 
 #[cfg(feature = "batch")]
@@ -159,21 +122,26 @@ impl<C: CurveAffine> Params<C> {
         })
     }
 
-    /// The GLV instance table, built on first use; `None` if the curve has no
-    /// GLV backend or the parameters have too few Lagrange bases.
     pub(crate) fn glv_instance_table(&self) -> Option<Arc<GlvInstanceTable<C>>> {
         self.glv_instance_cache
-            .0
             .get_or_init(|| {
-                if self.g_lagrange.len() < crate::PREPARED_INSTANCE_ROWS {
+                if self.g_lagrange.len() < PREPARED_INSTANCE_ROWS {
                     return None;
                 }
                 let dense = C::CurveExt::try_prepare_fixed_base_sum(
                     &self.g_lagrange[..PREPARED_INSTANCE_DENSE_ROWS],
                 )?;
+                // Instance commitments use Blind::default(), whose scalar is one.
+                let offsets = std::array::from_fn::<_, PREPARED_INSTANCE_OFFSETS, _>(|mask| {
+                    self.g_lagrange[PREPARED_INSTANCE_DENSE_ROWS..PREPARED_INSTANCE_ROWS]
+                        .iter()
+                        .enumerate()
+                        .filter(|(flag, _)| mask & (1 << flag) != 0)
+                        .fold(C::Curve::from(self.w), |sum, (_, base)| sum + *base)
+                });
                 Some(Arc::new(GlvInstanceTable {
                     dense: core::panic::AssertUnwindSafe(dense),
-                    offsets: prepared_instance_offsets(self),
+                    offsets,
                 }))
             })
             .clone()
@@ -261,7 +229,7 @@ impl<C: CurveAffine> Params<C> {
             #[cfg(feature = "batch")]
             instance_window_cache: InstanceWindowCache::default(),
             #[cfg(feature = "batch")]
-            glv_instance_cache: GlvInstanceCache::default(),
+            glv_instance_cache: Arc::new(OnceLock::new()),
         }
     }
 
@@ -378,7 +346,7 @@ impl<C: CurveAffine> Params<C> {
             #[cfg(feature = "batch")]
             instance_window_cache: InstanceWindowCache::default(),
             #[cfg(feature = "batch")]
-            glv_instance_cache: GlvInstanceCache::default(),
+            glv_instance_cache: Arc::new(OnceLock::new()),
         })
     }
 }
