@@ -6,7 +6,7 @@ use rand_core::{Rng, UnwrapErr};
 
 use super::{
     compute_batch_instance_commitments, signed_fixed_window_digit, signed_instance_window_count,
-    BatchItem, InstanceFixedWindowTable,
+    BatchItem, InstanceFixedWindowTable, commit_glv_instances,
 };
 use crate::{
     arithmetic::CurveAffine,
@@ -308,4 +308,97 @@ fn batch_instance_commitments_preserve_order_validation_and_transcript() {
         proof: vec![],
     }];
     assert!(compute_batch_instance_commitments(&params, &vk, &maximal).is_ok());
+}
+
+/// Orchard-shaped columns: seven full-width rows, then three flags taking
+/// every mask in turn.
+fn orchard_shaped_columns(count: u64) -> Vec<Vec<Fp>> {
+    (0..count)
+        .map(|column| {
+            let mut rows = (0..7u64)
+                .map(|row| {
+                    let mut bytes = [0; 64];
+                    let mut x = (column * 16 + row).wrapping_mul(0x9e37_79b9_7f4a_7c15) | 1;
+                    for chunk in bytes.chunks_mut(8) {
+                        x ^= x << 13;
+                        x ^= x >> 7;
+                        x ^= x << 17;
+                        chunk.copy_from_slice(&x.to_le_bytes());
+                    }
+                    Fp::from_uniform_bytes(&bytes)
+                })
+                .collect::<Vec<_>>();
+            rows[(column % 7) as usize] = match column % 3 {
+                0 => Fp::ZERO,
+                1 => Fp::ONE,
+                _ => -Fp::ONE,
+            };
+            rows.extend((0..3).map(|flag| {
+                if (column >> flag) & 1 == 1 {
+                    Fp::ONE
+                } else {
+                    Fp::ZERO
+                }
+            }));
+            rows
+        })
+        .collect()
+}
+
+#[test]
+fn glv_instance_commitments_match_fixed_window() {
+    let params = Params::<EqAffine>::new(7);
+    let table = InstanceFixedWindowTable::new(&params, 10);
+    let columns = orchard_shaped_columns(19);
+    let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
+
+    let glv = commit_glv_instances(&params, &slices).expect("Orchard-shaped columns");
+    assert_eq!(glv, table.commit_batch(&params, &slices));
+    for (column, commitment) in slices.iter().zip(&glv) {
+        assert_eq!(*commitment, params.commit_lagrange_instance(column));
+    }
+}
+
+#[test]
+fn glv_instance_commitments_decline_other_shapes() {
+    let params = Params::<EqAffine>::new(7);
+    let columns = orchard_shaped_columns(4);
+    let mut slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    assert!(commit_glv_instances(&params, &[]).is_none());
+
+    // A column of another length declines the whole batch.
+    slices[2] = &columns[2][..9];
+    assert!(commit_glv_instances(&params, &slices).is_none());
+
+    // So does a Boolean row that is neither zero nor one.
+    let mut non_boolean = columns[1].clone();
+    non_boolean[8] = Fp::from(2);
+    let slices = [columns[0].as_slice(), non_boolean.as_slice()];
+    assert!(commit_glv_instances(&params, &slices).is_none());
+}
+
+#[cfg(feature = "multicore")]
+#[test]
+fn glv_instance_commitments_match_across_pool_widths() {
+    let params = Params::<EqAffine>::new(7);
+    let columns = orchard_shaped_columns(23);
+    let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
+    let serial = slices
+        .iter()
+        .map(|column| params.commit_lagrange_instance(column))
+        .collect::<Vec<_>>();
+    for threads in [1, 2, 3, 4, 8] {
+        let pool = maybe_rayon::ThreadPoolBuilder::new()
+            .num_threads(threads)
+            .build()
+            .expect("test thread pool builds");
+        for count in [1, 2, 5, 23] {
+            let glv = pool.install(|| commit_glv_instances(&params, &slices[..count]));
+            assert_eq!(
+                glv.as_deref(),
+                Some(&serial[..count]),
+                "threads {threads}, columns {count}"
+            );
+        }
+    }
 }

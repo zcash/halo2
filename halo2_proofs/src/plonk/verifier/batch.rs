@@ -14,6 +14,7 @@ use crate::{
     poly::commitment::{Guard, Params, MSM},
     transcript::{Blake2bRead, EncodedChallenge},
     INSTANCE_WINDOW_BITS, INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS,
+    PREPARED_INSTANCE_DENSE_ROWS, PREPARED_INSTANCE_ROWS, instance_flag_mask,
 };
 
 #[cfg(feature = "multicore")]
@@ -288,18 +289,20 @@ fn compute_batch_instance_commitments<C: CurveAffine>(
             .fold(max_cached_instance_len, usize::max);
     }
 
-    let table = InstanceFixedWindowTable::new(params, max_cached_instance_len);
     let instances = items
         .iter()
         .flat_map(|item| item.instances.iter())
         .flat_map(|instances| instances.iter())
         .map(Vec::as_slice)
         .collect::<Vec<_>>();
-    let projective = if items.len() <= 2 {
-        table.commit_batch(params, &instances)
-    } else {
-        table.commit_batch_parallel(params, &instances)
-    };
+    let projective = commit_glv_instances(params, &instances).unwrap_or_else(|| {
+        let table = InstanceFixedWindowTable::new(params, max_cached_instance_len);
+        if items.len() <= 2 {
+            table.commit_batch(params, &instances)
+        } else {
+            table.commit_batch_parallel(params, &instances)
+        }
+    });
     let mut affine = vec![C::identity(); projective.len()];
     C::Curve::batch_normalize_vartime(&projective, &mut affine);
     let mut affine = affine.into_iter();
@@ -315,6 +318,60 @@ fn compute_batch_instance_commitments<C: CurveAffine>(
     assert!(affine.next().is_none());
 
     Ok(commitments)
+}
+
+/// Commits every column with the doubling-free GLV table when every column
+/// has the one-column Orchard instance shape: [`PREPARED_INSTANCE_DENSE_ROWS`]
+/// full-width rows followed by [`crate::PREPARED_INSTANCE_BOOLEAN_ROWS`] Boolean
+/// rows. The columns are split into one contiguous chunk per worker.
+///
+/// Returns `None`, committing nothing, if any column has another length or a
+/// Boolean row that is neither zero nor one, or if the params have no GLV
+/// table; the caller then uses the generic fixed-window path.
+fn commit_glv_instances<C: CurveAffine>(
+    params: &Params<C>,
+    instances: &[&[C::Scalar]],
+) -> Option<Vec<C::Curve>> {
+    if instances.is_empty()
+        || instances
+            .iter()
+            .any(|column| column.len() != PREPARED_INSTANCE_ROWS)
+    {
+        return None;
+    }
+    let masks = instances
+        .iter()
+        .map(|column| instance_flag_mask(column))
+        .collect::<Option<Vec<_>>>()?;
+    let table = params.glv_instance_table()?;
+
+    let chunk_len = instances
+        .len()
+        .div_ceil(crate::multicore::current_num_threads());
+    Some(
+        (0..instances.len().div_ceil(chunk_len))
+            .into_par_iter()
+            .map(|chunk| {
+                let start = chunk * chunk_len;
+                let end = (start + chunk_len).min(instances.len());
+                // One batched call per chunk: the dense sums share their
+                // affine reduction and its inversions.
+                let dense = instances[start..end]
+                    .iter()
+                    .map(|column| &column[..PREPARED_INSTANCE_DENSE_ROWS])
+                    .collect::<Vec<_>>();
+                let sums = table.dense.sum_batch_vartime(&dense);
+                // `zip` would silently drop columns if an implementation
+                // returned fewer sums than it was given.
+                debug_assert_eq!(sums.len(), dense.len(), "one sum per column");
+                sums.into_iter()
+                    .zip(&masks[start..end])
+                    .map(|(sum, &mask)| table.offsets[mask] + sum)
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>()
+            .concat(),
+    )
 }
 
 /// A verifier that checks multiple proofs in a batch. **This requires the
