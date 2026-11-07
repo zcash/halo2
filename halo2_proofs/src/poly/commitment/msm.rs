@@ -2,6 +2,7 @@ use super::Params;
 use crate::arithmetic::{best_multiexp_public, CurveAffine};
 use ff::Field;
 use group::Group;
+use pasta_curves::arithmetic::CurveExt;
 
 use std::collections::BTreeMap;
 
@@ -188,7 +189,10 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
         assert_eq!(scalars.len(), len);
 
-        bool::from(best_multiexp_public(&scalars, &bases).is_identity())
+        // A common nonzero scaling of all coefficients preserves identity,
+        // but must never be used by a point-returning MSM.
+        C::Curve::try_multiexp_full_width_is_identity_vartime(&scalars, &bases)
+            .unwrap_or_else(|| bool::from(best_multiexp_public(&scalars, &bases).is_identity()))
     }
 
     /// The MSM's accumulated terms, exposed for capturing the verifier fingerprint without consuming
@@ -214,6 +218,9 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         (g_scalars.map(<[_]>::to_vec), w_scalar, u_scalar, other)
     }
 }
+
+#[cfg(test)]
+mod identity_tests;
 
 #[cfg(test)]
 mod tests {

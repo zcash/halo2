@@ -7,6 +7,8 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Changed
+- Final verifier MSM identity checks try the curve's full-width public-input
+  hook, retaining the point-returning MSM fallback when unsupported.
 - Verifier MSM evaluation and public instance commitments try the curve's
   variable-time MSM hook before the generic signed-Booth implementation. Pasta's
   GLV backend is enabled, with parallel evaluation controlled by `multicore`.
