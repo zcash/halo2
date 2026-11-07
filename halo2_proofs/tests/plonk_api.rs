@@ -648,6 +648,28 @@ fn plonk_api() {
         //
 
         {
+            // A parseable proof with altered public inputs must fail both paths.
+            let wrong_pubinputs = vec![instance + Fp::ONE];
+            let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+            assert!(verify_proof(
+                &params,
+                pk.get_vk(),
+                SingleVerifier::new(&params),
+                &[&[&wrong_pubinputs[..]], &[&wrong_pubinputs[..]]],
+                &mut transcript,
+            )
+            .is_err());
+            let mut invalid_batch = BatchVerifier::new();
+            invalid_batch.add_proof(
+                vec![vec![pubinputs.clone()], vec![pubinputs.clone()]],
+                proof.clone(),
+            );
+            invalid_batch.add_proof(
+                vec![vec![wrong_pubinputs.clone()], vec![wrong_pubinputs]],
+                proof.clone(),
+            );
+            assert!(!invalid_batch.finalize(&params, pk.get_vk()));
+
             let mut batch = BatchVerifier::new();
 
             // First proof.

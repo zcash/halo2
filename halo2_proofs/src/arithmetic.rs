@@ -31,9 +31,13 @@ enum Bucket<C: CurveAffine> {
 }
 
 impl<C: CurveAffine> Bucket<C> {
-    fn add_assign(&mut self, other: C) {
+    fn add_assign<const PUBLIC: bool>(&mut self, other: C) {
         *self = match *self {
             Bucket::None => Bucket::Affine(other),
+            Bucket::Affine(a) if PUBLIC => {
+                Bucket::Projective(a.to_curve().add_mixed_vartime(&other))
+            }
+            Bucket::Projective(a) if PUBLIC => Bucket::Projective(a.add_mixed_vartime(&other)),
             Bucket::Affine(a) => Bucket::Projective(a + other),
             Bucket::Projective(mut a) => {
                 a += other;
@@ -42,9 +46,11 @@ impl<C: CurveAffine> Bucket<C> {
         }
     }
 
-    fn add(self, mut other: C::Curve) -> C::Curve {
+    fn add<const PUBLIC: bool>(self, mut other: C::Curve) -> C::Curve {
         match self {
             Bucket::None => other,
+            Bucket::Affine(a) if PUBLIC => other.add_mixed_vartime(&a),
+            Bucket::Projective(a) if PUBLIC => other.add_vartime(&a),
             Bucket::Affine(a) => {
                 other += a;
                 other
@@ -134,7 +140,7 @@ impl<C: CurveAffine> BoothBuckets<C> {
         }
     }
 
-    fn sum(
+    fn sum<const PUBLIC: bool>(
         &mut self,
         coeffs: &[<C::Scalar as PrimeField>::Repr],
         bases: &[C],
@@ -146,7 +152,7 @@ impl<C: CurveAffine> BoothBuckets<C> {
             let digit = booth_digit(coeff.as_ref(), self.c, i);
             if digit.magnitude != 0 {
                 let base = if digit.negative { -*base } else { *base };
-                self.coeffs[digit.magnitude - 1].add_assign(base);
+                self.coeffs[digit.magnitude - 1].add_assign::<PUBLIC>(base);
             }
         }
         // Summation by parts
@@ -156,8 +162,12 @@ impl<C: CurveAffine> BoothBuckets<C> {
         let mut acc = C::Curve::identity();
         let mut sum = C::Curve::identity();
         self.coeffs.iter().rev().for_each(|b| {
-            sum = b.add(sum);
-            acc += sum;
+            sum = b.add::<PUBLIC>(sum);
+            acc = if PUBLIC {
+                acc.add_vartime(&sum)
+            } else {
+                acc + sum
+            };
         });
         acc
     }
@@ -194,7 +204,8 @@ pub fn small_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::C
 /// use `best_multiexp` instead.
 pub(crate) fn best_multiexp_public<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
-    C::CurveExt::try_multiexp_vartime(coeffs, bases).unwrap_or_else(|| best_multiexp(coeffs, bases))
+    C::CurveExt::try_multiexp_vartime(coeffs, bases)
+        .unwrap_or_else(|| best_multiexp_inner::<C, true>(coeffs, bases))
 }
 
 /// Performs a multi-exponentiation operation.
@@ -203,6 +214,15 @@ pub(crate) fn best_multiexp_public<C: CurveAffine>(coeffs: &[C::Scalar], bases: 
 ///
 /// This will use multithreading if beneficial.
 pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Curve {
+    best_multiexp_inner::<C, false>(coeffs, bases)
+}
+
+// Only the public entry point enables these operations. Const specialization
+// leaves the ordinary witness-bearing prover arithmetic unchanged.
+fn best_multiexp_inner<C: CurveAffine, const PUBLIC: bool>(
+    coeffs: &[C::Scalar],
+    bases: &[C],
+) -> C::Curve {
     assert_eq!(coeffs.len(), bases.len());
 
     // Convert to canonical representations once instead of once per window.
@@ -225,22 +245,44 @@ pub fn best_multiexp<C: CurveAffine>(coeffs: &[C::Scalar], bases: &[C]) -> C::Cu
             .enumerate()
             .rev()
             .map(|(i, buckets)| {
-                let mut acc = buckets.sum(&coeffs, bases, i);
-                (0..c * i).for_each(|_| acc = acc.double());
+                let mut acc = buckets.sum::<PUBLIC>(&coeffs, bases, i);
+                (0..c * i).for_each(|_| {
+                    acc = if PUBLIC {
+                        acc.double_vartime()
+                    } else {
+                        acc.double()
+                    };
+                });
                 acc
             })
-            .the_best_reduce(C::Curve::identity, |a, b| a + b)
+            .the_best_reduce(C::Curve::identity, |a, b| {
+                if PUBLIC {
+                    a.add_vartime(&b)
+                } else {
+                    a + b
+                }
+            })
             .expect("multi_buckets always contains at least 1 bucket")
     } else {
         multi_buckets
             .iter_mut()
             .enumerate()
             .rev()
-            .map(|(i, buckets)| buckets.sum(&coeffs, bases, i))
+            .map(|(i, buckets)| buckets.sum::<PUBLIC>(&coeffs, bases, i))
             .fold(C::Curve::identity(), |mut sum, bucket| {
                 // restore original evaluation point
-                (0..c).for_each(|_| sum = sum.double());
-                sum + bucket
+                (0..c).for_each(|_| {
+                    sum = if PUBLIC {
+                        sum.double_vartime()
+                    } else {
+                        sum.double()
+                    };
+                });
+                if PUBLIC {
+                    sum.add_vartime(&bucket)
+                } else {
+                    sum + bucket
+                }
             })
     }
 }

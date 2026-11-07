@@ -100,3 +100,39 @@ fn buffered_owned_msms_match_naive_sums() {
     check::<EpAffine>();
     check::<EqAffine>();
 }
+
+#[test]
+fn public_identity_checks_preserve_acceptance_for_exceptional_points() {
+    fn check<C: CurveAffine>() {
+        let params = Params::<C>::new(3);
+        let point = params.g[0];
+        let double = (point + point).to_affine_vartime();
+        for batched in [false, true] {
+            let mut msm = params.empty_msm();
+            let mut expected = C::Curve::identity();
+            for (scalar, point) in [
+                (C::Scalar::ONE, C::identity()),
+                (C::Scalar::ONE, point),
+                (C::Scalar::ONE, point),
+                (-C::Scalar::ONE, double),
+                (C::Scalar::ONE, -point),
+                (C::Scalar::ONE, point),
+            ] {
+                if batched {
+                    let mut term = params.empty_msm();
+                    term.append_term(scalar, point);
+                    msm.add_msm_batch(term);
+                } else {
+                    msm.append_term(scalar, point);
+                }
+                expected += point * scalar;
+                assert_eq!(msm.clone().eval(), bool::from(expected.is_identity()));
+            }
+            assert!(msm.clone().eval());
+            msm.append_term(C::Scalar::ONE, point);
+            assert!(!msm.eval());
+        }
+    }
+    check::<EpAffine>();
+    check::<EqAffine>();
+}

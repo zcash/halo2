@@ -1,7 +1,7 @@
 use super::Params;
 use crate::arithmetic::{best_multiexp_public, CurveAffine};
 use ff::{Field, PrimeField};
-use group::Group;
+use pasta_curves::arithmetic::{CurveExt, VartimeField};
 
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
@@ -71,17 +71,19 @@ fn canonicalize_other<C: CurveAffine>(terms: &mut Vec<ArbitraryTerm<C>>) {
         if x != our_x {
             return false;
         }
-        if y == our_y {
+        if y.eq_vartime(our_y) {
             *our_scalar += *scalar;
         } else {
-            assert!(*our_y == -*y);
+            assert!(our_y.eq_vartime(&-*y));
             *our_scalar -= *scalar;
         }
         true
     });
 }
 
-/// A multiscalar multiplication in the polynomial commitment scheme
+/// A multiscalar multiplication in the polynomial commitment verifier.
+///
+/// Scalars and points must be public: coalescing and evaluation are variable-time.
 #[derive(Debug, Clone)]
 pub struct MSM<'a, C: CurveAffine> {
     pub(crate) params: &'a Params<C>,
@@ -139,10 +141,10 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         self.other
             .entry(x)
             .and_modify(|(our_scalar, our_y)| {
-                if *our_y == y {
+                if our_y.eq_vartime(&y) {
                     *our_scalar += scalar;
                 } else {
-                    assert!(*our_y == -y);
+                    assert!(our_y.eq_vartime(&-y));
                     *our_scalar -= scalar;
                 }
             })
@@ -169,7 +171,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
     /// Add arbitrary term (the scalar and the point)
     pub fn append_term(&mut self, scalar: C::Scalar, point: C) {
-        if !bool::from(point.is_identity()) {
+        if !point.is_identity_vartime() {
             let xy = point.coordinates().unwrap();
             self.add_other_key(CanonicalFieldKey::new(*xy.x()), scalar, *xy.y());
         }
@@ -283,7 +285,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
         assert_eq!(scalars.len(), len);
 
-        bool::from(best_multiexp_public(&scalars, &bases).is_identity())
+        best_multiexp_public(&scalars, &bases).is_identity_vartime()
     }
 
     /// Exposes the same terms evaluated by [`Self::eval`], with buffered batch

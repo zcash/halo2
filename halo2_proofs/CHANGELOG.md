@@ -7,12 +7,14 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 ### Changed
+- Public verifier MSM fallback arithmetic, point coalescing and reusable instance
+  tables use explicit variable-time group operations. Witness-bearing prover
+  operations retain the ordinary arithmetic path.
 - Verifier MSM evaluation and public instance commitments try the curve's
   variable-time MSM hook before the generic signed-Booth implementation. Pasta's
   GLV backend is enabled, with parallel evaluation controlled by `multicore`.
   Witness-bearing prover MSMs retain the existing implementation.
 
-### Changed
 - Verification batches multi-opening denominators into one inversion and avoids
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms

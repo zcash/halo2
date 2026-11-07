@@ -7,6 +7,8 @@ pub(super) fn assert_public_multiexp_matches_naive<C: CurveAffine>(
     expected: C::Curve,
 ) {
     assert_eq!(best_multiexp_public(coeffs, bases), expected);
+    // Exercise the generic public fallback even when the specialized hook accepts.
+    assert_eq!(best_multiexp_inner::<C, true>(coeffs, bases), expected);
 }
 
 #[cfg(test)]
@@ -27,6 +29,10 @@ fn check_multiexp_hook<C: CurveAffine>() {
             best_multiexp_public(&coeffs[..len], &bases[..len]),
             best_multiexp(&coeffs[..len], &bases[..len]),
             "random MSM of length {len}",
+        );
+        assert_eq!(
+            best_multiexp_inner::<C, true>(&coeffs[..len], &bases[..len]),
+            best_multiexp::<C>(&coeffs[..len], &bases[..len]),
         );
     }
 
@@ -68,6 +74,10 @@ fn check_multiexp_hook<C: CurveAffine>() {
             best_multiexp(&coeffs[..len], &bases[..len]),
             "edge MSM of length {len}",
         );
+        assert_eq!(
+            best_multiexp_inner::<C, true>(&coeffs[..len], &bases[..len]),
+            best_multiexp::<C>(&coeffs[..len], &bases[..len]),
+        );
     }
     assert_eq!(
         best_multiexp_public(&vec![C::Scalar::ZERO; bases.len()], &bases),
@@ -101,4 +111,35 @@ fn test_multiexp_missing_base() {
 #[should_panic]
 fn test_multiexp_missing_coefficient() {
     best_multiexp_public::<EpAffine>(&[], &[EpAffine::from(Ep::generator())]);
+}
+
+#[test]
+fn public_bucket_arithmetic_matches_ordinary_arithmetic() {
+    fn check<C: CurveAffine>() {
+        let point = C::Curve::generator().to_affine_vartime();
+        let double = point.to_curve().double().to_affine_vartime();
+        let edges = [C::identity(), point, point, -point, double, -double];
+        let mut rng = UnwrapErr(SysRng);
+        for len in [0, 1, 2, 3, 4, 16, 17, 31, 32, 33, 255, 256, 257] {
+            let bases = edges.into_iter().cycle().take(len).collect::<Vec<_>>();
+            for coeffs in [
+                vec![C::Scalar::ZERO; len],
+                vec![C::Scalar::ONE; len],
+                vec![-C::Scalar::ONE; len],
+                (0..len).map(|_| C::Scalar::random(&mut rng)).collect(),
+            ] {
+                let expected = coeffs
+                    .iter()
+                    .zip(&bases)
+                    .fold(C::Curve::identity(), |sum, (scalar, base)| {
+                        sum + *base * scalar
+                    });
+                assert_eq!(best_multiexp_inner::<C, true>(&coeffs, &bases), expected);
+                assert_eq!(best_multiexp_inner::<C, false>(&coeffs, &bases), expected);
+                assert_eq!(best_multiexp_public(&coeffs, &bases), expected);
+            }
+        }
+    }
+    check::<EpAffine>();
+    check::<EqAffine>();
 }

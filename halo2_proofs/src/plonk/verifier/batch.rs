@@ -89,7 +89,7 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
         for window in (0..window_count).rev() {
             if window + 1 != window_count {
                 for _ in 0..SERIAL_INSTANCE_WINDOW_BITS {
-                    variable = variable.double();
+                    variable = variable.double_vartime();
                 }
             }
 
@@ -100,14 +100,15 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
                     SERIAL_INSTANCE_WINDOW_BITS,
                 );
                 if digit != 0 {
-                    variable +=
-                        self.multiples[base_index * INSTANCE_WINDOW_ENTRIES_PER_BASE + digit - 1];
+                    variable = variable.add_mixed_vartime(
+                        &self.multiples[base_index * INSTANCE_WINDOW_ENTRIES_PER_BASE + digit - 1],
+                    );
                 }
             }
         }
 
         // The default instance blind is one, including for an empty column.
-        C::Curve::from(params.w) + variable
+        variable.add_mixed_vartime(&params.w)
     }
 
     #[inline(never)]
@@ -185,7 +186,7 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
             if window + 1 != window_count {
                 for _ in 0..INSTANCE_WINDOW_BITS {
                     for (output_index, _) in &cached_instances {
-                        commitments[*output_index] = commitments[*output_index].double();
+                        commitments[*output_index] = commitments[*output_index].double_vartime();
                     }
                 }
             }
@@ -201,15 +202,15 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
                         if digit.negative {
                             multiple = -multiple;
                         }
-                        commitments[*output_index] += multiple;
+                        commitments[*output_index] =
+                            commitments[*output_index].add_mixed_vartime(&multiple);
                     }
                 }
             }
         }
 
-        let blind = C::Curve::from(params.w);
         for (output_index, _) in cached_instances {
-            commitments[output_index] += blind;
+            commitments[output_index] = commitments[output_index].add_mixed_vartime(&params.w);
         }
         commitments
     }
@@ -353,7 +354,7 @@ fn commit_glv_instances<C: CurveAffine>(
                 let mut sums = table.dense.sum_batch_vartime(&dense);
                 assert_eq!(sums.len(), dense.len(), "one prepared sum per column");
                 for (sum, &mask) in sums.iter_mut().zip(&masks[start..end]) {
-                    *sum = table.offsets[mask] + *sum;
+                    *sum = sum.add_vartime(&table.offsets[mask]);
                 }
                 sums
             })

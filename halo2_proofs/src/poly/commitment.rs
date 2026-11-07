@@ -113,7 +113,7 @@ impl<C: CurveAffine> Params<C> {
                 let mut multiple = C::Curve::from(*base);
                 for _ in 1..INSTANCE_WINDOW_ENTRIES_PER_BASE {
                     projective.push(multiple);
-                    multiple += *base;
+                    multiple = multiple.add_mixed_vartime(base);
                 }
                 projective.push(multiple);
             }
@@ -139,7 +139,9 @@ impl<C: CurveAffine> Params<C> {
                         .iter()
                         .enumerate()
                         .filter(|(flag, _)| mask & (1 << flag) != 0)
-                        .fold(C::Curve::from(self.w), |sum, (_, base)| sum + *base)
+                        .fold(C::Curve::from(self.w), |sum, (_, base)| {
+                            sum.add_mixed_vartime(base)
+                        })
                 });
                 Some(Arc::new(GlvInstanceTable {
                     dense: core::panic::AssertUnwindSafe(dense),
