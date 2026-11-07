@@ -38,6 +38,8 @@ pub use prover::*;
 pub use verifier::*;
 
 use std::io;
+#[cfg(feature = "batch")]
+use std::sync::Arc;
 
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
@@ -51,6 +53,60 @@ pub struct VerifyingKey<C: CurveAffine> {
     cs_degree: usize,
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
+    /// Where proofs' points are, learned by the batch verifier; shared by
+    /// clones and not part of [`Self::pinned`].
+    #[cfg(feature = "batch")]
+    proof_point_layouts: Arc<ProofPointLayouts>,
+}
+
+/// The byte offsets of a proof's points, by the number of circuit instances
+/// the proof covers.
+///
+/// A proof's sequence of point and scalar reads is fixed by the verifying key
+/// and its circuit-instance count, so the offsets recorded while one proof of
+/// a shape is read completely hold for every proof of that shape, valid or
+/// not (validity is decided later, by the batch's final check). The batch
+/// verifier uses them to decode a proof's points together before reading it;
+/// a wrong layout would only cost speed, since a point read at an offset that
+/// was not decoded ahead decodes as usual.
+#[cfg(feature = "batch")]
+#[derive(Debug, Default)]
+pub(crate) struct ProofPointLayouts(std::sync::Mutex<Vec<(usize, Arc<[usize]>)>>);
+
+#[cfg(feature = "batch")]
+impl<C: CurveAffine> VerifyingKey<C> {
+    pub(crate) fn proof_point_layouts(&self) -> &ProofPointLayouts {
+        &self.proof_point_layouts
+    }
+}
+
+#[cfg(feature = "batch")]
+impl ProofPointLayouts {
+    /// At most this many shapes are kept; Orchard proofs differ only in their
+    /// action count.
+    const MAX_SHAPES: usize = 32;
+
+    pub(crate) fn get(&self, circuits: usize) -> Option<Arc<[usize]>> {
+        let layouts = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        layouts
+            .iter()
+            .find(|(shape, _)| *shape == circuits)
+            .map(|(_, offsets)| Arc::clone(offsets))
+    }
+
+    pub(crate) fn insert(&self, circuits: usize, offsets: Vec<usize>) {
+        let mut layouts = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if layouts.len() < Self::MAX_SHAPES && !layouts.iter().any(|(shape, _)| *shape == circuits)
+        {
+            layouts.push((circuits, offsets.into()));
+        }
+    }
 }
 
 impl<C: CurveAffine> VerifyingKey<C>
@@ -74,6 +130,8 @@ where
             cs_degree,
             // Temporary, this is not pinned.
             transcript_repr: C::Scalar::ZERO,
+            #[cfg(feature = "batch")]
+            proof_point_layouts: Arc::default(),
         };
 
         let mut hasher = Blake2bParams::new()
