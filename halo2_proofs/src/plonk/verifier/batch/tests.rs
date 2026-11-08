@@ -401,59 +401,87 @@ fn shared_anchor_commitments_match_unshared_prepared_sums() {
     macro_rules! check_curve {
         ($curve:ty, $scalar:ty) => {{
             let mut rng = UnwrapErr(SysRng);
-            for threads in [1, 3, 8] {
-                let pool = maybe_rayon::ThreadPoolBuilder::new()
-                    .num_threads(threads)
-                    .build()
-                    .unwrap();
-                for exceptional in [false, true] {
-                    let mut params = Params::<$curve>::new(4);
-                    if exceptional {
-                        params.g_lagrange[0] = <$curve>::identity();
+            for exceptional in [false, true] {
+                let mut params = Params::<$curve>::new(4);
+                if exceptional {
+                    let p = params.g_lagrange[0];
+                    params.g_lagrange[..7].copy_from_slice(&[
+                        <$curve>::identity(),
+                        p,
+                        -p,
+                        p,
+                        p,
+                        -p,
+                        <$curve>::identity(),
+                    ]);
+                    params.w = -p;
+                }
+                let table = params.glv_instance_table().unwrap();
+                for pattern in 0..5 {
+                    let instances = (0u64..207)
+                        .map(|column| {
+                            let mut instance = (0..crate::PREPARED_INSTANCE_DENSE_ROWS)
+                                .map(|_| <$scalar>::random(&mut rng))
+                                .collect::<Vec<_>>();
+                            instance[0] = match pattern {
+                                0 => <$scalar>::from(column + 1),
+                                1 => -<$scalar>::ONE,
+                                2 => match column % 3 {
+                                    0 => <$scalar>::ZERO,
+                                    1 => <$scalar>::ONE,
+                                    _ => <$scalar>::from(column + 100),
+                                },
+                                3 => <$scalar>::from(column / 2),
+                                // Distinct values with identical low 64 bits must
+                                // not be mistaken for a shared anchor.
+                                _ => <$scalar as ff::PrimeField>::from_u128(
+                                    (u128::from(column % 7) << 64) | 1,
+                                ),
+                            };
+                            instance.extend((0..crate::PREPARED_INSTANCE_BOOLEAN_ROWS).map(
+                                |flag| {
+                                    if column & (1 << flag) == 0 {
+                                        <$scalar>::ZERO
+                                    } else {
+                                        <$scalar>::ONE
+                                    }
+                                },
+                            ));
+                            instance
+                        })
+                        .collect::<Vec<_>>();
+                    let slices = instances.iter().map(Vec::as_slice).collect::<Vec<_>>();
+                    let dense = slices
+                        .iter()
+                        .map(|column| &column[..crate::PREPARED_INSTANCE_DENSE_ROWS])
+                        .collect::<Vec<_>>();
+                    let mut independent = table.dense.sum_batch_vartime(&dense);
+                    for (sum, column) in independent.iter_mut().zip(&slices) {
+                        *sum = table.offsets[crate::instance_flag_mask(column).unwrap()] + *sum;
+                        assert_eq!(*sum, params.commit_lagrange_instance(column));
                     }
-                    let table = params.glv_instance_table().unwrap();
-                    for pattern in 0..4 {
-                        let instances = (0u64..33)
-                            .map(|column| {
-                                let mut instance = (0..crate::PREPARED_INSTANCE_DENSE_ROWS)
-                                    .map(|_| <$scalar>::random(&mut rng))
-                                    .collect::<Vec<_>>();
-                                instance[0] = match pattern {
-                                    0 => <$scalar>::from(column + 1),
-                                    1 => -<$scalar>::ONE,
-                                    2 => match column % 3 {
-                                        0 => <$scalar>::ZERO,
-                                        1 => <$scalar>::ONE,
-                                        _ => <$scalar>::from(column + 100),
-                                    },
-                                    _ => <$scalar>::from(column / 2),
-                                };
-                                instance.extend((0..crate::PREPARED_INSTANCE_BOOLEAN_ROWS).map(
-                                    |flag| {
-                                        if column & (1 << flag) == 0 {
-                                            <$scalar>::ZERO
-                                        } else {
-                                            <$scalar>::ONE
-                                        }
-                                    },
-                                ));
-                                instance
-                            })
-                            .collect::<Vec<_>>();
-                        let slices = instances.iter().map(Vec::as_slice).collect::<Vec<_>>();
-                        let dense = slices
-                            .iter()
-                            .map(|column| &column[..crate::PREPARED_INSTANCE_DENSE_ROWS])
-                            .collect::<Vec<_>>();
-                        let mut unshared = table.dense.sum_batch_vartime(&dense);
-                        for (sum, column) in unshared.iter_mut().zip(&slices) {
-                            *sum = table.offsets[crate::instance_flag_mask(column).unwrap()] + *sum;
-                        }
-                        for count in [1, 2, 3, 8, 17, 33] {
+                    for threads in [1, 3, 8] {
+                        let pool = maybe_rayon::ThreadPoolBuilder::new()
+                            .num_threads(threads)
+                            .build()
+                            .unwrap();
+                        for count in [1, 2, 3, 8, 17, 33, 207] {
                             let shared = pool.install(|| {
                                 commit_glv_instances(&params, &slices[..count]).unwrap()
                             });
-                            assert_eq!(shared, unshared[..count]);
+                            assert_eq!(shared, independent[..count]);
+                            let reversed =
+                                slices[..count].iter().rev().copied().collect::<Vec<_>>();
+                            let shared =
+                                pool.install(|| commit_glv_instances(&params, &reversed).unwrap());
+                            assert_eq!(
+                                shared,
+                                independent[..count]
+                                    .iter()
+                                    .rev()
+                                    .copied()
+                                    .collect::<Vec<_>>()
+                            );
                         }
                     }
                 }
@@ -462,6 +490,65 @@ fn shared_anchor_commitments_match_unshared_prepared_sums() {
     }
     check_curve!(EqAffine, Fp);
     check_curve!(EpAffine, Fq);
+}
+
+#[test]
+fn repeated_anchor_batches_bind_each_instances_anchor() {
+    use crate::plonk::{create_proof, keygen_pk};
+
+    let params = Params::<EqAffine>::new(5);
+    let vk = keygen_vk(&params, &TwoInstanceColumns).unwrap();
+    let pk = keygen_pk(&params, vk, &TwoInstanceColumns).unwrap();
+    let proofs = (0u64..8)
+        .map(|index| {
+            let columns = (0..2)
+                .map(|column| {
+                    let mut values = vec![Fp::from(index + column + 2); 7];
+                    values[0] = Fp::from(index / 2);
+                    values.extend([Fp::ONE, Fp::ZERO, Fp::ONE]);
+                    values
+                })
+                .collect::<Vec<_>>();
+            let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+            create_proof(
+                &params,
+                &pk,
+                &[TwoInstanceColumns],
+                &[&slices],
+                UnwrapErr(SysRng),
+                &mut transcript,
+            )
+            .unwrap();
+            (vec![columns], transcript.finalize())
+        })
+        .collect::<Vec<_>>();
+    for alteration in 0..5 {
+        let mut batch = super::BatchVerifier::new();
+        for (index, (instances, proof)) in proofs.iter().enumerate() {
+            let mut instances = instances.clone();
+            let mut proof = proof.clone();
+            if index == 3 {
+                match alteration {
+                    0 => {}
+                    // Change only one column of a repeated anchor group.
+                    1 => instances[0][1][0] += Fp::ONE,
+                    // Move both columns to another existing anchor group.
+                    2 => {
+                        instances[0][0][0] = Fp::ZERO;
+                        instances[0][1][0] = Fp::ZERO;
+                    }
+                    // Exercise the generic fallback after sharing would apply.
+                    3 => instances[0][1][7] = Fp::from(2),
+                    _ => {
+                        proof.pop();
+                    }
+                }
+            }
+            batch.add_proof(instances, proof);
+        }
+        assert_eq!(batch.finalize(&params, pk.get_vk()), alteration == 0);
+    }
 }
 
 #[test]

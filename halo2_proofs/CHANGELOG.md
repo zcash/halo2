@@ -23,6 +23,8 @@ and this project adheres to Rust's notion of
   columns with seven dense values and three Boolean flags. Other shapes, flags,
   and unsupported curves retain the generic path; default blinding, parameter
   serialization, and transcript order are unchanged.
+- Batch verification reuses repeated public anchor terms within each worker's
+  prepared instance commitments, without changing commitment values or order.
 
 ## [0.4.1] - 2026-10-26
 ### Changed
