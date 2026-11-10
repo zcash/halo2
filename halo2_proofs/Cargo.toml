@@ -52,6 +52,10 @@ name = "fft"
 harness = false
 
 [[bench]]
+name = "prover"
+harness = false
+
+[[bench]]
 name = "prover_parallelism"
 harness = false
 required-features = ["unstable-bench-internals"]
