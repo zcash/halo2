@@ -34,3 +34,11 @@ pub fn grand_product<F: Field>(values: &[F], len: usize) -> Vec<F> {
 pub fn chained_grand_products<F: Field>(sets: Vec<Vec<F>>, len: usize) -> Vec<Vec<F>> {
     arithmetic::chained_grand_products(sets, len)
 }
+
+/// See `plonk::lookup::prover::permute_lookup_values`.
+pub fn permute_lookup_values<F: ff::PrimeField>(
+    input: &[F],
+    table: &[F],
+) -> Result<(Vec<F>, Vec<F>), crate::plonk::Error> {
+    crate::plonk::lookup::prover::permute_lookup_values(input, table)
+}

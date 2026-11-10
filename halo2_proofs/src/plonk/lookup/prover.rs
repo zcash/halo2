@@ -14,11 +14,12 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 use ff::WithSmallOrderMulGroup;
-use group::ff::Field;
+use group::ff::{Field, PrimeField};
+use maybe_rayon::prelude::*;
 use pasta_curves::arithmetic::CurveExt;
 use rand_core::Rng;
 use std::{
-    collections::BTreeMap,
+    cmp::Ordering,
     iter,
     ops::{Mul, MulAssign},
 };
@@ -566,53 +567,10 @@ fn permute_expression_pair<C: CurveAffine, R: Rng>(
     let blinding_factors = pk.vk.cs.blinding_factors();
     let usable_rows = params.n as usize - (blinding_factors + 1);
 
-    let mut permuted_input_expression: Vec<C::Scalar> = input_expression.to_vec();
-    permuted_input_expression.truncate(usable_rows);
-
-    // Sort input lookup expression values
-    permuted_input_expression.sort();
-
-    // A BTreeMap of each unique element in the table expression and its count
-    let mut leftover_table_map: BTreeMap<C::Scalar, u32> = table_expression
-        .iter()
-        .take(usable_rows)
-        .fold(BTreeMap::new(), |mut acc, coeff| {
-            *acc.entry(*coeff).or_insert(0) += 1;
-            acc
-        });
-    let mut permuted_table_coeffs = vec![C::Scalar::ZERO; usable_rows];
-
-    let mut repeated_input_rows = permuted_input_expression
-        .iter()
-        .zip(permuted_table_coeffs.iter_mut())
-        .enumerate()
-        .filter_map(|(row, (input_value, table_value))| {
-            // If this is the first occurrence of `input_value` in the input expression
-            if row == 0 || *input_value != permuted_input_expression[row - 1] {
-                *table_value = *input_value;
-                // Remove one instance of input_value from leftover_table_map
-                if let Some(count) = leftover_table_map.get_mut(input_value) {
-                    assert!(*count > 0);
-                    *count -= 1;
-                    None
-                } else {
-                    // Return error if input_value not found
-                    Some(Err(Error::ConstraintSystemFailure))
-                }
-            // If input value is repeated
-            } else {
-                Some(Ok(row))
-            }
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-
-    // Populate permuted table at unfilled rows with leftover table elements
-    for (coeff, count) in leftover_table_map.iter() {
-        for _ in 0..*count {
-            permuted_table_coeffs[repeated_input_rows.pop().unwrap()] = *coeff;
-        }
-    }
-    assert!(repeated_input_rows.is_empty());
+    let (mut permuted_input_expression, mut permuted_table_coeffs) = permute_lookup_values(
+        &input_expression[..][..usable_rows],
+        &table_expression[..][..usable_rows],
+    )?;
 
     permuted_input_expression
         .extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
@@ -639,4 +597,214 @@ fn permute_expression_pair<C: CurveAffine, R: Rng>(
         domain.lagrange_from_vec(permuted_input_expression),
         domain.lagrange_from_vec(permuted_table_coeffs),
     ))
+}
+
+/// Below this many rows, the lookup values are sorted on one thread.
+#[cfg_attr(not(feature = "multicore"), allow(dead_code))]
+const LOOKUP_SORT_PARALLEL_THRESHOLD: usize = 1 << 14;
+
+/// Orders field elements by their canonical byte representation read as a
+/// little-endian integer, which is the order of the integers in `[0, p)` and
+/// therefore the order pasta's `Ord` implementation defines.
+///
+/// Any total order in which equal keys mean equal values would do for the
+/// lookup argument; this one keeps proofs identical to those of earlier
+/// versions, which sorted with `Ord` directly.
+fn cmp_repr<F: PrimeField>(a: &F::Repr, b: &F::Repr) -> Ordering {
+    a.as_ref().iter().rev().cmp(b.as_ref().iter().rev())
+}
+
+/// Returns `values` sorted, together with their sort keys.
+///
+/// Comparing field elements with `Ord` converts both operands out of
+/// Montgomery form on every comparison, so a sort performs `2 n log n`
+/// conversions. Computing each key once costs `n`.
+fn sort_by_repr<F: PrimeField>(values: &[F]) -> Vec<(F::Repr, F)> {
+    let mut keyed: Vec<(F::Repr, F)> = values
+        .into_par_iter()
+        .map(|value| (value.to_repr(), *value))
+        .collect();
+    let by_key = |a: &(F::Repr, F), b: &(F::Repr, F)| cmp_repr::<F>(&a.0, &b.0);
+    // Elements with equal keys are equal, so an unstable sort is
+    // indistinguishable from a stable one.
+    #[cfg(feature = "multicore")]
+    if keyed.len() >= LOOKUP_SORT_PARALLEL_THRESHOLD {
+        keyed.par_sort_unstable_by(by_key);
+        return keyed;
+    }
+    keyed.sort_unstable_by(by_key);
+    keyed
+}
+
+/// Given the usable rows of a compressed input expression A and table
+/// expression S, returns (A', S') such that:
+/// - A' is A sorted, so like values in A' are vertically adjacent; and
+/// - S' is a permutation of S in which the first row of each run of like
+///   values in A' holds that value.
+///
+/// Both columns are sorted by key and then merged, so every input value is
+/// matched against the table in a single linear pass. Returns
+/// `Error::ConstraintSystemFailure` if an input value is not in the table.
+pub(crate) fn permute_lookup_values<F: PrimeField>(
+    input: &[F],
+    table: &[F],
+) -> Result<(Vec<F>, Vec<F>), Error> {
+    assert_eq!(input.len(), table.len());
+    let input = sort_by_repr(input);
+    let table = sort_by_repr(table);
+
+    // The table as runs of equal values, each with how many of its copies
+    // are not yet placed in S'.
+    let mut leftover: Vec<(F::Repr, F, u32)> = Vec::new();
+    for (key, value) in table {
+        match leftover.last_mut() {
+            Some((last, _, count)) if cmp_repr::<F>(last, &key) == Ordering::Equal => *count += 1,
+            _ => leftover.push((key, value, 1)),
+        }
+    }
+
+    let mut permuted_table = vec![F::ZERO; input.len()];
+    let mut repeated_input_rows = Vec::new();
+    let mut run = 0;
+    for (row, (key, value)) in input.iter().enumerate() {
+        // If this is the first occurrence of `value` in the input expression
+        if row == 0 || cmp_repr::<F>(key, &input[row - 1].0) != Ordering::Equal {
+            permuted_table[row] = *value;
+            // Remove one copy of `value` from the leftover table runs. Both
+            // lists are sorted, so the matching run is at or after `run`.
+            while run < leftover.len() && cmp_repr::<F>(&leftover[run].0, key) == Ordering::Less {
+                run += 1;
+            }
+            match leftover.get_mut(run) {
+                Some((table_key, _, count)) if cmp_repr::<F>(table_key, key) == Ordering::Equal => {
+                    assert!(*count > 0);
+                    *count -= 1;
+                }
+                // Return error if `value` is not in the table
+                _ => return Err(Error::ConstraintSystemFailure),
+            }
+        } else {
+            repeated_input_rows.push(row);
+        }
+    }
+
+    // Populate permuted table at unfilled rows with leftover table elements
+    for (_, value, count) in leftover {
+        for _ in 0..count {
+            permuted_table[repeated_input_rows.pop().unwrap()] = value;
+        }
+    }
+    assert!(repeated_input_rows.is_empty());
+
+    Ok((
+        input.into_iter().map(|(_, value)| value).collect(),
+        permuted_table,
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use group::ff::Field;
+    use proptest::prelude::*;
+
+    use super::{permute_lookup_values, LOOKUP_SORT_PARALLEL_THRESHOLD};
+    use crate::{pasta::Fp, plonk::Error};
+
+    /// The algorithm `permute_lookup_values` replaced: a stable sort with
+    /// `Ord` and a `BTreeMap` of leftover table values.
+    fn reference(input: &[Fp], table: &[Fp]) -> Result<(Vec<Fp>, Vec<Fp>), Error> {
+        let mut permuted_input = input.to_vec();
+        permuted_input.sort();
+        let mut leftover = BTreeMap::<Fp, u32>::new();
+        for value in table {
+            *leftover.entry(*value).or_insert(0) += 1;
+        }
+        let mut permuted_table = vec![Fp::ZERO; input.len()];
+        let mut repeated = vec![];
+        for row in 0..permuted_input.len() {
+            let value = permuted_input[row];
+            if row == 0 || value != permuted_input[row - 1] {
+                permuted_table[row] = value;
+                match leftover.get_mut(&value) {
+                    Some(count) => *count -= 1,
+                    None => return Err(Error::ConstraintSystemFailure),
+                }
+            } else {
+                repeated.push(row);
+            }
+        }
+        for (value, count) in leftover {
+            for _ in 0..count {
+                permuted_table[repeated.pop().unwrap()] = value;
+            }
+        }
+        Ok((permuted_input, permuted_table))
+    }
+
+    /// An input column drawn from a small range, so values repeat, and a
+    /// table column of the same length that contains every input value.
+    fn arb_lookup(max_len: usize) -> impl Strategy<Value = (Vec<Fp>, Vec<Fp>)> {
+        (1..max_len).prop_flat_map(|len| {
+            (
+                prop::collection::vec(0u64..8, len),
+                prop::collection::vec(0u64..16, len),
+            )
+                .prop_map(|(input, mut extra)| {
+                    // Place each distinct input value in the table once, then
+                    // pad with arbitrary values, some outside the input range.
+                    let mut distinct = input.clone();
+                    distinct.sort_unstable();
+                    distinct.dedup();
+                    extra[..distinct.len()].copy_from_slice(&distinct);
+                    // Large values exercise the most significant bytes.
+                    let field = |v: &u64| -Fp::from(*v);
+                    (
+                        input.iter().map(field).collect(),
+                        extra.iter().map(field).collect(),
+                    )
+                })
+        })
+    }
+
+    fn is_err<T>(r: &Result<T, Error>) -> bool {
+        matches!(r, Err(Error::ConstraintSystemFailure))
+    }
+
+    proptest! {
+        #[test]
+        fn matches_the_btreemap_algorithm((input, table) in arb_lookup(64)) {
+            prop_assert_eq!(
+                permute_lookup_values(&input, &table).unwrap(),
+                reference(&input, &table).unwrap()
+            );
+        }
+
+        #[test]
+        fn rejects_an_input_missing_from_the_table(
+            (input, mut table) in arb_lookup(64),
+        ) {
+            // Remove every copy of one input value from the table.
+            let missing = input[0];
+            for value in table.iter_mut().filter(|v| **v == missing) {
+                *value = Fp::from(1000);
+            }
+            prop_assert!(is_err(&permute_lookup_values(&input, &table)));
+            prop_assert!(is_err(&reference(&input, &table)));
+        }
+    }
+
+    #[test]
+    fn matches_the_btreemap_algorithm_above_the_parallel_threshold() {
+        let len = LOOKUP_SORT_PARALLEL_THRESHOLD + 7;
+        let input: Vec<Fp> = (0..len as u64)
+            .map(|i| -Fp::from((i * 7919) % 1000))
+            .collect();
+        let table: Vec<Fp> = (0..len as u64).map(|i| -Fp::from(i % 1500)).collect();
+        assert_eq!(
+            permute_lookup_values(&input, &table).unwrap(),
+            reference(&input, &table).unwrap()
+        );
+    }
 }

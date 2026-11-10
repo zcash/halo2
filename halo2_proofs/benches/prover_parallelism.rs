@@ -20,7 +20,8 @@ use halo2_proofs::arithmetic::{best_fft, VartimeBatchInvert};
 use halo2_proofs::bench_internals as internals;
 use halo2_proofs::pasta::Fp;
 use rand::rngs::SysRng;
-use rand_core::UnwrapErr;
+use rand_core::{Rng, UnwrapErr};
+use std::collections::BTreeMap;
 
 /// Extended-domain sizes `log2(n)` used by the FFT benchmarks.
 const EXTENDED_LOG_SIZES: [u32; 5] = [13, 14, 15, 16, 19];
@@ -169,5 +170,58 @@ fn scans(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, fft_setup, scans);
+/// Size of the lookup table: a 10-bit range check, as in Orchard.
+const LOOKUP_TABLE_SIZE: u64 = 1 << 10;
+
+/// The permutation step of the lookup argument, `(A, S) -> (A', S')`: before,
+/// a stable sort comparing field elements with `Ord` and a `BTreeMap` of the
+/// table values.
+fn lookup_sort(c: &mut Criterion) {
+    let mut group = c.benchmark_group("lookup_sort");
+    group.sample_size(20);
+    for log_n in ROW_LOG_SIZES {
+        let n = 1usize << log_n;
+        let mut rng = UnwrapErr(SysRng);
+        let input: Vec<Fp> = (0..n)
+            .map(|_| Fp::from(rng.next_u64() % LOOKUP_TABLE_SIZE))
+            .collect();
+        let table: Vec<Fp> = (0..n as u64)
+            .map(|i| Fp::from(i.min(LOOKUP_TABLE_SIZE - 1)))
+            .collect();
+
+        group.bench_function(BenchmarkId::new("ord_btreemap", log_n), |b| {
+            b.iter(|| {
+                let mut permuted_input = input.clone();
+                permuted_input.sort();
+                let mut leftover = BTreeMap::<Fp, u32>::new();
+                for value in &table {
+                    *leftover.entry(*value).or_insert(0) += 1;
+                }
+                let mut permuted_table = vec![Fp::ZERO; n];
+                let mut repeated = vec![];
+                for row in 0..n {
+                    let value = permuted_input[row];
+                    if row == 0 || value != permuted_input[row - 1] {
+                        permuted_table[row] = value;
+                        *leftover.get_mut(&value).unwrap() -= 1;
+                    } else {
+                        repeated.push(row);
+                    }
+                }
+                for (value, count) in leftover {
+                    for _ in 0..count {
+                        permuted_table[repeated.pop().unwrap()] = value;
+                    }
+                }
+                (permuted_input, permuted_table)
+            })
+        });
+        group.bench_function(BenchmarkId::new("keyed_sort_merge", log_n), |b| {
+            b.iter(|| internals::permute_lookup_values(&input, &table).unwrap())
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, fft_setup, scans, lookup_sort);
 criterion_main!(benches);
