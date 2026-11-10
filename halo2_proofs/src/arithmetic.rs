@@ -411,11 +411,48 @@ pub fn recursive_butterfly_arithmetic<Scalar: Field, G: FftGroup<Scalar>>(
 }
 
 /// This evaluates a provided polynomial (in coefficient form) at `point`.
+///
+/// Horner's rule is a fold of the affine maps `t -> t * point + coeff`. The
+/// maps compose associatively, so long polynomials are split into chunks
+/// that are evaluated in parallel and combined with a second, short Horner
+/// pass in `point^chunk_len`. The result is exactly the sequential value.
+// Without the inline hint, the dispatch below stops this function from being
+// inlined into its callers, which made the sequential path 25% slower (46 us
+// against 36 us at 2^11 coefficients).
+#[inline]
 pub fn eval_polynomial<F: Field>(poly: &[F], point: F) -> F {
-    // TODO: parallelize?
+    // Measured with 14 threads, splitting does not pay at 2^11 coefficients
+    // and is 3.2x faster at 2^14.
+    if poly.len() > EVAL_PARALLEL_THRESHOLD && multicore::current_num_threads() > 1 {
+        eval_polynomial_parallel(poly, point)
+    } else {
+        horner(poly, point)
+    }
+}
+
+/// Horner's rule on one thread.
+#[inline]
+fn horner<F: Field>(poly: &[F], point: F) -> F {
     poly.iter()
         .rev()
         .fold(F::ZERO, |acc, coeff| acc * point + coeff)
+}
+
+/// The parallel path of [`eval_polynomial`].
+#[inline(never)]
+fn eval_polynomial_parallel<F: Field>(poly: &[F], point: F) -> F {
+    let chunk_len = poly.len().div_ceil(multicore::current_num_threads());
+    let chunk_evals: Vec<F> = poly
+        .chunks(chunk_len)
+        .collect::<Vec<_>>()
+        .into_par_iter()
+        .map(|chunk| horner(chunk, point))
+        .collect();
+    let shift = point.pow_vartime([chunk_len as u64]);
+    chunk_evals
+        .iter()
+        .rev()
+        .fold(F::ZERO, |acc, chunk_eval| acc * shift + chunk_eval)
 }
 
 /// This computes the inner product of two vectors `a` and `b`.
@@ -480,6 +517,10 @@ pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mu
 /// Below this many elements, the scans below run sequentially: the extra
 /// pass and the thread synchronisation cost more than they save.
 const SCAN_PARALLEL_THRESHOLD: usize = 1 << 11;
+
+/// At or below this many coefficients, `eval_polynomial` runs Horner's rule
+/// on one thread.
+const EVAL_PARALLEL_THRESHOLD: usize = 1 << 11;
 
 /// Returns the chunk length for a parallel scan over `n` elements, or `None`
 /// if the scan should run sequentially.
@@ -1011,6 +1052,25 @@ fn check_chained_grand_products(len: usize) {
         })
         .collect();
     assert_eq!(chained_grand_products(sets, len), expected);
+}
+
+#[test]
+fn test_eval_polynomial_matches_horner() {
+    let point = Fp::random(&mut UnwrapErr(SysRng));
+    for n in [
+        0,
+        1,
+        3,
+        EVAL_PARALLEL_THRESHOLD,
+        3 * EVAL_PARALLEL_THRESHOLD + 11,
+    ] {
+        let poly = random_vector(n, 0);
+        let expected = poly
+            .iter()
+            .rev()
+            .fold(Fp::ZERO, |acc, coeff| acc * point + coeff);
+        assert_eq!(eval_polynomial(&poly, point), expected, "n = {n}");
+    }
 }
 
 #[test]

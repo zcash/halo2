@@ -42,3 +42,11 @@ pub fn permute_lookup_values<F: ff::PrimeField>(
 ) -> Result<(Vec<F>, Vec<F>), crate::plonk::Error> {
     crate::plonk::lookup::prover::permute_lookup_values(input, table)
 }
+
+/// The two extra generators `(u, w)` of the polynomial commitment scheme,
+/// which the inner-product argument folds its blinding and value terms into.
+pub fn params_u_w<C: crate::arithmetic::CurveAffine>(
+    params: &crate::poly::commitment::Params<C>,
+) -> (C, C) {
+    (params.u, params.w)
+}
