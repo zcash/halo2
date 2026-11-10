@@ -4,7 +4,7 @@ use super::super::{
 };
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, grand_product, parallel_batch_invert, parallelize, CurveAffine},
+    arithmetic::{evaluate_batch, grand_product, parallel_batch_invert, parallelize, CurveAffine},
     poly::{
         self,
         commitment::{Blind, Params},
@@ -483,20 +483,16 @@ impl<C: CurveAffine> Constructed<C> {
         let x_inv = domain.rotate_omega(*x, Rotation::prev());
         let x_next = domain.rotate_omega(*x, Rotation::next());
 
-        let product_eval = eval_polynomial(&self.product_poly, *x);
-        let product_next_eval = eval_polynomial(&self.product_poly, x_next);
-        let permuted_input_eval = eval_polynomial(&self.permuted_input_poly, *x);
-        let permuted_input_inv_eval = eval_polynomial(&self.permuted_input_poly, x_inv);
-        let permuted_table_eval = eval_polynomial(&self.permuted_table_poly, *x);
+        let queries: [(&[C::Scalar], C::Scalar); 5] = [
+            (&self.product_poly, *x),
+            (&self.product_poly, x_next),
+            (&self.permuted_input_poly, *x),
+            (&self.permuted_input_poly, x_inv),
+            (&self.permuted_table_poly, *x),
+        ];
 
-        // Hash each advice evaluation
-        for eval in iter::empty()
-            .chain(Some(product_eval))
-            .chain(Some(product_next_eval))
-            .chain(Some(permuted_input_eval))
-            .chain(Some(permuted_input_inv_eval))
-            .chain(Some(permuted_table_eval))
-        {
+        // Hash each lookup evaluation
+        for eval in evaluate_batch(&queries) {
             transcript.write_scalar(eval)?;
         }
 

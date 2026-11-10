@@ -50,3 +50,13 @@ pub fn params_u_w<C: crate::arithmetic::CurveAffine>(
 ) -> (C, C) {
     (params.u, params.w)
 }
+
+/// See `arithmetic::kate_division_parallel`.
+pub fn kate_division_parallel<F: Field>(a: &[F], b: F) -> Vec<F> {
+    arithmetic::kate_division_parallel(a, b)
+}
+
+/// See `arithmetic::evaluate_batch`.
+pub fn evaluate_batch<F: Field>(queries: &[(&[F], F)]) -> Vec<F> {
+    arithmetic::evaluate_batch(queries)
+}

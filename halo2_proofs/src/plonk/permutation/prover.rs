@@ -2,13 +2,13 @@ use group::ff::{Field, PrimeField};
 use maybe_rayon::prelude::*;
 use pasta_curves::arithmetic::CurveExt;
 use rand_core::Rng;
-use std::iter::{self, ExactSizeIterator};
+use std::iter;
 
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
 use crate::{
     arithmetic::{
-        chained_grand_products, eval_polynomial, parallel_batch_invert, parallelize, CurveAffine,
+        chained_grand_products, evaluate_batch, parallel_batch_invert, parallelize, CurveAffine,
     },
     plonk::{self, Error},
     poly::{
@@ -336,7 +336,9 @@ impl<C: CurveAffine> super::ProvingKey<C> {
         transcript: &mut T,
     ) -> Result<(), Error> {
         // Hash permutation evals
-        for eval in self.polys.iter().map(|poly| eval_polynomial(poly, *x)) {
+        let queries: Vec<(&[C::Scalar], C::Scalar)> =
+            self.polys.iter().map(|poly| (&poly[..], *x)).collect();
+        for eval in evaluate_batch(&queries) {
             transcript.write_scalar(eval)?;
         }
 
@@ -354,37 +356,29 @@ impl<C: CurveAffine> Constructed<C> {
         let domain = &pk.vk.domain;
         let blinding_factors = pk.vk.cs.blinding_factors();
 
-        {
-            let mut sets = self.sets.iter();
+        let x_next = domain.rotate_omega(*x, Rotation::next());
+        let x_last = domain.rotate_omega(*x, Rotation(-((blinding_factors + 1) as i32)));
 
-            while let Some(set) = sets.next() {
-                let permutation_product_eval = eval_polynomial(&set.permutation_product_poly, *x);
+        // Each set is evaluated at x and omega x. Every set but the last is
+        // also evaluated at omega^u x, so the verifier can constrain the last
+        // value of its running product to equal the first value of the next
+        // set's running product, chaining them together.
+        let last_set = self.sets.len().saturating_sub(1);
+        let queries: Vec<(&[C::Scalar], C::Scalar)> = self
+            .sets
+            .iter()
+            .enumerate()
+            .flat_map(|(index, set)| {
+                let poly = &set.permutation_product_poly[..];
+                iter::once((poly, *x))
+                    .chain(iter::once((poly, x_next)))
+                    .chain((index < last_set).then_some((poly, x_last)))
+            })
+            .collect();
 
-                let permutation_product_next_eval = eval_polynomial(
-                    &set.permutation_product_poly,
-                    domain.rotate_omega(*x, Rotation::next()),
-                );
-
-                // Hash permutation product evals
-                for eval in iter::empty()
-                    .chain(Some(&permutation_product_eval))
-                    .chain(Some(&permutation_product_next_eval))
-                {
-                    transcript.write_scalar(*eval)?;
-                }
-
-                // If we have any remaining sets to process, evaluate this set at omega^u
-                // so we can constrain the last value of its running product to equal the
-                // first value of the next set's running product, chaining them together.
-                if sets.len() > 0 {
-                    let permutation_product_last_eval = eval_polynomial(
-                        &set.permutation_product_poly,
-                        domain.rotate_omega(*x, Rotation(-((blinding_factors + 1) as i32))),
-                    );
-
-                    transcript.write_scalar(permutation_product_last_eval)?;
-                }
-            }
+        // Hash permutation product evals
+        for eval in evaluate_batch(&queries) {
+            transcript.write_scalar(eval)?;
         }
 
         Ok(Evaluated { constructed: self })

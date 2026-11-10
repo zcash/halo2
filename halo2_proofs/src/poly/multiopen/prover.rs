@@ -7,10 +7,11 @@ use super::{
     Query,
 };
 
-use crate::arithmetic::{eval_polynomial, kate_division, CurveAffine};
+use crate::arithmetic::{evaluate_batch, kate_division_parallel, CurveAffine};
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use ff::Field;
+use maybe_rayon::prelude::*;
 use pasta_curves::arithmetic::CurveExt;
 use rand_core::Rng;
 use std::hash::Hash;
@@ -45,52 +46,56 @@ where
     })?;
 
     // Collapse openings at same point sets together into single openings using
-    // x_1 challenge.
-    let mut q_polys: Vec<Option<Polynomial<C::Scalar, Coeff>>> = vec![None; point_sets.len()];
-    let mut q_blinds = vec![Blind(C::Scalar::ZERO); point_sets.len()];
-
-    {
-        let mut accumulate =
-            |set_idx: usize, new_poly: &Polynomial<C::Scalar, Coeff>, blind: Blind<C::Scalar>| {
-                if let Some(poly) = &q_polys[set_idx] {
-                    q_polys[set_idx] = Some(poly.clone() * *x_1 + new_poly);
-                } else {
-                    q_polys[set_idx] = Some(new_poly.clone());
-                }
-                q_blinds[set_idx] *= *x_1;
-                q_blinds[set_idx] += blind;
-            };
-
-        for commitment_data in poly_map.into_iter() {
-            accumulate(
-                commitment_data.set_index,        // set_idx,
-                commitment_data.commitment.poly,  // poly,
-                commitment_data.commitment.blind, // blind,
-            );
-        }
+    // x_1 challenge. The sets are independent, so they are collapsed in
+    // parallel; within a set, the polynomials keep their query order.
+    let mut by_set: Vec<Vec<PolynomialPointer<'a, C>>> = vec![vec![]; point_sets.len()];
+    for commitment_data in poly_map.into_iter() {
+        by_set[commitment_data.set_index].push(commitment_data.commitment);
     }
+    let (q_polys, q_blinds): (Vec<_>, Vec<_>) = by_set
+        .into_par_iter()
+        .map(|commitments| {
+            let (first, rest) = commitments
+                .split_first()
+                .expect("every point set has at least one polynomial");
+            rest.iter().fold(
+                (first.poly.clone(), first.blind),
+                |(poly, blind), commitment| {
+                    (
+                        poly * *x_1 + commitment.poly,
+                        Blind(blind.0 * *x_1 + commitment.blind.0),
+                    )
+                },
+            )
+        })
+        .unzip();
 
-    let q_prime_poly = point_sets
+    // Divide each collapsed polynomial by the vanishing polynomial of its
+    // point set, in parallel across sets, then combine them with x_2.
+    let divided: Vec<Vec<C::Scalar>> = point_sets
         .iter()
         .zip(q_polys.iter())
-        .fold(None, |q_prime_poly, (points, poly)| {
-            let mut poly = points
-                .iter()
-                .fold(poly.clone().unwrap().values, |poly, point| {
-                    kate_division(&poly, *point)
-                });
-            poly.resize(params.n as usize, C::Scalar::ZERO);
-            let poly = Polynomial {
-                values: poly,
-                _marker: PhantomData,
-            };
-
-            if q_prime_poly.is_none() {
-                Some(poly)
-            } else {
-                q_prime_poly.map(|q_prime_poly| q_prime_poly * *x_2 + &poly)
-            }
+        .collect::<Vec<_>>()
+        .into_par_iter()
+        .map(
+            |(points, poly): (&Vec<C::Scalar>, &Polynomial<C::Scalar, Coeff>)| {
+                let mut poly = points
+                    .iter()
+                    .fold(poly.values.clone(), |poly: Vec<C::Scalar>, point| {
+                        kate_division_parallel(&poly, *point)
+                    });
+                poly.resize(params.n as usize, C::Scalar::ZERO);
+                poly
+            },
+        )
+        .collect();
+    let q_prime_poly = divided
+        .into_iter()
+        .map(|values| Polynomial {
+            values,
+            _marker: PhantomData,
         })
+        .reduce(|q_prime_poly, poly| q_prime_poly * *x_2 + &poly)
         .unwrap();
 
     let q_prime_blind = Blind(C::Scalar::random(&mut rng));
@@ -104,8 +109,10 @@ where
 
     // Prover sends u_i for all i, which correspond to the evaluation
     // of each Q polynomial commitment at x_3.
-    for q_i_poly in &q_polys {
-        transcript.write_scalar(eval_polynomial(q_i_poly.as_ref().unwrap(), *x_3))?;
+    let queries: Vec<(&[C::Scalar], C::Scalar)> =
+        q_polys.iter().map(|poly| (&poly[..], *x_3)).collect();
+    for eval in evaluate_batch(&queries) {
+        transcript.write_scalar(eval)?;
     }
 
     let x_4: ChallengeX4<_> = transcript.squeeze_challenge_scalar();
@@ -114,7 +121,7 @@ where
         (q_prime_poly, q_prime_blind),
         |(q_prime_poly, q_prime_blind), (poly, blind)| {
             (
-                q_prime_poly * *x_4 + &poly.unwrap(),
+                q_prime_poly * *x_4 + &poly,
                 Blind((q_prime_blind.0 * &(*x_4)) + &blind.0),
             )
         },

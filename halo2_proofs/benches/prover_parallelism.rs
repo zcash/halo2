@@ -21,7 +21,7 @@ use criterion::{black_box, BatchSize, BenchmarkId, Criterion};
 use group::ff::{Field, PrimeField};
 use group::{Curve, CurveAffine as _};
 use halo2_proofs::arithmetic::{
-    best_fft, best_multiexp, compute_inner_product, eval_polynomial, parallelize,
+    best_fft, best_multiexp, compute_inner_product, eval_polynomial, kate_division, parallelize,
     VartimeBatchInvert,
 };
 use halo2_proofs::bench_internals as internals;
@@ -375,5 +375,43 @@ fn ipa(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, fft_setup, scans, lookup_sort, ipa);
+/// Number of evaluations in the batch benchmark: of the order of the
+/// queries a small circuit opens at rotations of `x`.
+const EVALUATION_BATCH: usize = 32;
+
+/// The opening phase: dividing each collapsed polynomial by `X - b` in the
+/// multi-opening argument, and evaluating every committed polynomial at
+/// rotations of `x`.
+fn opening(c: &mut Criterion) {
+    let mut group = c.benchmark_group("opening");
+    group.sample_size(20);
+    for log_n in ROW_LOG_SIZES {
+        let n = 1usize << log_n;
+        let poly = random_vector(n);
+        let point = Fp::random(&mut UnwrapErr(SysRng));
+        group.bench_function(BenchmarkId::new("kate_division/sequential", log_n), |b| {
+            b.iter(|| kate_division(black_box(&poly), black_box(point)))
+        });
+        group.bench_function(BenchmarkId::new("kate_division/parallel", log_n), |b| {
+            b.iter(|| internals::kate_division_parallel(black_box(&poly), black_box(point)))
+        });
+
+        let polys: Vec<Vec<Fp>> = (0..EVALUATION_BATCH).map(|_| random_vector(n)).collect();
+        let queries: Vec<(&[Fp], Fp)> = polys.iter().map(|p| (&p[..], point)).collect();
+        group.bench_function(BenchmarkId::new("evaluations/one_by_one", log_n), |b| {
+            b.iter(|| {
+                queries
+                    .iter()
+                    .map(|(poly, point)| horner(poly, *point))
+                    .collect::<Vec<_>>()
+            })
+        });
+        group.bench_function(BenchmarkId::new("evaluations/batch", log_n), |b| {
+            b.iter(|| internals::evaluate_batch(black_box(&queries)))
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, fft_setup, scans, lookup_sort, ipa, opening);
 criterion_main!(benches);

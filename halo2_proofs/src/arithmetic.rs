@@ -493,6 +493,75 @@ where
     q
 }
 
+/// Evaluates each `(polynomial, point)` pair, in parallel across pairs, and
+/// returns the values in the order given.
+///
+/// After the challenge `x`, the prover evaluates every committed polynomial
+/// at one or more rotations of `x`; the evaluations are independent, and
+/// for small circuits each one is too short to split on its own.
+pub(crate) fn evaluate_batch<F: Field>(queries: &[(&[F], F)]) -> Vec<F> {
+    queries
+        .into_par_iter()
+        .map(|(poly, point)| eval_polynomial(poly, *point))
+        .collect()
+}
+
+/// Divides the polynomial `a` by `X - b`, returning the quotient; the same
+/// as [`kate_division`], in parallel for long polynomials.
+///
+/// The quotient satisfies `q[i] = a[i + 1] + b q[i + 1]` from the top
+/// (`q[m] = 0` for `a` of length `m + 1`), a linear recurrence. Within a
+/// chunk `[s, e)` of indices, `q[i] = l[i] + b^(e - i) q[e]` where `l` is
+/// the recurrence run from zero at `e`. So chunks run the recurrence locally
+/// in parallel, a short pass from the top carries `q[e]` across chunks, and
+/// each chunk adds its correction in parallel. The result is exact.
+pub(crate) fn kate_division_parallel<F: Field>(a: &[F], b: F) -> Vec<F> {
+    if a.len() <= 1 {
+        return vec![];
+    }
+    let mut q = vec![F::ZERO; a.len() - 1];
+    let Some(chunk_len) = scan_chunk_len(q.len()) else {
+        let mut carry = F::ZERO;
+        for (i, q) in q.iter_mut().enumerate().rev() {
+            carry = a[i + 1] + b * carry;
+            *q = carry;
+        }
+        return q;
+    };
+
+    for_each_chunk(&mut q, chunk_len, |index, chunk| {
+        let start = index * chunk_len;
+        let mut carry = F::ZERO;
+        for (offset, q) in chunk.iter_mut().enumerate().rev() {
+            carry = a[start + offset + 1] + b * carry;
+            *q = carry;
+        }
+    });
+
+    // `carries[c]` is the true `q[e]` for chunk `c` ending at `e`. The last
+    // chunk ends at `q.len()`, where `q` is zero.
+    let num_chunks = q.len().div_ceil(chunk_len);
+    let mut carries = vec![F::ZERO; num_chunks];
+    for c in (0..num_chunks - 1).rev() {
+        let next_start = (c + 1) * chunk_len;
+        let next_len = chunk_len.min(q.len() - next_start);
+        carries[c] = q[next_start] + b.pow_vartime([next_len as u64]) * carries[c + 1];
+    }
+
+    for_each_chunk(&mut q, chunk_len, |index, chunk| {
+        let carry = carries[index];
+        if carry.is_zero_vartime() {
+            return;
+        }
+        let mut correction = carry;
+        for q in chunk.iter_mut().rev() {
+            correction *= b;
+            *q += correction;
+        }
+    });
+    q
+}
+
 /// This simple utility function will parallelize an operation that is to be
 /// performed over a mutable slice.
 pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mut [T], f: F) {
@@ -1071,6 +1140,48 @@ fn test_eval_polynomial_matches_horner() {
             .fold(Fp::ZERO, |acc, coeff| acc * point + coeff);
         assert_eq!(eval_polynomial(&poly, point), expected, "n = {n}");
     }
+}
+
+#[test]
+fn test_kate_division_parallel_matches_sequential() {
+    let b = Fp::random(&mut UnwrapErr(SysRng));
+    for n in [
+        0,
+        1,
+        2,
+        9,
+        SCAN_PARALLEL_THRESHOLD + 1,
+        3 * SCAN_PARALLEL_THRESHOLD + 7,
+    ] {
+        let a = random_vector(n, 0);
+        let expected = if n == 0 { vec![] } else { kate_division(&a, b) };
+        assert_eq!(kate_division_parallel(&a, b), expected, "n = {n}");
+    }
+    // A polynomial with a root at `b` divides exactly.
+    let mut a = random_vector(2 * SCAN_PARALLEL_THRESHOLD, 0);
+    let remainder = eval_polynomial(&a, b);
+    a[0] -= remainder;
+    let q = kate_division_parallel(&a, b);
+    let x = Fp::random(&mut UnwrapErr(SysRng));
+    assert_eq!(eval_polynomial(&q, x) * (x - b), eval_polynomial(&a, x));
+}
+
+#[test]
+fn test_evaluate_batch_matches_individual_evaluations() {
+    let polys: Vec<Vec<Fp>> = [0, 1, 17, 4 * EVAL_PARALLEL_THRESHOLD]
+        .iter()
+        .map(|&n| random_vector(n, 0))
+        .collect();
+    let mut rng = UnwrapErr(SysRng);
+    let queries: Vec<(&[Fp], Fp)> = polys
+        .iter()
+        .map(|p| (&p[..], Fp::random(&mut rng)))
+        .collect();
+    let expected: Vec<Fp> = queries
+        .iter()
+        .map(|(p, x)| p.iter().rev().fold(Fp::ZERO, |acc, c| acc * x + c))
+        .collect();
+    assert_eq!(evaluate_batch(&queries), expected);
 }
 
 #[test]

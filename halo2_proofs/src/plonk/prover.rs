@@ -12,7 +12,7 @@ use super::{
     ChallengeY, Error, ProvingKey,
 };
 use crate::{
-    arithmetic::{eval_polynomial, CurveAffine, CurveExt},
+    arithmetic::{evaluate_batch, CurveAffine, CurveExt},
     circuit::Value,
     plonk::Assigned,
     poly::{
@@ -603,58 +603,38 @@ pub fn create_proof<
     let x: ChallengeX<_> = transcript.squeeze_challenge_scalar();
     let xn = x.pow([params.n, 0, 0, 0]);
 
-    // Compute and hash instance evals for each circuit instance
-    for instance in instance.iter() {
-        // Evaluate polynomials at omega^i x
-        let instance_evals: Vec<_> = meta
-            .instance_queries
-            .iter()
-            .map(|&(column, at)| {
-                eval_polynomial(
-                    &instance.instance_polys[column.index()],
-                    domain.rotate_omega(*x, at),
-                )
-            })
-            .collect();
-
-        // Hash each instance column evaluation
-        for eval in instance_evals.iter() {
-            transcript.write_scalar(*eval)?;
-        }
-    }
-
-    // Compute and hash advice evals for each circuit instance
-    for advice in advice.iter() {
-        // Evaluate polynomials at omega^i x
-        let advice_evals: Vec<_> = meta
-            .advice_queries
-            .iter()
-            .map(|&(column, at)| {
-                eval_polynomial(
-                    &advice.advice_polys[column.index()],
-                    domain.rotate_omega(*x, at),
-                )
-            })
-            .collect();
-
-        // Hash each advice column evaluation
-        for eval in advice_evals.iter() {
-            transcript.write_scalar(*eval)?;
-        }
-    }
-
-    // Compute and hash fixed evals (shared across all circuit instances)
-    let fixed_evals: Vec<_> = meta
-        .fixed_queries
-        .iter()
-        .map(|&(column, at)| {
-            eval_polynomial(&pk.fixed_polys[column.index()], domain.rotate_omega(*x, at))
+    // Every evaluation at a rotation of x is independent: compute them all at
+    // once, then hash them in transcript order (the instance evals of each
+    // circuit, the advice evals of each circuit, then the fixed evals, which
+    // are shared across circuits).
+    let instance_queries = instance.iter().flat_map(|instance| {
+        meta.instance_queries.iter().map(move |&(column, at)| {
+            (
+                &instance.instance_polys[column.index()][..],
+                domain.rotate_omega(*x, at),
+            )
         })
+    });
+    let advice_queries = advice.iter().flat_map(|advice| {
+        meta.advice_queries.iter().map(move |&(column, at)| {
+            (
+                &advice.advice_polys[column.index()][..],
+                domain.rotate_omega(*x, at),
+            )
+        })
+    });
+    let fixed_queries = meta.fixed_queries.iter().map(|&(column, at)| {
+        (
+            &pk.fixed_polys[column.index()][..],
+            domain.rotate_omega(*x, at),
+        )
+    });
+    let queries: Vec<(&[C::Scalar], C::Scalar)> = instance_queries
+        .chain(advice_queries)
+        .chain(fixed_queries)
         .collect();
-
-    // Hash each fixed column evaluation
-    for eval in fixed_evals.iter() {
-        transcript.write_scalar(*eval)?;
+    for eval in evaluate_batch(&queries) {
+        transcript.write_scalar(eval)?;
     }
 
     let vanishing = vanishing.evaluate(x, xn, domain, transcript)?;
