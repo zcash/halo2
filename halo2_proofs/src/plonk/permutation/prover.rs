@@ -1,10 +1,9 @@
 use group::ff::{Field, PrimeField};
 use maybe_rayon::prelude::*;
 use pasta_curves::arithmetic::CurveExt;
-use rand_core::Rng;
 use std::iter;
 
-use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
+use super::super::{circuit::Any, prover::Draws, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
 use crate::{
     arithmetic::{
@@ -45,13 +44,7 @@ pub(crate) struct Evaluated<C: CurveAffine> {
 
 impl Argument {
     #[allow(clippy::too_many_arguments)]
-    pub(in crate::plonk) fn commit<
-        C: CurveAffine,
-        E: EncodedChallenge<C>,
-        Ev: Copy + Send + Sync,
-        R: Rng,
-        T: TranscriptWrite<C, E>,
-    >(
+    pub(in crate::plonk) fn commit<C: CurveAffine>(
         &self,
         params: &Params<C>,
         pk: &plonk::ProvingKey<C>,
@@ -61,10 +54,8 @@ impl Argument {
         instance: &[Polynomial<C::Scalar, LagrangeCoeff>],
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
-        evaluator: &mut poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
-        mut rng: R,
-        transcript: &mut T,
-    ) -> Result<Committed<C, Ev>, Error> {
+        mut draws: Draws<C::Scalar>,
+    ) -> CommittedPending<C> {
         let domain = &pk.vk.domain;
 
         // How many columns can be included in a single permutation polynomial?
@@ -167,8 +158,8 @@ impl Argument {
         let blinded: Vec<_> = chained_grand_products(set_fractions, last_active_row + 1)
             .into_iter()
             .map(|mut z| {
-                z.extend((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)));
-                let blind = Blind(C::Scalar::random(&mut rng));
+                z.extend((0..blinding_factors).map(|_| draws.next()));
+                let blind = Blind(draws.next());
                 (domain.lagrange_from_vec(z), blind)
             })
             .collect();
@@ -184,8 +175,47 @@ impl Argument {
             })
             .collect();
 
-        let mut sets = Vec::with_capacity(committed.len());
-        for (commitment, permutation_product_poly, coset, permutation_product_blind) in committed {
+        CommittedPending { sets: committed }
+    }
+
+    /// The number of field elements [`Argument::commit`] draws: for each set,
+    /// its blinding rows and then its blind.
+    pub(in crate::plonk) fn commit_draws<C: CurveAffine>(
+        &self,
+        pk: &plonk::ProvingKey<C>,
+    ) -> usize {
+        let chunk_len = pk.vk.cs_degree - 2;
+        self.columns.len().div_ceil(chunk_len) * (pk.vk.cs.blinding_factors() + 1)
+    }
+}
+
+/// The permutation product sets of one circuit, committed but not yet
+/// hashed into the transcript, with their cosets not yet registered.
+/// Computing this needs no shared state, so circuits are committed in
+/// parallel; [`CommittedPending::finish`] then runs in transcript order.
+pub(in crate::plonk) struct CommittedPending<C: CurveAffine> {
+    #[allow(clippy::type_complexity)]
+    sets: Vec<(
+        C,
+        Polynomial<C::Scalar, Coeff>,
+        Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+        Blind<C::Scalar>,
+    )>,
+}
+
+impl<C: CurveAffine> CommittedPending<C> {
+    /// Hashes each set's commitment and registers its coset.
+    pub(in crate::plonk) fn finish<
+        E: EncodedChallenge<C>,
+        Ev: Copy + Send + Sync,
+        T: TranscriptWrite<C, E>,
+    >(
+        self,
+        evaluator: &mut poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
+        transcript: &mut T,
+    ) -> Result<Committed<C, Ev>, Error> {
+        let mut sets = Vec::with_capacity(self.sets.len());
+        for (commitment, permutation_product_poly, coset, permutation_product_blind) in self.sets {
             // Hash the permutation product commitment
             transcript.write_point(commitment)?;
 
