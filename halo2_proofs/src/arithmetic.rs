@@ -252,35 +252,89 @@ fn should_parallelize_multiexp(num_coeffs: usize, num_threads: usize) -> bool {
 ///
 /// This will use multithreading if beneficial.
 pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, log_n: u32) {
-    fn bitreverse(mut n: usize, l: usize) -> usize {
-        let mut r = 0;
-        for _ in 0..l {
-            r = (r << 1) | (n & 1);
-            n >>= 1;
-        }
-        r
-    }
+    let twiddles = fft_twiddles(omega, a.len() / 2);
+    fft_with_twiddles(a, &twiddles, log_n);
+}
 
+/// Below this many elements, the FFT twiddle table is built sequentially:
+/// splitting it across threads costs more than it saves.
+const TWIDDLES_PARALLEL_THRESHOLD: usize = 1 << 13;
+
+/// Returns `[1, omega, omega^2, ..., omega^(len - 1)]`, the twiddle factors
+/// used by [`best_fft`] for a transform of size `2 * len`.
+///
+/// Each element is an exact field value, so splitting the sequence into
+/// chunks that each start from `omega^start` gives the same table as the
+/// sequential running product.
+pub(crate) fn fft_twiddles<Scalar: Field>(omega: Scalar, len: usize) -> Vec<Scalar> {
+    let mut twiddles = vec![Scalar::ONE; len];
+    let fill = |chunk: &mut [Scalar], start: usize| {
+        let mut w = omega.pow_vartime([start as u64]);
+        for tw in chunk {
+            *tw = w;
+            w *= &omega;
+        }
+    };
+    if len < TWIDDLES_PARALLEL_THRESHOLD {
+        fill(&mut twiddles, 0);
+    } else {
+        parallelize(&mut twiddles, fill);
+    }
+    twiddles
+}
+
+/// Below this many elements, the bit-reversal permutation swaps in place
+/// sequentially. The parallel version gathers from a copy, which only pays
+/// off once the vector no longer fits in cache: measured with 14 threads, it
+/// is slower at 2^13 elements (35 us against 20 us) and faster at 2^15
+/// (67 us against 122 us).
+const BITREVERSE_PARALLEL_THRESHOLD: usize = 1 << 15;
+
+/// Permutes `a` (of length `2^log_n`) so that index `i` holds the element
+/// that was at the bit reversal of `i`.
+pub(crate) fn bitreverse_permutation<T: Copy + Send + Sync>(a: &mut [T], log_n: u32) {
+    if log_n == 0 {
+        return;
+    }
+    let shift = usize::BITS - log_n;
+    let reverse = |i: usize| i.reverse_bits() >> shift;
+    if a.len() < BITREVERSE_PARALLEL_THRESHOLD {
+        for i in 0..a.len() {
+            let r = reverse(i);
+            if i < r {
+                a.swap(r, i);
+            }
+        }
+    } else {
+        // A bit reversal is an involution made of disjoint swaps, but the
+        // swaps of one chunk reach into every other chunk, so the parallel
+        // version gathers from a copy instead of swapping in place.
+        let source = a.to_vec();
+        parallelize(a, |chunk, start| {
+            for (offset, value) in chunk.iter_mut().enumerate() {
+                *value = source[reverse(start + offset)];
+            }
+        });
+    }
+}
+
+/// Performs the same transformation as [`best_fft`], given the twiddle table
+/// `[1, omega, ..., omega^(n/2 - 1)]` for `n = 2^log_n`.
+///
+/// Passing the table lets a caller that transforms many vectors over the
+/// same domain compute it once (see [`fft_twiddles`]).
+pub(crate) fn fft_with_twiddles<Scalar: Field, G: FftGroup<Scalar>>(
+    a: &mut [G],
+    twiddles: &[Scalar],
+    log_n: u32,
+) {
     let threads = multicore::current_num_threads();
     let log_threads = log2_floor(threads);
     let n = a.len();
     assert_eq!(n, 1 << log_n);
+    assert_eq!(twiddles.len(), n / 2);
 
-    for k in 0..n {
-        let rk = bitreverse(k, log_n as usize);
-        if k < rk {
-            a.swap(rk, k);
-        }
-    }
-
-    // precompute twiddle factors
-    let twiddles: Vec<_> = (0..(n / 2))
-        .scan(Scalar::ONE, |w, _| {
-            let tw = *w;
-            *w *= &omega;
-            Some(tw)
-        })
-        .collect();
+    bitreverse_permutation(a, log_n);
 
     if log_n <= log_threads {
         let mut chunk = 2_usize;
@@ -312,7 +366,7 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
             twiddle_chunk /= 2;
         }
     } else {
-        recursive_butterfly_arithmetic(a, n, 1, &twiddles)
+        recursive_butterfly_arithmetic(a, n, 1, twiddles)
     }
 }
 
@@ -728,6 +782,56 @@ fn test_lagrange_interpolate() {
 
         for (point, eval) in points.iter().zip(evals) {
             assert_eq!(eval_polynomial(&poly, *point), *eval);
+        }
+    }
+}
+
+#[test]
+fn test_fft_twiddles_match_running_product() {
+    let omega = Fp::random(&mut UnwrapErr(SysRng));
+    // Odd length above the threshold, so the parallel chunks are uneven.
+    let len = TWIDDLES_PARALLEL_THRESHOLD * 2 + 3;
+    let expected: Vec<Fp> = (0..len)
+        .scan(Fp::ONE, |w, _| {
+            let tw = *w;
+            *w *= omega;
+            Some(tw)
+        })
+        .collect();
+    assert_eq!(fft_twiddles(omega, len), expected);
+    assert_eq!(fft_twiddles(omega, 5), expected[..5]);
+    assert!(fft_twiddles(omega, 0).is_empty());
+}
+
+#[test]
+fn test_bitreverse_permutation_is_the_bit_reversal() {
+    for log_n in [0, 1, 3, 16] {
+        let n = 1usize << log_n;
+        let mut a: Vec<usize> = (0..n).collect();
+        bitreverse_permutation(&mut a, log_n);
+        for (i, &v) in a.iter().enumerate() {
+            let expected = (0..log_n).fold(0, |r, b| (r << 1) | ((i >> b) & 1));
+            assert_eq!(v, expected, "log_n = {log_n}, i = {i}");
+        }
+    }
+}
+
+#[test]
+fn test_fft_matches_naive_dft() {
+    let mut rng = UnwrapErr(SysRng);
+    for log_n in [0u32, 1, 4, 14] {
+        let n = 1usize << log_n;
+        let omega = Fp::ROOT_OF_UNITY.pow_vartime([1u64 << (Fp::S - log_n)]);
+        let coeffs: Vec<Fp> = (0..n).map(|_| Fp::random(&mut rng)).collect();
+        let mut evals = coeffs.clone();
+        best_fft(&mut evals, omega, log_n);
+        // Spot-check a few evaluation points; a full naive DFT at 2^14 is
+        // quadratic.
+        for i in [0, 1, n / 2, n - 1].into_iter().filter(|&i| i < n) {
+            assert_eq!(
+                evals[i],
+                eval_polynomial(&coeffs, omega.pow_vartime([i as u64]))
+            );
         }
     }
 }
