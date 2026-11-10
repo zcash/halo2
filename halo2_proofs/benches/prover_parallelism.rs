@@ -14,9 +14,9 @@
 #[macro_use]
 extern crate criterion;
 
-use criterion::{BenchmarkId, Criterion};
+use criterion::{BatchSize, BenchmarkId, Criterion};
 use group::ff::{Field, PrimeField};
-use halo2_proofs::arithmetic::best_fft;
+use halo2_proofs::arithmetic::{best_fft, VartimeBatchInvert};
 use halo2_proofs::bench_internals as internals;
 use halo2_proofs::pasta::Fp;
 use rand::rngs::SysRng;
@@ -91,5 +91,83 @@ fn fft_setup(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, fft_setup);
+/// Circuit sizes `log2(n)` used by the benchmarks of per-row vectors.
+const ROW_LOG_SIZES: [u32; 3] = [11, 14, 17];
+
+/// Number of chained sets in the permutation benchmark: Orchard's action
+/// circuit has 12 permutation sets, so 4 is a conservative middle ground.
+const PERMUTATION_SETS: usize = 4;
+
+/// Montgomery batch inversion and grand products, the sequential scans of
+/// the lookup and permutation arguments.
+fn scans(c: &mut Criterion) {
+    let mut group = c.benchmark_group("scans");
+    group.sample_size(20);
+    for log_n in ROW_LOG_SIZES {
+        let n = 1usize << log_n;
+        let input = random_vector(n);
+
+        group.bench_function(BenchmarkId::new("batch_invert/sequential", log_n), |b| {
+            b.iter_batched_ref(
+                || input.clone(),
+                |v| v.iter_mut().batch_invert_vartime(),
+                BatchSize::LargeInput,
+            )
+        });
+        group.bench_function(BenchmarkId::new("batch_invert/parallel", log_n), |b| {
+            b.iter_batched_ref(
+                || input.clone(),
+                |v| internals::parallel_batch_invert(v),
+                BatchSize::LargeInput,
+            )
+        });
+
+        group.bench_function(BenchmarkId::new("grand_product/sequential", log_n), |b| {
+            b.iter(|| {
+                std::iter::once(Fp::ONE)
+                    .chain(input.iter().copied())
+                    .scan(Fp::ONE, |acc, v| {
+                        *acc *= v;
+                        Some(*acc)
+                    })
+                    .take(n)
+                    .collect::<Vec<_>>()
+            })
+        });
+        group.bench_function(BenchmarkId::new("grand_product/parallel", log_n), |b| {
+            b.iter(|| internals::grand_product(&input, n))
+        });
+
+        // The permutation argument's sets, each starting from the last value
+        // of the previous one: before, a single running product through all
+        // of them.
+        let sets: Vec<Vec<Fp>> = (0..PERMUTATION_SETS).map(|_| random_vector(n)).collect();
+        group.bench_function(BenchmarkId::new("chained_sets/sequential", log_n), |b| {
+            b.iter(|| {
+                let mut carried = Fp::ONE;
+                sets.iter()
+                    .map(|factors| {
+                        let mut z = Vec::with_capacity(n);
+                        z.push(carried);
+                        for factor in &factors[..n - 1] {
+                            z.push(z[z.len() - 1] * factor);
+                        }
+                        carried = z[n - 1];
+                        z
+                    })
+                    .collect::<Vec<_>>()
+            })
+        });
+        group.bench_function(BenchmarkId::new("chained_sets/parallel", log_n), |b| {
+            b.iter_batched(
+                || sets.clone(),
+                |sets| internals::chained_grand_products(sets, n),
+                BatchSize::LargeInput,
+            )
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, fft_setup, scans);
 criterion_main!(benches);

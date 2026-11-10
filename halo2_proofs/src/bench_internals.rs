@@ -19,3 +19,18 @@ pub fn bitreverse_permutation<T: Copy + Send + Sync>(a: &mut [T], log_n: u32) {
 pub fn fft_with_twiddles<F: Field, G: FftGroup<F>>(a: &mut [G], twiddles: &[F], log_n: u32) {
     arithmetic::fft_with_twiddles(a, twiddles, log_n)
 }
+
+/// See `arithmetic::parallel_batch_invert`.
+pub fn parallel_batch_invert<F: pasta_curves::arithmetic::VartimeField>(v: &mut [F]) {
+    arithmetic::parallel_batch_invert(v)
+}
+
+/// See `arithmetic::grand_product`.
+pub fn grand_product<F: Field>(values: &[F], len: usize) -> Vec<F> {
+    arithmetic::grand_product(values, len)
+}
+
+/// See `arithmetic::chained_grand_products`.
+pub fn chained_grand_products<F: Field>(sets: Vec<Vec<F>>, len: usize) -> Vec<Vec<F>> {
+    arithmetic::chained_grand_products(sets, len)
+}

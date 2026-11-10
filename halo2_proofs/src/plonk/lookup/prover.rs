@@ -4,7 +4,7 @@ use super::super::{
 };
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine},
+    arithmetic::{eval_polynomial, grand_product, parallel_batch_invert, parallelize, CurveAffine},
     poly::{
         self,
         commitment::{Blind, Params},
@@ -15,7 +15,7 @@ use crate::{
 };
 use ff::WithSmallOrderMulGroup;
 use group::ff::Field;
-use pasta_curves::arithmetic::{CurveExt, VartimeBatchInvert};
+use pasta_curves::arithmetic::CurveExt;
 use rand_core::Rng;
 use std::{
     collections::BTreeMap,
@@ -289,7 +289,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
 
         // Batch invert to obtain the denominators for the lookup product
         // polynomials
-        lookup_product.iter_mut().batch_invert_vartime();
+        parallel_batch_invert(&mut lookup_product);
 
         // Finish the computation of the entire fraction by computing the numerators
         // (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
@@ -320,18 +320,11 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
 
         // Compute the evaluations of the lookup product polynomial
         // over our domain, starting with z[0] = 1
-        let z = iter::once(C::Scalar::ONE)
-            .chain(lookup_product)
-            .scan(C::Scalar::ONE, |state, cur| {
-                *state *= &cur;
-                Some(*state)
-            })
-            // Take all rows including the "last" row which should
-            // be a boolean (and ideally 1, else soundness is broken)
-            .take(params.n as usize - blinding_factors)
-            // Chain random blinding factors.
-            .chain((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)))
-            .collect::<Vec<_>>();
+        // Take all rows including the "last" row which should be a boolean
+        // (and ideally 1, else soundness is broken), then the random
+        // blinding factors.
+        let mut z = grand_product(&lookup_product, params.n as usize - blinding_factors);
+        z.extend((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)));
         assert_eq!(z.len(), params.n as usize);
         let z = pk.vk.domain.lagrange_from_vec(z);
 

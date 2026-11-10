@@ -1,12 +1,15 @@
 use group::ff::{Field, PrimeField};
-use pasta_curves::arithmetic::{CurveExt, VartimeBatchInvert};
+use maybe_rayon::prelude::*;
+use pasta_curves::arithmetic::CurveExt;
 use rand_core::Rng;
 use std::iter::{self, ExactSizeIterator};
 
 use super::super::{circuit::Any, ChallengeBeta, ChallengeGamma, ChallengeX};
 use super::{Argument, ProvingKey};
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine},
+    arithmetic::{
+        chained_grand_products, eval_polynomial, parallel_batch_invert, parallelize, CurveAffine,
+    },
     plonk::{self, Error},
     poly::{
         self,
@@ -72,118 +75,123 @@ impl Argument {
         let chunk_len = pk.vk.cs_degree - 2;
         let blinding_factors = pk.vk.cs.blinding_factors();
 
-        // Each column gets its own delta power.
-        let mut deltaomega = C::Scalar::ONE;
+        let n = params.n as usize;
+        // The rows after this one hold blinding factors. Its value is the
+        // product carried into the next set.
+        let last_active_row = n - (blinding_factors + 1);
 
-        // Track the "last" value from the previous column set
-        let mut last_z = C::Scalar::ONE;
+        // Column `i` of the whole permutation uses the coset `delta^i <omega>`.
+        let delta_powers: Vec<C::Scalar> =
+            iter::successors(Some(C::Scalar::ONE), |d| Some(*d * C::Scalar::DELTA))
+                .take(self.columns.len())
+                .collect();
 
-        let mut sets = vec![];
-
-        for (columns, permutations) in self
+        // The fractions of each set are independent of the other sets, and
+        // `chained_grand_products` computes the chained grand products with
+        // every set in parallel.
+        let set_fractions: Vec<Vec<C::Scalar>> = self
             .columns
             .chunks(chunk_len)
             .zip(pkey.permutations.chunks(chunk_len))
-        {
-            // Goal is to compute the products of fractions
-            //
-            // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
-            // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
-            //
-            // where p_j(X) is the jth column in this permutation,
-            // and i is the ith row of the column.
+            .enumerate()
+            .collect::<Vec<_>>()
+            .into_par_iter()
+            .map(|(set_index, (columns, permutations))| {
+                // Goal is to compute the products of fractions
+                //
+                // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
+                // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
+                //
+                // where p_j(X) is the jth column in this permutation,
+                // and i is the ith row of the column.
+                let mut modified_values = vec![C::Scalar::ONE; n];
 
-            let mut modified_values = vec![C::Scalar::ONE; params.n as usize];
+                // Iterate over each column of the permutation
+                for (&column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
+                    let values = match column.column_type() {
+                        Any::Advice => advice,
+                        Any::Fixed => fixed,
+                        Any::Instance => instance,
+                    };
+                    parallelize(&mut modified_values, |modified_values, start| {
+                        for ((modified_values, value), permuted_value) in modified_values
+                            .iter_mut()
+                            .zip(values[column.index()][start..].iter())
+                            .zip(permuted_column_values[start..].iter())
+                        {
+                            *modified_values *= &(*beta * permuted_value + &*gamma + value);
+                        }
+                    });
+                }
 
-            // Iterate over each column of the permutation
-            for (&column, permuted_column_values) in columns.iter().zip(permutations.iter()) {
-                let values = match column.column_type() {
-                    Any::Advice => advice,
-                    Any::Fixed => fixed,
-                    Any::Instance => instance,
-                };
-                parallelize(&mut modified_values, |modified_values, start| {
-                    for ((modified_values, value), permuted_value) in modified_values
-                        .iter_mut()
-                        .zip(values[column.index()][start..].iter())
-                        .zip(permuted_column_values[start..].iter())
-                    {
-                        *modified_values *= &(*beta * permuted_value + &*gamma + value);
-                    }
-                });
-            }
+                // Invert to obtain the denominator for the permutation product polynomial
+                parallel_batch_invert(&mut modified_values);
 
-            // Invert to obtain the denominator for the permutation product polynomial
-            modified_values.batch_invert_vartime();
-
-            // Iterate over each column again, this time finishing the computation
-            // of the entire fraction by computing the numerators
-            for &column in columns.iter() {
+                // Iterate over each column again, this time finishing the computation
+                // of the entire fraction by computing the numerators
                 let omega = domain.get_omega();
-                let values = match column.column_type() {
-                    Any::Advice => advice,
-                    Any::Fixed => fixed,
-                    Any::Instance => instance,
-                };
-                parallelize(&mut modified_values, |modified_values, start| {
-                    let mut deltaomega = deltaomega * &omega.pow_vartime([start as u64]);
-                    for (modified_values, value) in modified_values
-                        .iter_mut()
-                        .zip(values[column.index()][start..].iter())
-                    {
-                        // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
-                        *modified_values *= &(deltaomega * &*beta + &*gamma + value);
-                        deltaomega *= &omega;
-                    }
-                });
-                deltaomega *= &C::Scalar::DELTA;
-            }
+                for (offset, &column) in columns.iter().enumerate() {
+                    let delta = delta_powers[set_index * chunk_len + offset];
+                    let values = match column.column_type() {
+                        Any::Advice => advice,
+                        Any::Fixed => fixed,
+                        Any::Instance => instance,
+                    };
+                    parallelize(&mut modified_values, |modified_values, start| {
+                        let mut deltaomega = delta * &omega.pow_vartime([start as u64]);
+                        for (modified_values, value) in modified_values
+                            .iter_mut()
+                            .zip(values[column.index()][start..].iter())
+                        {
+                            // Multiply by p_j(\omega^i) + \delta^j \omega^i \beta
+                            *modified_values *= &(deltaomega * &*beta + &*gamma + value);
+                            deltaomega *= &omega;
+                        }
+                    });
+                }
 
-            // The modified_values vector is a vector of products of fractions
-            // of the form
-            //
-            // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
-            // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
-            //
-            // where i is the index into modified_values, for the jth column in
-            // the permutation
+                // The modified_values vector is a vector of products of fractions
+                // of the form
+                //
+                // (p_j(\omega^i) + \delta^j \omega^i \beta + \gamma) /
+                // (p_j(\omega^i) + \beta s_j(\omega^i) + \gamma)
+                //
+                // where i is the index into modified_values, for the jth column in
+                // the permutation.
+                modified_values
+            })
+            .collect();
 
-            // Compute the evaluations of the permutation product polynomial
-            // over our domain, starting with z[0] = 1
-            let mut z = vec![last_z];
-            for row in 1..(params.n as usize) {
-                let mut tmp = z[row - 1];
+        // Append the blinding factors. Randomness is drawn set by set in the
+        // same order as a sequential prover.
+        let blinded: Vec<_> = chained_grand_products(set_fractions, last_active_row + 1)
+            .into_iter()
+            .map(|mut z| {
+                z.extend((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)));
+                let blind = Blind(C::Scalar::random(&mut rng));
+                (domain.lagrange_from_vec(z), blind)
+            })
+            .collect();
 
-                tmp *= &modified_values[row - 1];
-                z.push(tmp);
-            }
-            let mut z = domain.lagrange_from_vec(z);
-            // Set blinding factors
-            for z in &mut z[params.n as usize - blinding_factors..] {
-                *z = C::Scalar::random(&mut rng);
-            }
-            // Set new last_z
-            last_z = z[params.n as usize - (blinding_factors + 1)];
+        // Commit to and transform every set at once.
+        let committed: Vec<_> = blinded
+            .into_par_iter()
+            .map(|(z, blind)| {
+                let commitment = params.commit_lagrange(&z, blind).to_affine_vartime();
+                let poly = domain.lagrange_to_coeff(z);
+                let coset = domain.coeff_to_extended(poly.clone());
+                (commitment, poly, coset, blind)
+            })
+            .collect();
 
-            let blind = Blind(C::Scalar::random(&mut rng));
-
-            let permutation_product_commitment_projective = params.commit_lagrange(&z, blind);
-            let permutation_product_blind = blind;
-            let z = domain.lagrange_to_coeff(z);
-            let permutation_product_poly = z.clone();
-
-            let permutation_product_coset =
-                evaluator.register_poly(domain.coeff_to_extended(z.clone()));
-
-            let permutation_product_commitment =
-                permutation_product_commitment_projective.to_affine_vartime();
-
+        let mut sets = Vec::with_capacity(committed.len());
+        for (commitment, permutation_product_poly, coset, permutation_product_blind) in committed {
             // Hash the permutation product commitment
-            transcript.write_point(permutation_product_commitment)?;
+            transcript.write_point(commitment)?;
 
             sets.push(CommittedSet {
                 permutation_product_poly,
-                permutation_product_coset,
+                permutation_product_coset: evaluator.register_poly(coset),
                 permutation_product_blind,
             });
         }
