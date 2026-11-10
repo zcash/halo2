@@ -294,7 +294,7 @@ where
 ///
 /// Every byte is still read and absorbed in the original order. Prefetched
 /// decodings must equal [`group::GroupEncoding::from_bytes`] on those bytes
-/// (see [`CurveAffine::batch_decode`]); other offsets decode normally.
+/// (see [`CurveAffine::batch_decode_vartime`]); other offsets decode normally.
 #[cfg(feature = "batch")]
 pub(crate) struct PrefetchedBlake2bRead<'a, C: CurveAffine>
 where

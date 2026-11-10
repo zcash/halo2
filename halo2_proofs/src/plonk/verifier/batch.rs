@@ -73,7 +73,7 @@ fn prefetch_points<C: CurveAffine>(
         .unzip();
     offsets
         .into_iter()
-        .zip(C::batch_decode(&encodings))
+        .zip(C::batch_decode_vartime(&encodings))
         .collect()
 }
 
