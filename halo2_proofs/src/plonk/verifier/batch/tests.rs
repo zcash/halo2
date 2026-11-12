@@ -23,11 +23,9 @@ fn commit_instance_with_table<C: CurveAffine>(
     table: &InstanceFixedWindowTable<C>,
     instance: &[C::Scalar],
 ) -> C::Curve {
-    if instance.len() <= table.base_count {
-        table.commit(params, instance)
-    } else {
-        params.commit_lagrange_instance(instance)
-    }
+    let mut commitments = table.commit_batch(params, &[instance]);
+    assert_eq!(commitments.len(), 1);
+    commitments.remove(0)
 }
 
 #[test]
@@ -164,7 +162,10 @@ fn fixed_window_instance_commitments_handle_exceptional_points() {
                         .zip(&params.g_lagrange)
                         .fold(blind.to_curve(), |acc, (scalar, base)| acc + *base * scalar);
                     assert_eq!(commitment, expected);
-                    assert_eq!(table.commit(&params, instance), expected);
+                    assert_eq!(
+                        table.commit_batch(&params, &[instance.as_slice()])[0],
+                        expected
+                    );
                 }
             }
         }};

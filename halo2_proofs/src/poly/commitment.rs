@@ -31,6 +31,9 @@ pub use verifier::{verify_proof, Accumulator, Guard};
 use std::io;
 
 /// These are the public parameters for the polynomial commitment scheme.
+///
+/// The fields are fixed after construction. With the `batch` feature, clones
+/// share a cache derived from `g_lagrange`; see `instance_window_table`.
 #[derive(Clone)]
 #[cfg_attr(not(feature = "batch"), derive(Debug))]
 pub struct Params<C: CurveAffine> {
@@ -57,22 +60,35 @@ impl<C> Default for InstanceWindowCache<C> {
 
 #[cfg(feature = "batch")]
 impl<C> InstanceWindowCache<C> {
-    fn get_or_grow(&self, base_count: usize, initialize: impl FnOnce() -> Vec<C>) -> Arc<Vec<C>> {
-        let required_len = base_count
-            .checked_mul(INSTANCE_WINDOW_ENTRIES_PER_BASE)
-            .expect("instance window table length fits in usize");
+    /// Returns the cached table when it holds at least `required_len` entries
+    /// and `is_current` accepts it; otherwise builds, stores and returns a new
+    /// one. Holding the lock while building makes concurrent callers share a
+    /// single build.
+    fn get_or_build<Current, Build>(
+        &self,
+        required_len: usize,
+        is_current: Current,
+        build: Build,
+    ) -> Arc<Vec<C>>
+    where
+        Current: FnOnce(&[C]) -> bool,
+        Build: FnOnce() -> Vec<C>,
+    {
         let mut table = self
             .0
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if let Some(table) = table.as_ref().filter(|table| table.len() >= required_len) {
+        if let Some(table) = table
+            .as_ref()
+            .filter(|table| table.len() >= required_len && is_current(table))
+        {
             return Arc::clone(table);
         }
 
-        let initialized = Arc::new(initialize());
-        assert_eq!(initialized.len(), required_len);
-        *table = Some(Arc::clone(&initialized));
-        initialized
+        let built = Arc::new(build());
+        assert_eq!(built.len(), required_len);
+        *table = Some(Arc::clone(&built));
+        built
     }
 }
 
@@ -92,29 +108,47 @@ impl<C: CurveAffine> fmt::Debug for Params<C> {
 }
 
 #[cfg(feature = "batch")]
-impl<C: CurveAffine> Params<C> {
+impl<C> Params<C>
+where
+    C: CurveAffine,
+{
+    /// Returns `j * G_i` for `j` in `1..=256` and each of the first
+    /// `base_count` Lagrange bases `G_i`, base-major. The table may be longer;
+    /// only this prefix is meaningful.
+    ///
+    /// Clones of `Params` share the table. A cached table is reused only while
+    /// its first multiple of each requested base still equals that base, so a
+    /// table built before `g_lagrange` changed is rebuilt rather than used.
     pub(crate) fn instance_window_table(&self, base_count: usize) -> Arc<Vec<C>> {
         assert!(base_count <= MAX_CACHED_INSTANCE_ROWS);
         assert!(base_count <= self.g_lagrange.len());
+        let bases = &self.g_lagrange[..base_count];
+        let required_len = base_count
+            .checked_mul(INSTANCE_WINDOW_ENTRIES_PER_BASE)
+            .expect("instance window table length fits in usize");
 
-        self.instance_window_cache.get_or_grow(base_count, || {
-            let capacity = base_count
-                .checked_mul(INSTANCE_WINDOW_ENTRIES_PER_BASE)
-                .expect("instance window table length fits in usize");
-            let mut projective = Vec::with_capacity(capacity);
-            for base in &self.g_lagrange[..base_count] {
-                let mut multiple = C::Curve::from(*base);
-                for _ in 1..INSTANCE_WINDOW_ENTRIES_PER_BASE {
+        let is_current = |table: &[C]| {
+            table
+                .chunks(INSTANCE_WINDOW_ENTRIES_PER_BASE)
+                .zip(bases)
+                .all(|(multiples, base)| multiples[0] == *base)
+        };
+        self.instance_window_cache
+            .get_or_build(required_len, is_current, || {
+                let mut projective = Vec::with_capacity(required_len);
+                for base in bases {
+                    let mut multiple = C::Curve::from(*base);
+                    for _ in 1..INSTANCE_WINDOW_ENTRIES_PER_BASE {
+                        projective.push(multiple);
+                        multiple += *base;
+                    }
                     projective.push(multiple);
-                    multiple += *base;
                 }
-                projective.push(multiple);
-            }
 
-            let mut affine = vec![C::identity(); projective.len()];
-            C::Curve::batch_normalize_vartime(&projective, &mut affine);
-            affine
-        })
+                let mut affine = vec![C::identity(); projective.len()];
+                C::Curve::batch_normalize_vartime(&projective, &mut affine);
+                affine
+            })
     }
 }
 

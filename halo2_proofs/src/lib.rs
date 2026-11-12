@@ -19,7 +19,8 @@ pub mod transcript;
 pub mod dev;
 mod helpers;
 
-// Signed width nine needs one more cached multiple than unsigned width eight.
+// Signed width-nine digits lie in [-256, 256], so each base caches its
+// multiples 1..=256 and negates them for negative digits.
 #[cfg(feature = "batch")]
 const INSTANCE_WINDOW_BITS: usize = 9;
 #[cfg(feature = "batch")]
