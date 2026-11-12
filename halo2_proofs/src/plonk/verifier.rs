@@ -66,11 +66,23 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifie
     }
 }
 
-fn validate_instances<C: CurveAffine, I: AsRef<[S]>, S: AsRef<[C::Scalar]>>(
+/// One proof's instance commitments, indexed by circuit, then by column.
+type InstanceCommitments<C> = Vec<Vec<C>>;
+
+/// Checks the shape of one proof's instances: each circuit has exactly the
+/// verifying key's instance columns, and no column exceeds the usable rows.
+/// Only lengths are read, so the scalars may be borrowed (`&[&[F]]`) or owned
+/// (`Vec<Vec<F>>`).
+fn validate_instances<C, Circuit, Column>(
     params: &Params<C>,
     vk: &VerifyingKey<C>,
-    instances: &[I],
-) -> Result<(), Error> {
+    instances: &[Circuit],
+) -> Result<(), Error>
+where
+    C: CurveAffine,
+    Circuit: AsRef<[Column]>,
+    Column: AsRef<[C::Scalar]>,
+{
     // Check that instances matches the expected number of instance columns
     for instances in instances.iter() {
         if instances.as_ref().len() != vk.cs.num_instance_columns {
@@ -90,10 +102,13 @@ fn validate_instances<C: CurveAffine, I: AsRef<[S]>, S: AsRef<[C::Scalar]>>(
     Ok(())
 }
 
-fn compute_instance_commitments<C: CurveAffine>(
+fn compute_instance_commitments<C>(
     params: &Params<C>,
     instances: &[&[&[C::Scalar]]],
-) -> Vec<Vec<C>> {
+) -> InstanceCommitments<C>
+where
+    C: CurveAffine,
+{
     let batch_normalize = instances
         .iter()
         .flat_map(|instance| instance.iter())
@@ -159,21 +174,22 @@ pub fn verify_proof<
     verify_proof_with_instance_commitments(params, vk, strategy, instance_commitments, transcript)
 }
 
-// The callers validate instance shapes before computing these commitments.
-// Their nested order is the transcript's circuit/column order.
-fn verify_proof_with_instance_commitments<
-    'params,
+/// `verify_proof` after its instance commitments are computed. Callers must
+/// have validated the instance shapes, and must pass the commitments in the
+/// transcript's circuit, then column, order.
+fn verify_proof_with_instance_commitments<'params, C, E, T, V>(
+    params: &'params Params<C>,
+    vk: &VerifyingKey<C>,
+    strategy: V,
+    instance_commitments: InstanceCommitments<C>,
+    transcript: &mut T,
+) -> Result<V::Output, Error>
+where
     C: CurveAffine,
     E: EncodedChallenge<C>,
     T: TranscriptRead<C, E>,
     V: VerificationStrategy<'params, C>,
->(
-    params: &'params Params<C>,
-    vk: &VerifyingKey<C>,
-    strategy: V,
-    instance_commitments: Vec<Vec<C>>,
-    transcript: &mut T,
-) -> Result<V::Output, Error> {
+{
     let num_proofs = instance_commitments.len();
 
     // Hash verification key into transcript
