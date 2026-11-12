@@ -14,3 +14,11 @@ submitted for inclusion in the work by you, as defined in the Apache-2.0
 license, shall be dual licensed as above, without any additional terms or
 conditions.
 
+# Third party contributions
+
+Copyright notices for third-party contributions, ported or adapted from forks of
+this crates or other sources, are preserved below. For precise attributions, see
+the commits introducing the code.
+
+- Copyright (c) The Zakura Contributors
+

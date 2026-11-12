@@ -1,5 +1,5 @@
 use super::Params;
-use crate::arithmetic::{best_multiexp, CurveAffine};
+use crate::arithmetic::{best_multiexp_public, CurveAffine};
 use ff::Field;
 use group::Group;
 
@@ -157,7 +157,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
         )
     }
 
-    /// Perform multiexp and check that it results in zero
+    /// Perform variable-time multiexp on public inputs and check that it results in zero.
     pub fn eval(self) -> bool {
         let (g_scalars, w_scalar, u_scalar, other) = self.terms();
 
@@ -188,7 +188,7 @@ impl<'a, C: CurveAffine> MSM<'a, C> {
 
         assert_eq!(scalars.len(), len);
 
-        bool::from(best_multiexp(&scalars, &bases).is_identity())
+        bool::from(best_multiexp_public(&scalars, &bases).is_identity())
     }
 
     /// The MSM's accumulated terms, exposed for capturing the verifier fingerprint without consuming
