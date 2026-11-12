@@ -6,6 +6,34 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `unstable-bench-internals` feature flag, which exposes crate-internal prover
+  kernels to the new `prover_parallelism` benchmark. It is not a stable API.
+- `prover` benchmark: whole proofs of a circuit with a custom gate, a lookup,
+  an instance column and a multi-set permutation argument, with one or several
+  circuits per proof.
+
+### Changed
+- `halo2_proofs::plonk::create_proof` now commits to the instance and advice
+  columns of all circuits, the lookups, the permutation arguments and the
+  lookup grand products in parallel across circuits, columns and lookups. It
+  draws randomness in the same order as before and writes the transcript in
+  the same order, so for a given RNG stream it produces the same proof bytes.
+- The lookup argument's prover sorts its compressed columns on precomputed
+  keys and matches them with a linear merge, instead of comparing field
+  elements with `Ord` and counting table values in a `BTreeMap`.
+- The prover's grand products and batch inversions, polynomial evaluations
+  at rotations of `x`, and multi-opening divisions now run in parallel.
+- `halo2_proofs::poly::commitment::create_proof` no longer materializes the
+  vector of powers of `x_3`; its inner products are computed as polynomial
+  evaluations, and the L and R multiexps of each round run concurrently.
+- `halo2_proofs::arithmetic::eval_polynomial` evaluates polynomials of more
+  than 2^11 coefficients in parallel chunks.
+- `halo2_proofs::arithmetic::best_fft` builds its twiddle table in parallel
+  for large transforms, and from 2^15 elements performs its bit-reversal
+  permutation in parallel. `halo2_proofs::poly::EvaluationDomain` now caches
+  its twiddle tables.
+
 
 ## [0.4.1] - 2026-10-26
 ### Changed

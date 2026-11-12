@@ -252,35 +252,89 @@ fn should_parallelize_multiexp(num_coeffs: usize, num_threads: usize) -> bool {
 ///
 /// This will use multithreading if beneficial.
 pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, log_n: u32) {
-    fn bitreverse(mut n: usize, l: usize) -> usize {
-        let mut r = 0;
-        for _ in 0..l {
-            r = (r << 1) | (n & 1);
-            n >>= 1;
-        }
-        r
-    }
+    let twiddles = fft_twiddles(omega, a.len() / 2);
+    fft_with_twiddles(a, &twiddles, log_n);
+}
 
+/// Below this many elements, the FFT twiddle table is built sequentially:
+/// splitting it across threads costs more than it saves.
+const TWIDDLES_PARALLEL_THRESHOLD: usize = 1 << 13;
+
+/// Returns `[1, omega, omega^2, ..., omega^(len - 1)]`, the twiddle factors
+/// used by [`best_fft`] for a transform of size `2 * len`.
+///
+/// Each element is an exact field value, so splitting the sequence into
+/// chunks that each start from `omega^start` gives the same table as the
+/// sequential running product.
+pub(crate) fn fft_twiddles<Scalar: Field>(omega: Scalar, len: usize) -> Vec<Scalar> {
+    let mut twiddles = vec![Scalar::ONE; len];
+    let fill = |chunk: &mut [Scalar], start: usize| {
+        let mut w = omega.pow_vartime([start as u64]);
+        for tw in chunk {
+            *tw = w;
+            w *= &omega;
+        }
+    };
+    if len < TWIDDLES_PARALLEL_THRESHOLD {
+        fill(&mut twiddles, 0);
+    } else {
+        parallelize(&mut twiddles, fill);
+    }
+    twiddles
+}
+
+/// Below this many elements, the bit-reversal permutation swaps in place
+/// sequentially. The parallel version gathers from a copy, which only pays
+/// off once the vector no longer fits in cache: measured with 14 threads, it
+/// is slower at 2^13 elements (35 us against 20 us) and faster at 2^15
+/// (67 us against 122 us).
+const BITREVERSE_PARALLEL_THRESHOLD: usize = 1 << 15;
+
+/// Permutes `a` (of length `2^log_n`) so that index `i` holds the element
+/// that was at the bit reversal of `i`.
+pub(crate) fn bitreverse_permutation<T: Copy + Send + Sync>(a: &mut [T], log_n: u32) {
+    if log_n == 0 {
+        return;
+    }
+    let shift = usize::BITS - log_n;
+    let reverse = |i: usize| i.reverse_bits() >> shift;
+    if a.len() < BITREVERSE_PARALLEL_THRESHOLD {
+        for i in 0..a.len() {
+            let r = reverse(i);
+            if i < r {
+                a.swap(r, i);
+            }
+        }
+    } else {
+        // A bit reversal is an involution made of disjoint swaps, but the
+        // swaps of one chunk reach into every other chunk, so the parallel
+        // version gathers from a copy instead of swapping in place.
+        let source = a.to_vec();
+        parallelize(a, |chunk, start| {
+            for (offset, value) in chunk.iter_mut().enumerate() {
+                *value = source[reverse(start + offset)];
+            }
+        });
+    }
+}
+
+/// Performs the same transformation as [`best_fft`], given the twiddle table
+/// `[1, omega, ..., omega^(n/2 - 1)]` for `n = 2^log_n`.
+///
+/// Passing the table lets a caller that transforms many vectors over the
+/// same domain compute it once (see [`fft_twiddles`]).
+pub(crate) fn fft_with_twiddles<Scalar: Field, G: FftGroup<Scalar>>(
+    a: &mut [G],
+    twiddles: &[Scalar],
+    log_n: u32,
+) {
     let threads = multicore::current_num_threads();
     let log_threads = log2_floor(threads);
     let n = a.len();
     assert_eq!(n, 1 << log_n);
+    assert_eq!(twiddles.len(), n / 2);
 
-    for k in 0..n {
-        let rk = bitreverse(k, log_n as usize);
-        if k < rk {
-            a.swap(rk, k);
-        }
-    }
-
-    // precompute twiddle factors
-    let twiddles: Vec<_> = (0..(n / 2))
-        .scan(Scalar::ONE, |w, _| {
-            let tw = *w;
-            *w *= &omega;
-            Some(tw)
-        })
-        .collect();
+    bitreverse_permutation(a, log_n);
 
     if log_n <= log_threads {
         let mut chunk = 2_usize;
@@ -312,7 +366,7 @@ pub fn best_fft<Scalar: Field, G: FftGroup<Scalar>>(a: &mut [G], omega: Scalar, 
             twiddle_chunk /= 2;
         }
     } else {
-        recursive_butterfly_arithmetic(a, n, 1, &twiddles)
+        recursive_butterfly_arithmetic(a, n, 1, twiddles)
     }
 }
 
@@ -357,11 +411,48 @@ pub fn recursive_butterfly_arithmetic<Scalar: Field, G: FftGroup<Scalar>>(
 }
 
 /// This evaluates a provided polynomial (in coefficient form) at `point`.
+///
+/// Horner's rule is a fold of the affine maps `t -> t * point + coeff`. The
+/// maps compose associatively, so long polynomials are split into chunks
+/// that are evaluated in parallel and combined with a second, short Horner
+/// pass in `point^chunk_len`. The result is exactly the sequential value.
+// Without the inline hint, the dispatch below stops this function from being
+// inlined into its callers, which made the sequential path 25% slower (46 us
+// against 36 us at 2^11 coefficients).
+#[inline]
 pub fn eval_polynomial<F: Field>(poly: &[F], point: F) -> F {
-    // TODO: parallelize?
+    // Measured with 14 threads, splitting does not pay at 2^11 coefficients
+    // and is 3.2x faster at 2^14.
+    if poly.len() > EVAL_PARALLEL_THRESHOLD && multicore::current_num_threads() > 1 {
+        eval_polynomial_parallel(poly, point)
+    } else {
+        horner(poly, point)
+    }
+}
+
+/// Horner's rule on one thread.
+#[inline]
+fn horner<F: Field>(poly: &[F], point: F) -> F {
     poly.iter()
         .rev()
         .fold(F::ZERO, |acc, coeff| acc * point + coeff)
+}
+
+/// The parallel path of [`eval_polynomial`].
+#[inline(never)]
+fn eval_polynomial_parallel<F: Field>(poly: &[F], point: F) -> F {
+    let chunk_len = poly.len().div_ceil(multicore::current_num_threads());
+    let chunk_evals: Vec<F> = poly
+        .chunks(chunk_len)
+        .collect::<Vec<_>>()
+        .into_par_iter()
+        .map(|chunk| horner(chunk, point))
+        .collect();
+    let shift = point.pow_vartime([chunk_len as u64]);
+    chunk_evals
+        .iter()
+        .rev()
+        .fold(F::ZERO, |acc, chunk_eval| acc * shift + chunk_eval)
 }
 
 /// This computes the inner product of two vectors `a` and `b`.
@@ -402,6 +493,75 @@ where
     q
 }
 
+/// Evaluates each `(polynomial, point)` pair, in parallel across pairs, and
+/// returns the values in the order given.
+///
+/// After the challenge `x`, the prover evaluates every committed polynomial
+/// at one or more rotations of `x`; the evaluations are independent, and
+/// for small circuits each one is too short to split on its own.
+pub(crate) fn evaluate_batch<F: Field>(queries: &[(&[F], F)]) -> Vec<F> {
+    queries
+        .into_par_iter()
+        .map(|(poly, point)| eval_polynomial(poly, *point))
+        .collect()
+}
+
+/// Divides the polynomial `a` by `X - b`, returning the quotient; the same
+/// as [`kate_division`], in parallel for long polynomials.
+///
+/// The quotient satisfies `q[i] = a[i + 1] + b q[i + 1]` from the top
+/// (`q[m] = 0` for `a` of length `m + 1`), a linear recurrence. Within a
+/// chunk `[s, e)` of indices, `q[i] = l[i] + b^(e - i) q[e]` where `l` is
+/// the recurrence run from zero at `e`. So chunks run the recurrence locally
+/// in parallel, a short pass from the top carries `q[e]` across chunks, and
+/// each chunk adds its correction in parallel. The result is exact.
+pub(crate) fn kate_division_parallel<F: Field>(a: &[F], b: F) -> Vec<F> {
+    if a.len() <= 1 {
+        return vec![];
+    }
+    let mut q = vec![F::ZERO; a.len() - 1];
+    let Some(chunk_len) = scan_chunk_len(q.len()) else {
+        let mut carry = F::ZERO;
+        for (i, q) in q.iter_mut().enumerate().rev() {
+            carry = a[i + 1] + b * carry;
+            *q = carry;
+        }
+        return q;
+    };
+
+    for_each_chunk(&mut q, chunk_len, |index, chunk| {
+        let start = index * chunk_len;
+        let mut carry = F::ZERO;
+        for (offset, q) in chunk.iter_mut().enumerate().rev() {
+            carry = a[start + offset + 1] + b * carry;
+            *q = carry;
+        }
+    });
+
+    // `carries[c]` is the true `q[e]` for chunk `c` ending at `e`. The last
+    // chunk ends at `q.len()`, where `q` is zero.
+    let num_chunks = q.len().div_ceil(chunk_len);
+    let mut carries = vec![F::ZERO; num_chunks];
+    for c in (0..num_chunks - 1).rev() {
+        let next_start = (c + 1) * chunk_len;
+        let next_len = chunk_len.min(q.len() - next_start);
+        carries[c] = q[next_start] + b.pow_vartime([next_len as u64]) * carries[c + 1];
+    }
+
+    for_each_chunk(&mut q, chunk_len, |index, chunk| {
+        let carry = carries[index];
+        if carry.is_zero_vartime() {
+            return;
+        }
+        let mut correction = carry;
+        for q in chunk.iter_mut().rev() {
+            correction *= b;
+            *q += correction;
+        }
+    });
+    q
+}
+
 /// This simple utility function will parallelize an operation that is to be
 /// performed over a mutable slice.
 pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mut [T], f: F) {
@@ -421,6 +581,155 @@ pub fn parallelize<T: Send, F: Fn(&mut [T], usize) + Send + Sync + Clone>(v: &mu
             });
         }
     });
+}
+
+/// Below this many elements, the scans below run sequentially: the extra
+/// pass and the thread synchronisation cost more than they save.
+const SCAN_PARALLEL_THRESHOLD: usize = 1 << 11;
+
+/// At or below this many coefficients, `eval_polynomial` runs Horner's rule
+/// on one thread.
+const EVAL_PARALLEL_THRESHOLD: usize = 1 << 11;
+
+/// Returns the chunk length for a parallel scan over `n` elements, or `None`
+/// if the scan should run sequentially.
+fn scan_chunk_len(n: usize) -> Option<usize> {
+    let threads = multicore::current_num_threads();
+    if threads < 2 || n < SCAN_PARALLEL_THRESHOLD {
+        None
+    } else {
+        Some(n.div_ceil(threads))
+    }
+}
+
+/// Runs `f(chunk_index, chunk)` on consecutive chunks of `chunk_len`
+/// elements of `v`, in parallel.
+fn for_each_chunk<T: Send, F: Fn(usize, &mut [T]) + Send + Sync>(
+    v: &mut [T],
+    chunk_len: usize,
+    f: F,
+) {
+    let f = &f;
+    multicore::scope(|scope| {
+        for (index, chunk) in v.chunks_mut(chunk_len).enumerate() {
+            scope.spawn(move |_| f(index, chunk));
+        }
+    });
+}
+
+/// Inverts every nonzero element of `v` in place, leaving zeros unchanged.
+///
+/// This is Montgomery's trick (a product scan, one inversion, and a backward
+/// scan). The scans are sequential, so the parallel version splits `v` into
+/// chunks and runs the trick on each one: it costs one field inversion per
+/// chunk and produces exactly the same values.
+pub(crate) fn parallel_batch_invert<F: VartimeField>(v: &mut [F]) {
+    match scan_chunk_len(v.len()) {
+        None => {
+            v.iter_mut().batch_invert_vartime();
+        }
+        Some(chunk_len) => for_each_chunk(v, chunk_len, |_, chunk| {
+            chunk.iter_mut().batch_invert_vartime();
+        }),
+    }
+}
+
+/// Returns the `len` running products `[1, v_0, v_0 v_1, ...,
+/// v_0 ... v_{len-2}]` of `values`, the evaluations of a grand-product
+/// polynomial starting from one.
+///
+/// A prefix product only needs associativity, so it parallelises as a
+/// two-level scan: each chunk computes its local running products, a
+/// sequential pass multiplies the chunk totals into chunk offsets, and each
+/// chunk is then scaled by its offset. Field arithmetic is exact, so the
+/// result equals the sequential one element for element.
+///
+/// Panics if `len` is zero or `values` has fewer than `len - 1` elements.
+pub(crate) fn grand_product<F: Field>(values: &[F], len: usize) -> Vec<F> {
+    assert!(len >= 1 && values.len() >= len - 1);
+    let mut products = vec![F::ONE; len];
+    let (_, running) = products.split_at_mut(1);
+    let factors = &values[..len - 1];
+
+    let Some(chunk_len) = scan_chunk_len(running.len()) else {
+        let mut acc = F::ONE;
+        for (product, factor) in running.iter_mut().zip(factors) {
+            acc *= factor;
+            *product = acc;
+        }
+        return products;
+    };
+
+    for_each_chunk(running, chunk_len, |index, chunk| {
+        let mut acc = F::ONE;
+        for (product, factor) in chunk.iter_mut().zip(&factors[index * chunk_len..]) {
+            acc *= factor;
+            *product = acc;
+        }
+    });
+    let offsets: Vec<F> = running
+        .chunks(chunk_len)
+        .scan(F::ONE, |acc, chunk| {
+            let offset = *acc;
+            *acc *= chunk[chunk.len() - 1];
+            Some(offset)
+        })
+        .collect();
+    for_each_chunk(running, chunk_len, |index, chunk| {
+        if index > 0 {
+            for product in chunk {
+                *product *= offsets[index];
+            }
+        }
+    });
+    products
+}
+
+/// Returns the grand products of several chained sets: set `j` starts from
+/// the last value of set `j - 1` instead of from one, as the sets of the
+/// permutation argument do. Each output has `len` elements, and the value
+/// carried into the next set is the last of them.
+///
+/// The chain looks sequential, but set `j` is just the grand product of its
+/// own factors starting from one, scaled by the carried-in scalar. So every
+/// set is computed independently and in parallel, and only the rescaling is
+/// chained. That costs an extra multiplication per element, so short sets
+/// (measured: four sets of 2^11 elements, 208 us in parallel against 153 us
+/// sequentially) run the plain sequential chain instead.
+pub(crate) fn chained_grand_products<F: Field>(sets: Vec<Vec<F>>, len: usize) -> Vec<Vec<F>> {
+    assert!(len >= 1);
+    // Same criterion as `grand_product`, which scans `len - 1` factors.
+    if scan_chunk_len(len - 1).is_none() {
+        let mut carried = F::ONE;
+        return sets
+            .iter()
+            .map(|factors| {
+                let mut products = Vec::with_capacity(len);
+                products.push(carried);
+                for factor in &factors[..len - 1] {
+                    products.push(products[products.len() - 1] * factor);
+                }
+                carried = products[len - 1];
+                products
+            })
+            .collect();
+    }
+    let mut products: Vec<Vec<F>> = sets
+        .into_par_iter()
+        .map(|factors| grand_product(&factors, len))
+        .collect();
+    let mut carried = F::ONE;
+    for set in products.iter_mut() {
+        if carried != F::ONE {
+            parallelize(set, |set, _| {
+                for value in set {
+                    *value *= carried;
+                }
+            });
+        }
+        carried = set[len - 1];
+    }
+    products
 }
 
 fn log2_floor(num: usize) -> u32 {
@@ -728,6 +1037,199 @@ fn test_lagrange_interpolate() {
 
         for (point, eval) in points.iter().zip(evals) {
             assert_eq!(eval_polynomial(&poly, *point), *eval);
+        }
+    }
+}
+
+#[cfg(test)]
+fn random_vector(n: usize, zero_every: usize) -> Vec<Fp> {
+    let mut rng = UnwrapErr(SysRng);
+    (0..n)
+        .map(|i| {
+            if zero_every > 0 && i % zero_every == 0 {
+                Fp::ZERO
+            } else {
+                Fp::random(&mut rng)
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn test_parallel_batch_invert_matches_sequential() {
+    for n in [
+        0,
+        1,
+        7,
+        SCAN_PARALLEL_THRESHOLD - 1,
+        3 * SCAN_PARALLEL_THRESHOLD + 5,
+    ] {
+        let original = random_vector(n, 97);
+        let mut expected = original.clone();
+        expected.iter_mut().batch_invert_vartime();
+        let mut actual = original.clone();
+        parallel_batch_invert(&mut actual);
+        assert_eq!(actual, expected, "n = {n}");
+        for (x, inv) in original.iter().zip(&actual) {
+            assert!(bool::from(x.is_zero()) && bool::from(inv.is_zero()) || *x * inv == Fp::ONE);
+        }
+    }
+}
+
+#[test]
+fn test_grand_product_matches_sequential() {
+    for n in [
+        1,
+        2,
+        9,
+        SCAN_PARALLEL_THRESHOLD + 1,
+        4 * SCAN_PARALLEL_THRESHOLD + 3,
+    ] {
+        let values = random_vector(n + 5, 0);
+        let expected: Vec<Fp> = std::iter::once(Fp::ONE)
+            .chain(values.iter().scan(Fp::ONE, |acc, v| {
+                *acc *= v;
+                Some(*acc)
+            }))
+            .take(n)
+            .collect();
+        assert_eq!(grand_product(&values, n), expected, "n = {n}");
+        assert_eq!(grand_product(&values[..n - 1], n), expected, "n = {n}");
+    }
+}
+
+#[test]
+fn test_chained_grand_products_match_sequential_chain() {
+    for len in [1, 5, 2 * SCAN_PARALLEL_THRESHOLD + 1] {
+        check_chained_grand_products(len);
+    }
+}
+
+#[cfg(test)]
+fn check_chained_grand_products(len: usize) {
+    let sets: Vec<Vec<Fp>> = (0..4).map(|_| random_vector(len, 0)).collect();
+    let mut carried = Fp::ONE;
+    let expected: Vec<Vec<Fp>> = sets
+        .iter()
+        .map(|factors| {
+            let mut z = vec![carried];
+            for factor in &factors[..len - 1] {
+                z.push(z[z.len() - 1] * factor);
+            }
+            carried = z[len - 1];
+            z
+        })
+        .collect();
+    assert_eq!(chained_grand_products(sets, len), expected);
+}
+
+#[test]
+fn test_eval_polynomial_matches_horner() {
+    let point = Fp::random(&mut UnwrapErr(SysRng));
+    for n in [
+        0,
+        1,
+        3,
+        EVAL_PARALLEL_THRESHOLD,
+        3 * EVAL_PARALLEL_THRESHOLD + 11,
+    ] {
+        let poly = random_vector(n, 0);
+        let expected = poly
+            .iter()
+            .rev()
+            .fold(Fp::ZERO, |acc, coeff| acc * point + coeff);
+        assert_eq!(eval_polynomial(&poly, point), expected, "n = {n}");
+    }
+}
+
+#[test]
+fn test_kate_division_parallel_matches_sequential() {
+    let b = Fp::random(&mut UnwrapErr(SysRng));
+    for n in [
+        0,
+        1,
+        2,
+        9,
+        SCAN_PARALLEL_THRESHOLD + 1,
+        3 * SCAN_PARALLEL_THRESHOLD + 7,
+    ] {
+        let a = random_vector(n, 0);
+        let expected = if n == 0 { vec![] } else { kate_division(&a, b) };
+        assert_eq!(kate_division_parallel(&a, b), expected, "n = {n}");
+    }
+    // A polynomial with a root at `b` divides exactly.
+    let mut a = random_vector(2 * SCAN_PARALLEL_THRESHOLD, 0);
+    let remainder = eval_polynomial(&a, b);
+    a[0] -= remainder;
+    let q = kate_division_parallel(&a, b);
+    let x = Fp::random(&mut UnwrapErr(SysRng));
+    assert_eq!(eval_polynomial(&q, x) * (x - b), eval_polynomial(&a, x));
+}
+
+#[test]
+fn test_evaluate_batch_matches_individual_evaluations() {
+    let polys: Vec<Vec<Fp>> = [0, 1, 17, 4 * EVAL_PARALLEL_THRESHOLD]
+        .iter()
+        .map(|&n| random_vector(n, 0))
+        .collect();
+    let mut rng = UnwrapErr(SysRng);
+    let queries: Vec<(&[Fp], Fp)> = polys
+        .iter()
+        .map(|p| (&p[..], Fp::random(&mut rng)))
+        .collect();
+    let expected: Vec<Fp> = queries
+        .iter()
+        .map(|(p, x)| p.iter().rev().fold(Fp::ZERO, |acc, c| acc * x + c))
+        .collect();
+    assert_eq!(evaluate_batch(&queries), expected);
+}
+
+#[test]
+fn test_fft_twiddles_match_running_product() {
+    let omega = Fp::random(&mut UnwrapErr(SysRng));
+    // Odd length above the threshold, so the parallel chunks are uneven.
+    let len = TWIDDLES_PARALLEL_THRESHOLD * 2 + 3;
+    let expected: Vec<Fp> = (0..len)
+        .scan(Fp::ONE, |w, _| {
+            let tw = *w;
+            *w *= omega;
+            Some(tw)
+        })
+        .collect();
+    assert_eq!(fft_twiddles(omega, len), expected);
+    assert_eq!(fft_twiddles(omega, 5), expected[..5]);
+    assert!(fft_twiddles(omega, 0).is_empty());
+}
+
+#[test]
+fn test_bitreverse_permutation_is_the_bit_reversal() {
+    for log_n in [0, 1, 3, 16] {
+        let n = 1usize << log_n;
+        let mut a: Vec<usize> = (0..n).collect();
+        bitreverse_permutation(&mut a, log_n);
+        for (i, &v) in a.iter().enumerate() {
+            let expected = (0..log_n).fold(0, |r, b| (r << 1) | ((i >> b) & 1));
+            assert_eq!(v, expected, "log_n = {log_n}, i = {i}");
+        }
+    }
+}
+
+#[test]
+fn test_fft_matches_naive_dft() {
+    let mut rng = UnwrapErr(SysRng);
+    for log_n in [0u32, 1, 4, 14] {
+        let n = 1usize << log_n;
+        let omega = Fp::ROOT_OF_UNITY.pow_vartime([1u64 << (Fp::S - log_n)]);
+        let coeffs: Vec<Fp> = (0..n).map(|_| Fp::random(&mut rng)).collect();
+        let mut evals = coeffs.clone();
+        best_fft(&mut evals, omega, log_n);
+        // Spot-check a few evaluation points; a full naive DFT at 2^14 is
+        // quadratic.
+        for i in [0, 1, n / 2, n - 1].into_iter().filter(|&i| i < n) {
+            assert_eq!(
+                evals[i],
+                eval_polynomial(&coeffs, omega.pow_vartime([i as u64]))
+            );
         }
     }
 }

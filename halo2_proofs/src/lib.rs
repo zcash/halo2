@@ -17,4 +17,8 @@ pub mod poly;
 pub mod transcript;
 
 pub mod dev;
+
+#[cfg(feature = "unstable-bench-internals")]
+#[doc(hidden)]
+pub mod bench_internals;
 mod helpers;

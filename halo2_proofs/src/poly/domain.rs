@@ -2,7 +2,7 @@
 //! domain that is of a suitable size for the application.
 
 use crate::{
-    arithmetic::{best_fft, parallelize},
+    arithmetic::{fft_twiddles, fft_with_twiddles, parallelize},
     plonk::Assigned,
 };
 
@@ -12,7 +12,31 @@ use ff::WithSmallOrderMulGroup;
 use group::ff::Field;
 use pasta_curves::arithmetic::{VartimeBatchInvert, VartimeField};
 
+use std::fmt;
 use std::marker::PhantomData;
+use std::sync::Arc;
+
+/// The twiddle factors `[1, w, w^2, ..., w^(m/2 - 1)]` of a size-`m` FFT with
+/// root of unity `w`.
+///
+/// Building the table is a sequential chain of `m/2` multiplications, which
+/// costs roughly a fifth of the transform itself, so each domain builds its
+/// three tables once. They are shared behind an `Arc` because the domain is
+/// cloned along with every verifying key.
+#[derive(Clone)]
+struct Twiddles<F>(Arc<[F]>);
+
+impl<F: Field> Twiddles<F> {
+    fn new(omega: F, log_size: u32) -> Self {
+        Twiddles(fft_twiddles(omega, (1usize << log_size) / 2).into())
+    }
+}
+
+impl<F> fmt::Debug for Twiddles<F> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Twiddles(len = {})", self.0.len())
+    }
+}
 
 /// This structure contains precomputed constants and other details needed for
 /// performing operations on an evaluation domain of size $2^k$ and an extended
@@ -25,7 +49,6 @@ pub struct EvaluationDomain<F: Field> {
     omega: F,
     omega_inv: F,
     extended_omega: F,
-    extended_omega_inv: F,
     g_coset: F,
     g_coset_inv: F,
     quotient_poly_degree: u64,
@@ -33,6 +56,9 @@ pub struct EvaluationDomain<F: Field> {
     extended_ifft_divisor: F,
     t_evaluations: Vec<F>,
     barycentric_weight: F,
+    omega_inv_twiddles: Twiddles<F>,
+    extended_omega_twiddles: Twiddles<F>,
+    extended_omega_inv_twiddles: Twiddles<F>,
 }
 
 impl<F: WithSmallOrderMulGroup<3> + VartimeField> EvaluationDomain<F> {
@@ -135,7 +161,6 @@ impl<F: WithSmallOrderMulGroup<3> + VartimeField> EvaluationDomain<F> {
             omega,
             omega_inv,
             extended_omega,
-            extended_omega_inv,
             g_coset,
             g_coset_inv,
             quotient_poly_degree,
@@ -143,6 +168,9 @@ impl<F: WithSmallOrderMulGroup<3> + VartimeField> EvaluationDomain<F> {
             extended_ifft_divisor,
             t_evaluations,
             barycentric_weight,
+            omega_inv_twiddles: Twiddles::new(omega_inv, k),
+            extended_omega_twiddles: Twiddles::new(extended_omega, extended_k),
+            extended_omega_inv_twiddles: Twiddles::new(extended_omega_inv, extended_k),
         }
     }
 }
@@ -231,7 +259,12 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         assert_eq!(a.values.len(), 1 << self.k);
 
         // Perform inverse FFT to obtain the polynomial in coefficient form
-        Self::ifft(&mut a.values, self.omega_inv, self.k, self.ifft_divisor);
+        Self::ifft(
+            &mut a.values,
+            &self.omega_inv_twiddles,
+            self.k,
+            self.ifft_divisor,
+        );
 
         Polynomial {
             values: a.values,
@@ -249,7 +282,11 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
 
         self.distribute_powers_zeta(&mut a.values, true);
         a.values.resize(self.extended_len(), F::ZERO);
-        best_fft(&mut a.values, self.extended_omega, self.extended_k);
+        fft_with_twiddles(
+            &mut a.values,
+            &self.extended_omega_twiddles.0,
+            self.extended_k,
+        );
 
         Polynomial {
             values: a.values,
@@ -309,7 +346,7 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         // Inverse FFT
         Self::ifft(
             &mut a.values,
-            self.extended_omega_inv,
+            &self.extended_omega_inv_twiddles,
             self.extended_k,
             self.extended_ifft_divisor,
         );
@@ -375,8 +412,8 @@ impl<F: WithSmallOrderMulGroup<3>> EvaluationDomain<F> {
         });
     }
 
-    fn ifft(a: &mut [F], omega_inv: F, log_n: u32, divisor: F) {
-        best_fft(a, omega_inv, log_n);
+    fn ifft(a: &mut [F], omega_inv_twiddles: &Twiddles<F>, log_n: u32, divisor: F) {
+        fft_with_twiddles(a, &omega_inv_twiddles.0, log_n);
         parallelize(a, |a, _| {
             for a in a {
                 // Finish iFFT

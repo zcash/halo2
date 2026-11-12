@@ -3,6 +3,7 @@
 //! the committed polynomials at arbitrary points.
 
 use crate::arithmetic::parallelize;
+use crate::multicore;
 use crate::plonk::Assigned;
 
 use group::ff::Field;
@@ -145,15 +146,20 @@ pub(crate) fn batch_invert_assigned<F: VartimeField>(
         })
         .collect();
 
-    assigned_denominators
-        .iter_mut()
-        .flat_map(|f| {
-            f.iter_mut()
-                // If the denominator is trivial, we can skip it, reducing the
-                // size of the batch inversion.
-                .filter_map(|d| d.as_mut())
-        })
-        .batch_invert_vartime();
+    // Each column is inverted as its own batch, in parallel: one field
+    // inversion per column instead of one overall, and the same values.
+    multicore::scope(|scope| {
+        for column in assigned_denominators.iter_mut() {
+            scope.spawn(move |_| {
+                column
+                    .iter_mut()
+                    // If the denominator is trivial, we can skip it, reducing
+                    // the size of the batch inversion.
+                    .filter_map(|d| d.as_mut())
+                    .batch_invert_vartime();
+            });
+        }
+    });
 
     assigned
         .iter()

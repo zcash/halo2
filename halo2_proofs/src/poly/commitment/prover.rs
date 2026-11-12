@@ -4,12 +4,12 @@ use rand_core::Rng;
 
 use super::super::{Coeff, Polynomial};
 use super::{Blind, Params};
-use crate::arithmetic::{
-    best_multiexp, compute_inner_product, eval_polynomial, parallelize, CurveAffine, CurveExt,
-};
+use crate::arithmetic::{best_multiexp, eval_polynomial, parallelize, CurveAffine, CurveExt};
+use crate::multicore;
 use crate::transcript::{EncodedChallenge, TranscriptWrite};
 
 use std::io;
+use std::iter;
 
 /// Create a polynomial commitment opening proof for the polynomial defined
 /// by the coefficients `px`, the blinding factor `blind` used for the
@@ -76,16 +76,19 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, R: Rng, T: Transcrip
     let mut p_prime = p_prime_poly.values;
     assert_eq!(p_prime.len(), params.n as usize);
 
-    // Initialize the vector `b` as the powers of `x_3`. The inner product of
-    // `p_prime` and `b` is the evaluation of the polynomial at `x_3`.
-    let mut b = Vec::with_capacity(1 << params.k);
-    {
-        let mut cur = C::Scalar::ONE;
-        for _ in 0..(1 << params.k) {
-            b.push(cur);
-            cur *= &x_3;
-        }
-    }
+    // The argument folds `p_prime` against the vector `b` of powers of `x_3`,
+    // whose inner product with `p_prime` is the evaluation of the polynomial
+    // at `x_3`. Folding the top half of `b` into the bottom half with `u_j`
+    // only multiplies it by a scalar: if `b = c (1, x_3, ..., x_3^(2h - 1))`
+    // then `b[i] + u_j b[i + h] = c (1 + u_j x_3^h) x_3^i`. So `b` is always
+    // `b_scale` times the powers of `x_3`, its inner products are
+    // polynomial evaluations, and the vector itself is never needed.
+    let mut b_scale = C::Scalar::ONE;
+    // `x_3^(2^t)` for `t = 0..k`, by repeated squaring; round `j` uses
+    // `x_3^half` with `half = 2^(k - j - 1)`.
+    let x_3_powers: Vec<C::Scalar> = iter::successors(Some(x_3), |x| Some(x.square()))
+        .take(params.k as usize)
+        .collect();
 
     // Initialize the vector `G'` from the URS. We'll be progressively collapsing
     // this vector into smaller and smaller vectors until it is of length 1.
@@ -95,14 +98,30 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, R: Rng, T: Transcrip
     for j in 0..params.k {
         let half = 1 << (params.k - j - 1); // half the length of `p_prime`, `b`, `G'`
 
-        // Compute L, R
+        let x_3_half = x_3_powers[(params.k - j - 1) as usize];
+
+        // Compute L, R. The two multiexps and the two evaluations are
+        // independent, so they run concurrently.
         //
         // TODO: If we modify multiexp to take "extra" bases, we could speed
         // this piece up a bit by combining the multiexps.
-        let l_j = best_multiexp(&p_prime[half..], &g_prime[0..half]);
-        let r_j = best_multiexp(&p_prime[0..half], &g_prime[half..]);
-        let value_l_j = compute_inner_product(&p_prime[half..], &b[0..half]);
-        let value_r_j = compute_inner_product(&p_prime[0..half], &b[half..]);
+        let (p_lo, p_hi) = p_prime.split_at(half);
+        let ((l_j, r_j), (value_l_j, value_r_j)) = multicore::join(
+            || {
+                multicore::join(
+                    || best_multiexp(p_hi, &g_prime[0..half]),
+                    || best_multiexp(p_lo, &g_prime[half..]),
+                )
+            },
+            || {
+                multicore::join(
+                    // <p_hi, b[..half]> = b_scale * p_hi(x_3)
+                    || b_scale * eval_polynomial(p_hi, x_3),
+                    // <p_lo, b[half..]> = b_scale * x_3^half * p_lo(x_3)
+                    || b_scale * x_3_half * eval_polynomial(p_lo, x_3),
+                )
+            },
+        );
         let l_j_randomness = C::Scalar::random(&mut rng);
         let r_j_randomness = C::Scalar::random(&mut rng);
         let l_j = l_j + &best_multiexp(&[value_l_j * &z, l_j_randomness], &[params.u, params.w]);
@@ -118,14 +137,16 @@ pub fn create_proof<C: CurveAffine, E: EncodedChallenge<C>, R: Rng, T: Transcrip
         let u_j_inv = u_j.invert_vartime().unwrap(); // TODO, bubble this up
 
         // Collapse `p_prime` and `b`.
-        // TODO: parallelize
-        #[allow(clippy::assign_op_pattern)]
-        for i in 0..half {
-            p_prime[i] = p_prime[i] + &(p_prime[i + half] * &u_j_inv);
-            b[i] = b[i] + &(b[i + half] * &u_j);
+        {
+            let (p_lo, p_hi) = p_prime.split_at_mut(half);
+            parallelize(p_lo, |p_lo, start| {
+                for (lo, hi) in p_lo.iter_mut().zip(&p_hi[start..]) {
+                    *lo += *hi * u_j_inv;
+                }
+            });
         }
         p_prime.truncate(half);
-        b.truncate(half);
+        b_scale *= C::Scalar::ONE + u_j * x_3_half;
 
         // Collapse `G'`
         parallel_generator_collapse(&mut g_prime, u_j);

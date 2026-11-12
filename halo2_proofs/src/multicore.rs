@@ -13,6 +13,33 @@ compile_error!(
 
 pub use maybe_rayon::{iter::IntoParallelIterator, join, scope};
 
+/// The parallel-iterator traits, with sequential stand-ins for those that
+/// `maybe_rayon` does not provide when the `multicore` feature is off.
+pub(crate) mod prelude {
+    pub(crate) use maybe_rayon::prelude::*;
+
+    #[cfg(not(feature = "multicore"))]
+    pub(crate) use super::sequential::IntoParallelRefIterator;
+}
+
+#[cfg(not(feature = "multicore"))]
+mod sequential {
+    /// `rayon`'s `par_iter`, which `maybe_rayon` omits, as a plain iterator.
+    pub(crate) trait IntoParallelRefIterator<'data> {
+        type Iter: Iterator;
+
+        fn par_iter(&'data self) -> Self::Iter;
+    }
+
+    impl<'data, T: Sync + 'data> IntoParallelRefIterator<'data> for [T] {
+        type Iter = std::slice::Iter<'data, T>;
+
+        fn par_iter(&'data self) -> Self::Iter {
+            self.iter()
+        }
+    }
+}
+
 #[cfg(feature = "multicore")]
 pub use maybe_rayon::{
     current_num_threads,
