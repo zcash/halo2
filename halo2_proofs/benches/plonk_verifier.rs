@@ -1,5 +1,5 @@
-//! Benchmarks single-proof verification with the instance layout used by
-//! Orchard: one proof containing multiple action circuits over a size-$2^{11}$
+//! Benchmarks single-proof and batch verification with the instance layout used by
+//! Orchard: each proof contains action circuits over a size-$2^{11}$
 //! domain, with nine instance values per action. The benchmark circuit is
 //! intentionally minimal, so this is not a full Orchard benchmark.
 
@@ -163,6 +163,31 @@ fn criterion_benchmark(c: &mut Criterion) {
         });
     }
     group.finish();
+
+    #[cfg(feature = "batch")]
+    {
+        let case = create_verification_case(&params, &pk, 1);
+        let mut group = c.benchmark_group("plonk-verifier-batch");
+        for proof_count in [1, 8, 64] {
+            group.bench_function(BenchmarkId::new("proofs", proof_count), |b| {
+                b.iter_batched(
+                    || {
+                        let mut batch = halo2_proofs::plonk::BatchVerifier::new();
+                        for _ in 0..proof_count {
+                            batch.add_proof(
+                                case.public_inputs.iter().map(|v| vec![v.clone()]).collect(),
+                                case.proof.clone(),
+                            );
+                        }
+                        batch
+                    },
+                    |batch| assert!(batch.finalize(&params, pk.get_vk())),
+                    criterion::BatchSize::SmallInput,
+                );
+            });
+        }
+        group.finish();
+    }
 }
 
 criterion_group!(benches, criterion_benchmark);
