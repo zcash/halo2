@@ -7,7 +7,10 @@ use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
 use std::sync::Arc;
 
-use super::{validate_instances, verify_proof_with_instance_commitments, VerificationStrategy};
+use super::{
+    validate_instances, verify_proof_with_instance_commitments, InstanceCommitments,
+    VerificationStrategy,
+};
 use crate::{
     multicore::{IntoParallelIterator, TryFoldAndReduce},
     plonk::{Error, VerifyingKey},
@@ -60,17 +63,20 @@ struct BatchItem<C: CurveAffine> {
     proof: Vec<u8>,
 }
 
-const SERIAL_INSTANCE_WINDOW_BITS: usize = 8;
-// Lockstep bookkeeping pays off with three or more instance columns.
-const MIN_LOCKSTEP_INSTANCE_COLUMNS: usize = 3;
-
 // All scalars and points handled by this table are public instance data.
-struct InstanceFixedWindowTable<C: CurveAffine> {
+//
+// The table holds `j * G_i` for `j` in `1..=256` and the first `base_count`
+// Lagrange bases, so a signed width-nine digit `d` of a scalar on `G_i` is one
+// lookup and at most one negation.
+struct InstanceFixedWindowTable<C> {
     base_count: usize,
     multiples: Arc<Vec<C>>,
 }
 
-impl<C: CurveAffine> InstanceFixedWindowTable<C> {
+impl<C> InstanceFixedWindowTable<C>
+where
+    C: CurveAffine,
+{
     fn new(params: &Params<C>, base_count: usize) -> Self {
         Self {
             base_count,
@@ -78,52 +84,10 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
         }
     }
 
-    fn commit(&self, params: &Params<C>, scalars: &[C::Scalar]) -> C::Curve {
-        assert!(scalars.len() <= self.base_count);
-
-        // The scalar bit count fits usize on every supported target.
-        let window_count = (C::Scalar::NUM_BITS as usize).div_ceil(SERIAL_INSTANCE_WINDOW_BITS);
-        let scalar_reprs = scalars.iter().map(PrimeField::to_repr).collect::<Vec<_>>();
-        let mut variable = C::Curve::identity();
-
-        for window in (0..window_count).rev() {
-            if window + 1 != window_count {
-                for _ in 0..SERIAL_INSTANCE_WINDOW_BITS {
-                    variable = variable.double();
-                }
-            }
-
-            for (base_index, scalar) in scalar_reprs.iter().enumerate() {
-                let digit = unsigned_fixed_window_digit(
-                    scalar.as_ref(),
-                    window,
-                    SERIAL_INSTANCE_WINDOW_BITS,
-                );
-                if digit != 0 {
-                    variable +=
-                        self.multiples[base_index * INSTANCE_WINDOW_ENTRIES_PER_BASE + digit - 1];
-                }
-            }
-        }
-
-        // The default instance blind is one, including for an empty column.
-        C::Curve::from(params.w) + variable
-    }
-
+    /// Returns `W + sum_i x_i G_i` for every column `x`, in order. This equals
+    /// `Params::commit_lagrange_instance` on each column; columns longer than
+    /// the table use it directly.
     fn commit_batch(&self, params: &Params<C>, instances: &[&[C::Scalar]]) -> Vec<C::Curve> {
-        if instances.len() < MIN_LOCKSTEP_INSTANCE_COLUMNS {
-            return instances
-                .iter()
-                .map(|instance| {
-                    if instance.len() <= self.base_count {
-                        self.commit(params, instance)
-                    } else {
-                        params.commit_lagrange_instance(instance)
-                    }
-                })
-                .collect();
-        }
-
         let mut commitments = vec![C::Curve::identity(); instances.len()];
         let cached_instances = instances
             .iter()
@@ -147,6 +111,7 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
             }
         }
 
+        // Horner's rule in radix 2^9, one accumulator per column.
         // The scalar bit count fits usize on every supported target.
         let window_count = signed_instance_window_count(C::Scalar::NUM_BITS as usize);
         for window in (0..window_count).rev() {
@@ -175,6 +140,7 @@ impl<C: CurveAffine> InstanceFixedWindowTable<C> {
             }
         }
 
+        // The default instance blind is one, including for an empty column.
         let blind = C::Curve::from(params.w);
         for (output_index, _) in cached_instances {
             commitments[output_index] += blind;
@@ -195,7 +161,10 @@ fn signed_instance_window_count(scalar_bits: usize) -> usize {
     scalar_bits / INSTANCE_WINDOW_BITS + 1
 }
 
-fn unsigned_fixed_window_digit(bytes: &[u8], window: usize, window_bits: usize) -> usize {
+/// The raw `window_bits`-bit field of a little-endian integer starting at bit
+/// `window * window_bits`, reading zero past the end.
+fn window_value(bytes: &[u8], window: usize, window_bits: usize) -> usize {
+    debug_assert!(window_bits <= 9);
     let bit_start = window * window_bits;
     // A byte has eight bits, which fits usize on every supported target.
     let byte_bits = u8::BITS as usize;
@@ -210,7 +179,7 @@ fn unsigned_fixed_window_digit(bytes: &[u8], window: usize, window_bits: usize) 
 fn signed_fixed_window_digit(bytes: &[u8], window: usize, window_bits: usize) -> FixedWindowDigit {
     let bit_start = window * window_bits;
     let radix = 1usize << window_bits;
-    let value = unsigned_fixed_window_digit(bytes, window, window_bits);
+    let value = window_value(bytes, window, window_bits);
     let overlap = if bit_start == 0 {
         0
     } else {
@@ -238,11 +207,16 @@ fn signed_fixed_window_digit(bytes: &[u8], window: usize, window_bits: usize) ->
     }
 }
 
-fn compute_batch_instance_commitments<C: CurveAffine>(
+/// Commitments to every proof's instance columns, nested proof, circuit,
+/// column: the order in which each proof's transcript absorbs them.
+fn compute_batch_instance_commitments<C>(
     params: &Params<C>,
     vk: &VerifyingKey<C>,
     items: &[BatchItem<C>],
-) -> Result<Vec<Vec<Vec<C>>>, Error> {
+) -> Result<Vec<InstanceCommitments<C>>, Error>
+where
+    C: CurveAffine,
+{
     let mut max_cached_instance_len = 0;
     for item in items {
         validate_instances(params, vk, &item.instances)?;

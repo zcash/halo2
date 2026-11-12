@@ -17,7 +17,8 @@
 //! 5. Zero padding: trailing zeros do not change a commitment.
 //! 6. Permutation: reordering columns reorders outputs the same way.
 //! 7. Cache: every table the cache returns is the multiples table of the
-//!    current bases, checked by a linear-time certificate.
+//!    current bases, checked by a linear-time certificate, including after a
+//!    base changes under an already-built table.
 
 use std::sync::{Arc, OnceLock};
 
@@ -176,7 +177,7 @@ macro_rules! curve_laws {
     ($module:ident, $curve:ty, $scalar:ty) => {
         mod $module {
             use super::*;
-            use group::CurveAffine as _;
+            use group::{Curve as _, CurveAffine as _, Group as _};
 
             type C = $curve;
             type S = $scalar;
@@ -308,6 +309,31 @@ macro_rules! curve_laws {
                         prop_assert!(Arc::ptr_eq(&table, &params.instance_window_table(base_count)));
                         previous = Some((base_count, table));
                     }
+                }
+
+                #[test]
+                fn stale_tables_are_rebuilt(
+                    (base_count, index, column) in (1..=MAX_CACHED_INSTANCE_ROWS)
+                        .prop_flat_map(|base_count| (
+                            Just(base_count),
+                            0..base_count,
+                            arb_column::<S>(base_count),
+                        )),
+                ) {
+                    // A clone shares the cache, so it sees a table built from
+                    // the bases as they were before the change.
+                    let original = Params::<C>::new(K);
+                    let _ = original.instance_window_table(base_count);
+                    let mut params = original.clone();
+                    params.g_lagrange[index] = params.g_lagrange[index].to_curve().double().to_affine();
+
+                    certify_table(&params, &params.instance_window_table(base_count), base_count);
+                    prop_assert_eq!(
+                        fast(&params, base_count, &[column.clone()]),
+                        reference(&params, &[column]),
+                    );
+                    // The original still gets a table for its own bases.
+                    certify_table(&original, &original.instance_window_table(base_count), base_count);
                 }
             }
         }
