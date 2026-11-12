@@ -20,6 +20,8 @@ use crate::{
 use crate::multicore::{IndexedParallelIterator, ParallelIterator};
 
 #[cfg(test)]
+mod proptests;
+#[cfg(test)]
 mod tests;
 
 /// A proof verification strategy that returns the proof's MSM.
