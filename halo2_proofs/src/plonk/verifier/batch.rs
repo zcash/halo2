@@ -1,18 +1,28 @@
-use group::ff::{Field, FromUniformBytes};
-use pasta_curves::arithmetic::CurveAffine;
+use group::{
+    ff::{Field, FromUniformBytes, PrimeField},
+    Group,
+};
+use pasta_curves::arithmetic::{CurveAffine, CurveExt};
 use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
+use std::sync::Arc;
 
-use super::{verify_proof, VerificationStrategy};
+use super::{validate_instances, verify_proof_with_instance_commitments, VerificationStrategy};
 use crate::{
+    instance_flag_mask,
     multicore::{IntoParallelIterator, TryFoldAndReduce},
     plonk::{Error, VerifyingKey},
     poly::commitment::{Guard, Params, MSM},
     transcript::{Blake2bRead, EncodedChallenge},
+    INSTANCE_WINDOW_BITS, INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS,
+    PREPARED_INSTANCE_DENSE_ROWS,
 };
 
 #[cfg(feature = "multicore")]
 use crate::multicore::{IndexedParallelIterator, ParallelIterator};
+
+#[cfg(test)]
+mod tests;
 
 /// A proof verification strategy that returns the proof's MSM.
 ///
@@ -20,12 +30,14 @@ use crate::multicore::{IndexedParallelIterator, ParallelIterator};
 #[derive(Debug)]
 struct BatchStrategy<'params, C: CurveAffine> {
     msm: MSM<'params, C>,
+    batching_scalar: C::Scalar,
 }
 
 impl<'params, C: CurveAffine> BatchStrategy<'params, C> {
-    fn new(params: &'params Params<C>) -> Self {
+    fn new(params: &'params Params<C>, batching_scalar: C::Scalar) -> Self {
         BatchStrategy {
             msm: MSM::new(params),
+            batching_scalar,
         }
     }
 }
@@ -38,7 +50,7 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy
         f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
     ) -> Result<Self::Output, Error> {
         let guard = f(self.msm)?;
-        Ok(guard.use_challenges())
+        Ok(guard.use_challenges_with_scale(self.batching_scalar))
     }
 }
 
@@ -46,6 +58,345 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy
 struct BatchItem<C: CurveAffine> {
     instances: Vec<Vec<Vec<C::Scalar>>>,
     proof: Vec<u8>,
+}
+
+const SERIAL_INSTANCE_WINDOW_BITS: usize = 8;
+// Lockstep bookkeeping pays off with three or more instance columns.
+const MIN_LOCKSTEP_INSTANCE_COLUMNS: usize = 3;
+
+// All scalars and points handled by this table are public instance data.
+struct InstanceFixedWindowTable<C: CurveAffine> {
+    base_count: usize,
+    multiples: Arc<Vec<C>>,
+}
+
+impl<C: CurveAffine> InstanceFixedWindowTable<C> {
+    fn new(params: &Params<C>, base_count: usize) -> Self {
+        Self {
+            base_count,
+            multiples: params.instance_window_table(base_count),
+        }
+    }
+
+    fn commit(&self, params: &Params<C>, scalars: &[C::Scalar]) -> C::Curve {
+        assert!(scalars.len() <= self.base_count);
+
+        // The scalar bit count fits usize on every supported target.
+        let window_count = (C::Scalar::NUM_BITS as usize).div_ceil(SERIAL_INSTANCE_WINDOW_BITS);
+        let scalar_reprs = scalars.iter().map(PrimeField::to_repr).collect::<Vec<_>>();
+        let mut variable = C::Curve::identity();
+
+        for window in (0..window_count).rev() {
+            if window + 1 != window_count {
+                for _ in 0..SERIAL_INSTANCE_WINDOW_BITS {
+                    variable = variable.double();
+                }
+            }
+
+            for (base_index, scalar) in scalar_reprs.iter().enumerate() {
+                let digit = unsigned_fixed_window_digit(
+                    scalar.as_ref(),
+                    window,
+                    SERIAL_INSTANCE_WINDOW_BITS,
+                );
+                if digit != 0 {
+                    variable +=
+                        self.multiples[base_index * INSTANCE_WINDOW_ENTRIES_PER_BASE + digit - 1];
+                }
+            }
+        }
+
+        // The default instance blind is one, including for an empty column.
+        C::Curve::from(params.w) + variable
+    }
+
+    #[inline(never)]
+    fn commit_batch_parallel(
+        &self,
+        params: &Params<C>,
+        instances: &[&[C::Scalar]],
+    ) -> Vec<C::Curve> {
+        #[cfg(feature = "multicore")]
+        {
+            let workers = crate::multicore::current_num_threads();
+            let chunk_size = instances
+                .len()
+                .div_ceil(workers)
+                .max(MIN_LOCKSTEP_INSTANCE_COLUMNS);
+            // Bound the number of tasks by the existing pool, keeping lockstep evaluation
+            // in each task. Small proof batches bypass this helper entirely.
+            if workers > 1 && instances.len() > chunk_size {
+                return (0..instances.len().div_ceil(chunk_size))
+                    .into_par_iter()
+                    .flat_map_iter(|chunk| {
+                        let start = chunk * chunk_size;
+                        let end = (start + chunk_size).min(instances.len());
+                        self.commit_batch(params, &instances[start..end])
+                    })
+                    .collect();
+            }
+        }
+        self.commit_batch(params, instances)
+    }
+
+    // Preserve the original inlining in small-batch verification now that parallel workers
+    // also call this routine.
+    #[inline(always)]
+    fn commit_batch(&self, params: &Params<C>, instances: &[&[C::Scalar]]) -> Vec<C::Curve> {
+        if instances.len() < MIN_LOCKSTEP_INSTANCE_COLUMNS {
+            return instances
+                .iter()
+                .map(|instance| {
+                    if instance.len() <= self.base_count {
+                        self.commit(params, instance)
+                    } else {
+                        params.commit_lagrange_instance(instance)
+                    }
+                })
+                .collect();
+        }
+
+        let mut commitments = vec![C::Curve::identity(); instances.len()];
+        let cached_instances = instances
+            .iter()
+            .enumerate()
+            .filter_map(|(output_index, instance)| {
+                if instance.len() <= self.base_count {
+                    Some((output_index, *instance))
+                } else {
+                    commitments[output_index] = params.commit_lagrange_instance(instance);
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        let cached_count = cached_instances.len();
+        // Store representations base-major so every inner loop reads a
+        // contiguous row while updating independent output accumulators.
+        let mut scalar_reprs = vec![C::Scalar::ZERO.to_repr(); self.base_count * cached_count];
+        for (cached_index, (_, instance)) in cached_instances.iter().enumerate() {
+            for (base_index, scalar) in instance.iter().enumerate() {
+                scalar_reprs[base_index * cached_count + cached_index] = scalar.to_repr();
+            }
+        }
+
+        // The scalar bit count fits usize on every supported target.
+        let window_count = signed_instance_window_count(C::Scalar::NUM_BITS as usize);
+        for window in (0..window_count).rev() {
+            if window + 1 != window_count {
+                for _ in 0..INSTANCE_WINDOW_BITS {
+                    for (output_index, _) in &cached_instances {
+                        commitments[*output_index] = commitments[*output_index].double();
+                    }
+                }
+            }
+
+            for base_index in 0..self.base_count {
+                for (cached_index, (output_index, _)) in cached_instances.iter().enumerate() {
+                    let scalar = &scalar_reprs[base_index * cached_count + cached_index];
+                    let digit =
+                        signed_fixed_window_digit(scalar.as_ref(), window, INSTANCE_WINDOW_BITS);
+                    if digit.magnitude != 0 {
+                        let mut multiple = self.multiples
+                            [base_index * INSTANCE_WINDOW_ENTRIES_PER_BASE + digit.magnitude - 1];
+                        if digit.negative {
+                            multiple = -multiple;
+                        }
+                        commitments[*output_index] += multiple;
+                    }
+                }
+            }
+        }
+
+        let blind = C::Curve::from(params.w);
+        for (output_index, _) in cached_instances {
+            commitments[output_index] += blind;
+        }
+        commitments
+    }
+}
+
+#[derive(Clone, Copy)]
+struct FixedWindowDigit {
+    magnitude: usize,
+    negative: bool,
+}
+
+fn signed_instance_window_count(scalar_bits: usize) -> usize {
+    // A full high window can carry into one more window. A partial high
+    // window cannot carry, so it already occupies this final slot.
+    scalar_bits / INSTANCE_WINDOW_BITS + 1
+}
+
+fn unsigned_fixed_window_digit(bytes: &[u8], window: usize, window_bits: usize) -> usize {
+    let bit_start = window * window_bits;
+    // A byte has eight bits, which fits usize on every supported target.
+    let byte_bits = u8::BITS as usize;
+    let byte_start = bit_start / byte_bits;
+    let bit_offset = bit_start % byte_bits;
+    let low = bytes.get(byte_start).copied().unwrap_or(0);
+    let high = bytes.get(byte_start + 1).copied().unwrap_or(0);
+    let encoded = u16::from(low) | (u16::from(high) << u8::BITS);
+    usize::from((encoded >> bit_offset) & ((1 << window_bits) - 1))
+}
+
+fn signed_fixed_window_digit(bytes: &[u8], window: usize, window_bits: usize) -> FixedWindowDigit {
+    let bit_start = window * window_bits;
+    let radix = 1usize << window_bits;
+    let value = unsigned_fixed_window_digit(bytes, window, window_bits);
+    let overlap = if bit_start == 0 {
+        0
+    } else {
+        let bit = bit_start - 1;
+        // A byte has eight bits, which fits usize on every supported target.
+        let byte_bits = u8::BITS as usize;
+        bytes
+            .get(bit / byte_bits)
+            .map_or(0, |byte| usize::from((byte >> (bit % byte_bits)) & 1))
+    };
+
+    // The bit below each window is its carry-in, while the window's high bit
+    // is its carry-out. These cancel between adjacent windows.
+    if value < radix / 2 {
+        FixedWindowDigit {
+            magnitude: value + overlap,
+            negative: false,
+        }
+    } else {
+        let magnitude = radix - value - overlap;
+        FixedWindowDigit {
+            magnitude,
+            negative: magnitude != 0,
+        }
+    }
+}
+
+fn compute_batch_instance_commitments<C: CurveAffine>(
+    params: &Params<C>,
+    vk: &VerifyingKey<C>,
+    items: &[BatchItem<C>],
+) -> Result<Vec<Vec<Vec<C>>>, Error> {
+    let mut max_cached_instance_len = 0;
+    for item in items {
+        validate_instances(params, vk, &item.instances)?;
+
+        // Table construction costs 256 points per row. Longer, caller-sized
+        // columns remain valid but use the generic MSM below.
+        max_cached_instance_len = item
+            .instances
+            .iter()
+            .flat_map(|instances| instances.iter())
+            .map(Vec::len)
+            .filter(|instance_len| *instance_len <= MAX_CACHED_INSTANCE_ROWS)
+            .fold(max_cached_instance_len, usize::max);
+    }
+
+    // Build the ordinary table only when the prepared shape/backend declines.
+    let instances = items
+        .iter()
+        .flat_map(|item| item.instances.iter())
+        .flat_map(|instances| instances.iter())
+        .map(Vec::as_slice)
+        .collect::<Vec<_>>();
+    let projective = commit_glv_instances(params, &instances).unwrap_or_else(|| {
+        let table = InstanceFixedWindowTable::new(params, max_cached_instance_len);
+        if items.len() <= 2 {
+            table.commit_batch(params, &instances)
+        } else {
+            table.commit_batch_parallel(params, &instances)
+        }
+    });
+    let mut affine = vec![C::identity(); projective.len()];
+    C::Curve::batch_normalize_vartime(&projective, &mut affine);
+    let mut affine = affine.into_iter();
+    let commitments = items
+        .iter()
+        .map(|item| {
+            item.instances
+                .iter()
+                .map(|columns| affine.by_ref().take(columns.len()).collect())
+                .collect()
+        })
+        .collect();
+    assert!(affine.next().is_none());
+
+    Ok(commitments)
+}
+
+/// Uses the doubling-free table only when every column has Orchard's shape.
+/// Unrecognized shapes, non-Boolean flags and unsupported curves retain the
+/// generic commitment path without changing validation or blinding.
+fn commit_glv_instances<C: CurveAffine>(
+    params: &Params<C>,
+    instances: &[&[C::Scalar]],
+) -> Option<Vec<C::Curve>> {
+    if instances.is_empty() {
+        return None;
+    }
+    let masks = instances
+        .iter()
+        .map(|column| instance_flag_mask(column))
+        .collect::<Option<Vec<_>>>()?;
+    let table = params.glv_instance_table()?;
+    let chunk_len = instances
+        .len()
+        .div_ceil(crate::multicore::current_num_threads());
+    Some(
+        (0..instances.len().div_ceil(chunk_len))
+            .into_par_iter()
+            .map(|chunk| {
+                let start = chunk * chunk_len;
+                let end = (start + chunk_len).min(instances.len());
+                let mut dense = instances[start..end]
+                    .iter()
+                    .map(|column| &column[..PREPARED_INSTANCE_DENSE_ROWS])
+                    .collect::<Vec<_>>();
+                // Row zero is a public anchor. Group by canonical encoding so
+                // only repeated anchors need copied columns and an add-back.
+                let mut anchors = dense
+                    .iter()
+                    .enumerate()
+                    .map(|(index, column)| (column[0].to_repr(), index))
+                    .collect::<Vec<_>>();
+                anchors.sort_unstable_by(|a, b| a.0.as_ref().cmp(b.0.as_ref()));
+                let mut shared = Vec::new();
+                let mut repeated = Vec::new();
+                for group in anchors.chunk_by(|a, b| a.0.as_ref() == b.0.as_ref()) {
+                    if group.len() > 1 {
+                        let shared_index = shared.len();
+                        shared.push([dense[group[0].1][0]]);
+                        for &(_, index) in group {
+                            let mut column: [C::Scalar; PREPARED_INSTANCE_DENSE_ROWS] = dense
+                                [index]
+                                .try_into()
+                                .expect("prepared columns have exactly seven dense rows");
+                            column[0] = C::Scalar::ZERO;
+                            repeated.push((index, shared_index, column));
+                        }
+                    }
+                }
+                for (index, _, column) in &repeated {
+                    dense[*index] = column.as_slice();
+                }
+                // Evaluate the shared terms in the same affine reduction as
+                // the remaining rows; omitted trailing scalars are zero.
+                dense.extend(shared.iter().map(|anchor| anchor.as_slice()));
+                let mut sums = table.dense.sum_batch_vartime(&dense);
+                assert_eq!(sums.len(), dense.len(), "one prepared sum per column");
+                let column_count = end - start;
+                for (index, shared_index, _) in &repeated {
+                    sums[*index] = sums[*index] + sums[column_count + *shared_index];
+                }
+                sums.truncate(column_count);
+                for (sum, &mask) in sums.iter_mut().zip(&masks[start..end]) {
+                    *sum = table.offsets[mask] + *sum;
+                }
+                sums
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
+            .collect(),
+    )
 }
 
 /// A verifier that checks multiple proofs in a batch. **This requires the
@@ -84,30 +435,40 @@ where
             mut acc: MSM<'params, C>,
             msm: MSM<'params, C>,
         ) -> MSM<'params, C> {
-            // Scale the MSM by a random factor to ensure that if the existing MSM has
-            // `is_zero() == false` then this argument won't be able to interfere with it
-            // to make it true, with high probability.
-            acc.scale(C::Scalar::random(&mut UnwrapErr(SysRng)));
-
-            acc.add_msm(&msm);
+            acc.add_msm_batch(msm);
             acc
         }
+
+        let instance_commitments = match compute_batch_instance_commitments(params, vk, &self.items)
+        {
+            Ok(instance_commitments) => instance_commitments,
+            Err(_) => return false,
+        };
 
         let final_msm = self
             .items
             .into_par_iter()
+            .zip(instance_commitments.into_par_iter())
             .enumerate()
-            .map(|(i, item)| {
-                let instances: Vec<Vec<_>> = item
-                    .instances
-                    .iter()
-                    .map(|i| i.iter().map(|c| &c[..]).collect())
-                    .collect();
-                let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
-
-                let strategy = BatchStrategy::new(params);
+            .map(|(i, (item, instance_commitments))| {
+                // All proof equations are fixed before sampling these independent
+                // weights. Fix the first weight at one; randomize every later
+                // equation so invalid proofs cannot deliberately cancel.
+                let rho = if i == 0 {
+                    C::Scalar::ONE
+                } else {
+                    C::Scalar::random(&mut UnwrapErr(SysRng))
+                };
+                let strategy = BatchStrategy::new(params, rho);
                 let mut transcript = Blake2bRead::init(&item.proof[..]);
-                verify_proof(params, vk, strategy, &instances, &mut transcript).map_err(|e| {
+                verify_proof_with_instance_commitments(
+                    params,
+                    vk,
+                    strategy,
+                    instance_commitments,
+                    &mut transcript,
+                )
+                .map_err(|e| {
                     tracing::debug!("Batch item {} failed verification: {}", i, e);
                     e
                 })
