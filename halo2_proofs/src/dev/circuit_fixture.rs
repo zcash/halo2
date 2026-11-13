@@ -408,7 +408,9 @@ impl<F: PrimeField> CircuitFixtureRecorder<F> {
                     "⟨{}, {:?}, {}⟩",
                     index,
                     name,
-                    row.expect("every recorded region must touch a row")
+                    // Match the JSON renderer: an empty region records no start row, so
+                    // render the same zero sentinel instead of panicking.
+                    row.unwrap_or(0)
                 )
             })
             .collect::<Vec<_>>();
@@ -609,5 +611,36 @@ impl SigmaAssembly {
         let left_mapping = self.mapping[left_column][left_row];
         self.mapping[left_column][left_row] = self.mapping[right_column][right_row];
         self.mapping[right_column][right_row] = left_mapping;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pasta_curves::pallas;
+
+    use super::*;
+
+    #[test]
+    fn lean_layout_tolerates_empty_region() {
+        // A region whose closure assigns no cell records no start row. The JSON
+        // renderer maps that to a zero sentinel; the Lean renderer must do the
+        // same instead of panicking.
+        let mut recorder = CircuitFixtureRecorder::<pallas::Base>::default();
+        recorder.enter_region(|| "empty");
+        recorder.exit_region();
+
+        let meta = ConstraintSystem::<pallas::Base>::default();
+        let environment = LeanEnvironment {
+            fixture_import: "Import",
+            fixture_namespace: "Fixture",
+            open_namespace: "Sigma",
+        };
+        let layout =
+            recorder.render_layout_lean(&meta, 4, "-- header", "fixture", environment, false);
+
+        assert!(
+            layout.contains("\u{27e8}0, \"empty\", 0\u{27e9}"),
+            "empty region must render with the zero sentinel: {layout}"
+        );
     }
 }
