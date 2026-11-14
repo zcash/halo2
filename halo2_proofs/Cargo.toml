@@ -51,6 +51,15 @@ harness = false
 name = "fft"
 harness = false
 
+[[bench]]
+name = "prover"
+harness = false
+
+[[bench]]
+name = "prover_parallelism"
+harness = false
+required-features = ["unstable-bench-internals"]
+
 [dependencies]
 backtrace = { workspace = true, optional = true }
 ff.workspace = true
@@ -105,6 +114,10 @@ nightly = [
 unstable-verifier-fingerprint = []
 # Capture-only tooling for recording keygen layouts and rendering reproducible circuit fixtures.
 unstable-circuit-fixtures = []
+# Exposes crate-internal prover kernels to the `prover_parallelism` benchmark,
+# so that each one can be measured against its sequential predecessor. Not a
+# stable API.
+unstable-bench-internals = []
 # Add flags for in-development features above this line.
 
 [lib]
