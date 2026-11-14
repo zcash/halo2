@@ -241,7 +241,7 @@ pub fn verify_proof<
     // commitments open to the correct values.
     let vanishing = {
         // x^n
-        let xn = x.pow([params.n, 0, 0, 0]);
+        let xn = pow_by_power_of_two(*x, params.k);
 
         let blinding_factors = vk.cs.blinding_factors();
         let l_evals = vk
@@ -375,8 +375,14 @@ pub fn verify_proof<
     })
 }
 
+fn pow_by_power_of_two<F: Field>(value: F, exponent: u32) -> F {
+    (0..exponent).fold(value, |power, _| power.square())
+}
+
 #[cfg(test)]
 mod tests {
+    mod scalar;
+
     use super::{verify_proof, SingleVerifier, MIN_BATCH_NORMALIZE};
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
@@ -499,5 +505,14 @@ mod tests {
         let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
         verify_proof(&params, pk.get_vk(), strategy, &instances, &mut transcript)
             .expect("proof verification should not fail");
+
+        scalar::check_tampered_and_batch_verification(
+            &params,
+            &pk,
+            proof,
+            &instances,
+            #[cfg(feature = "batch")]
+            &public_inputs,
+        );
     }
 }

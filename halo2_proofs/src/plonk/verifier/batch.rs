@@ -20,12 +20,14 @@ use crate::multicore::{IndexedParallelIterator, ParallelIterator};
 #[derive(Debug)]
 struct BatchStrategy<'params, C: CurveAffine> {
     msm: MSM<'params, C>,
+    batching_scalar: C::Scalar,
 }
 
 impl<'params, C: CurveAffine> BatchStrategy<'params, C> {
-    fn new(params: &'params Params<C>) -> Self {
+    fn new(params: &'params Params<C>, batching_scalar: C::Scalar) -> Self {
         BatchStrategy {
             msm: MSM::new(params),
+            batching_scalar,
         }
     }
 }
@@ -38,7 +40,7 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy
         f: impl FnOnce(MSM<'params, C>) -> Result<Guard<'params, C, E>, Error>,
     ) -> Result<Self::Output, Error> {
         let guard = f(self.msm)?;
-        Ok(guard.use_challenges())
+        Ok(guard.use_challenges_with_scale(self.batching_scalar))
     }
 }
 
@@ -84,12 +86,7 @@ where
             mut acc: MSM<'params, C>,
             msm: MSM<'params, C>,
         ) -> MSM<'params, C> {
-            // Scale the MSM by a random factor to ensure that if the existing MSM has
-            // `is_zero() == false` then this argument won't be able to interfere with it
-            // to make it true, with high probability.
-            acc.scale(C::Scalar::random(&mut UnwrapErr(SysRng)));
-
-            acc.add_msm(&msm);
+            acc.add_msm_batch(msm);
             acc
         }
 
@@ -105,7 +102,15 @@ where
                     .collect();
                 let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
 
-                let strategy = BatchStrategy::new(params);
+                // All proof equations are fixed before sampling these independent
+                // weights. Fix the first weight at one; randomize every later
+                // equation so invalid proofs cannot deliberately cancel.
+                let rho = if i == 0 {
+                    C::Scalar::ONE
+                } else {
+                    C::Scalar::random(&mut UnwrapErr(SysRng))
+                };
+                let strategy = BatchStrategy::new(params, rho);
                 let mut transcript = Blake2bRead::init(&item.proof[..]);
                 verify_proof(params, vk, strategy, &instances, &mut transcript).map_err(|e| {
                     tracing::debug!("Batch item {} failed verification: {}", i, e);
