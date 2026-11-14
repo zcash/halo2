@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794501126591,
+  "lastUpdate": 1794658774546,
   "repoUrl": "https://github.com/zcash/halo2",
   "entries": {
     "halo2 Benchmark": [
@@ -515,6 +515,48 @@ window.BENCHMARK_DATA = {
             "name": "plonk-verifier-orchard-shaped/actions/64",
             "value": 85339872,
             "range": "± 842390",
+            "unit": "ns/iter"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "be.danny.willems@gmail.com",
+            "name": "Danny Willems",
+            "username": "dannywillems"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7465edf9110aace00b8c24b96270e1b820fd39fb",
+          "message": "Merge pull request #984 from upbqdn/upstream/verifier-scalar\n\nReduce verifier scalar work and MSM allocation",
+          "timestamp": "2026-11-14T12:38:35+01:00",
+          "tree_id": "d4ac533637f6338a1da75ba867ff8d03f825740c",
+          "url": "https://github.com/zcash/halo2/commit/7465edf9110aace00b8c24b96270e1b820fd39fb"
+        },
+        "date": 1794658769640,
+        "tool": "cargo",
+        "benches": [
+          {
+            "name": "plonk-verifier-batch/proofs/1",
+            "value": 6989680,
+            "range": "± 255134",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "plonk-verifier-batch/proofs/8",
+            "value": 11521688,
+            "range": "± 186099",
+            "unit": "ns/iter"
+          },
+          {
+            "name": "plonk-verifier-batch/proofs/64",
+            "value": 48292019,
+            "range": "± 702001",
             "unit": "ns/iter"
           }
         ]
