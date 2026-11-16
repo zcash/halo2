@@ -1,7 +1,6 @@
 //! Shared strategies, circuit and fixtures for the integration-test laws.
 //!
 //! Everything here goes through the crate's public API only.
-#![allow(dead_code)]
 
 use std::sync::OnceLock;
 
