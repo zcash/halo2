@@ -1,6 +1,7 @@
 //! Laws of proof verification, stated through the public API only, aimed at
-//! the batch verifier's public-instance commitments: its cached windows, the
-//! generic fallback for long columns, and the shared parameter cache.
+//! the commitments to public instances: the window table shared by many
+//! columns and cached in the parameters, and the generic path for few or long
+//! columns.
 #![cfg(feature = "batch")]
 
 mod common;
@@ -59,7 +60,7 @@ proptest! {
 
     /// Law: verify_batch on Params, its clone and its write-read copy agree, and leave write and Debug unchanged.
     #[test]
-    fn parameter_cache_is_unobservable(entries in arb_entries(4)) {
+    fn batch_verdict_depends_only_on_the_parameters(entries in arb_entries(4)) {
         let fixture = fixture();
         let statements = fixture.select(&entries);
         let mut bytes = vec![];

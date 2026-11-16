@@ -1,21 +1,13 @@
-use group::{
-    ff::{Field, FromUniformBytes, PrimeField},
-    Group,
-};
-use pasta_curves::arithmetic::{CurveAffine, CurveExt};
+use group::ff::{Field, FromUniformBytes};
+use pasta_curves::arithmetic::CurveAffine;
 use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
-use std::sync::Arc;
 
-use super::{
-    validate_instances, verify_proof_with_instance_commitments, InstanceCommitments,
-    VerificationStrategy,
-};
+use super::{verify_proof_with_instance_commitments, InstanceCommitments, VerificationStrategy};
 use crate::{
     plonk::{Error, VerifyingKey},
     poly::commitment::{Guard, Params, MSM},
     transcript::{Blake2bRead, EncodedChallenge},
-    INSTANCE_WINDOW_BITS, INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS,
 };
 
 use maybe_rayon::iter::IntoParallelIterator;
@@ -59,200 +51,6 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy
 struct BatchItem<C: CurveAffine> {
     instances: Vec<Vec<Vec<C::Scalar>>>,
     proof: Vec<u8>,
-}
-
-// All scalars and points handled by this table are public instance data.
-//
-// The table holds `j * G_i` for `j` in `1..=256` and the first `base_count`
-// Lagrange bases, so a signed width-nine digit `d` of a scalar on `G_i` is one
-// lookup and at most one negation.
-struct InstanceFixedWindowTable<C> {
-    base_count: usize,
-    multiples: Arc<Vec<C>>,
-}
-
-impl<C> InstanceFixedWindowTable<C>
-where
-    C: CurveAffine,
-{
-    fn new(params: &Params<C>, base_count: usize) -> Self {
-        Self {
-            base_count,
-            multiples: params.instance_window_table(base_count),
-        }
-    }
-
-    /// Returns `W + sum_i x_i G_i` for every column `x`, in order. This equals
-    /// `Params::commit_lagrange_instance` on each column; columns longer than
-    /// the table use it directly.
-    fn commit_batch(&self, params: &Params<C>, instances: &[&[C::Scalar]]) -> Vec<C::Curve> {
-        let mut commitments = vec![C::Curve::identity(); instances.len()];
-        let cached_instances = instances
-            .iter()
-            .enumerate()
-            .filter_map(|(output_index, instance)| {
-                if instance.len() <= self.base_count {
-                    Some((output_index, *instance))
-                } else {
-                    commitments[output_index] = params.commit_lagrange_instance(instance);
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-        let cached_count = cached_instances.len();
-        // Store representations base-major so every inner loop reads a
-        // contiguous row while updating independent output accumulators.
-        let mut scalar_reprs = vec![C::Scalar::ZERO.to_repr(); self.base_count * cached_count];
-        for (cached_index, (_, instance)) in cached_instances.iter().enumerate() {
-            for (base_index, scalar) in instance.iter().enumerate() {
-                scalar_reprs[base_index * cached_count + cached_index] = scalar.to_repr();
-            }
-        }
-
-        // Horner's rule in radix 2^9, one accumulator per column.
-        // The scalar bit count fits usize on every supported target.
-        let window_count = signed_instance_window_count(C::Scalar::NUM_BITS as usize);
-        for window in (0..window_count).rev() {
-            if window + 1 != window_count {
-                for _ in 0..INSTANCE_WINDOW_BITS {
-                    for (output_index, _) in &cached_instances {
-                        commitments[*output_index] = commitments[*output_index].double();
-                    }
-                }
-            }
-
-            for base_index in 0..self.base_count {
-                for (cached_index, (output_index, _)) in cached_instances.iter().enumerate() {
-                    let scalar = &scalar_reprs[base_index * cached_count + cached_index];
-                    let digit =
-                        signed_fixed_window_digit(scalar.as_ref(), window, INSTANCE_WINDOW_BITS);
-                    if digit.magnitude != 0 {
-                        let mut multiple = self.multiples
-                            [base_index * INSTANCE_WINDOW_ENTRIES_PER_BASE + digit.magnitude - 1];
-                        if digit.negative {
-                            multiple = -multiple;
-                        }
-                        commitments[*output_index] += multiple;
-                    }
-                }
-            }
-        }
-
-        // The default instance blind is one, including for an empty column.
-        let blind = C::Curve::from(params.w);
-        for (output_index, _) in cached_instances {
-            commitments[output_index] += blind;
-        }
-        commitments
-    }
-}
-
-#[derive(Clone, Copy)]
-struct FixedWindowDigit {
-    magnitude: usize,
-    negative: bool,
-}
-
-fn signed_instance_window_count(scalar_bits: usize) -> usize {
-    // A full high window can carry into one more window. A partial high
-    // window cannot carry, so it already occupies this final slot.
-    scalar_bits / INSTANCE_WINDOW_BITS + 1
-}
-
-/// The raw `window_bits`-bit field of a little-endian integer starting at bit
-/// `window * window_bits`, reading zero past the end.
-fn window_value(bytes: &[u8], window: usize, window_bits: usize) -> usize {
-    debug_assert!(window_bits <= 9);
-    let bit_start = window * window_bits;
-    // A byte has eight bits, which fits usize on every supported target.
-    let byte_bits = u8::BITS as usize;
-    let byte_start = bit_start / byte_bits;
-    let bit_offset = bit_start % byte_bits;
-    let low = bytes.get(byte_start).copied().unwrap_or(0);
-    let high = bytes.get(byte_start + 1).copied().unwrap_or(0);
-    let encoded = u16::from(low) | (u16::from(high) << u8::BITS);
-    usize::from((encoded >> bit_offset) & ((1 << window_bits) - 1))
-}
-
-fn signed_fixed_window_digit(bytes: &[u8], window: usize, window_bits: usize) -> FixedWindowDigit {
-    let bit_start = window * window_bits;
-    let radix = 1usize << window_bits;
-    let value = window_value(bytes, window, window_bits);
-    let overlap = if bit_start == 0 {
-        0
-    } else {
-        let bit = bit_start - 1;
-        // A byte has eight bits, which fits usize on every supported target.
-        let byte_bits = u8::BITS as usize;
-        bytes
-            .get(bit / byte_bits)
-            .map_or(0, |byte| usize::from((byte >> (bit % byte_bits)) & 1))
-    };
-
-    // The bit below each window is its carry-in, while the window's high bit
-    // is its carry-out. These cancel between adjacent windows.
-    if value < radix / 2 {
-        FixedWindowDigit {
-            magnitude: value + overlap,
-            negative: false,
-        }
-    } else {
-        let magnitude = radix - value - overlap;
-        FixedWindowDigit {
-            magnitude,
-            negative: magnitude != 0,
-        }
-    }
-}
-
-/// Commitments to every proof's instance columns, nested proof, circuit,
-/// column: the order in which each proof's transcript absorbs them.
-fn compute_batch_instance_commitments<C>(
-    params: &Params<C>,
-    vk: &VerifyingKey<C>,
-    items: &[BatchItem<C>],
-) -> Result<Vec<InstanceCommitments<C>>, Error>
-where
-    C: CurveAffine,
-{
-    let mut max_cached_instance_len = 0;
-    for item in items {
-        validate_instances(params, vk, &item.instances)?;
-
-        // Table construction costs 256 points per row. Longer, caller-sized
-        // columns remain valid but use the generic MSM below.
-        max_cached_instance_len = item
-            .instances
-            .iter()
-            .flat_map(|instances| instances.iter())
-            .map(Vec::len)
-            .filter(|instance_len| *instance_len <= MAX_CACHED_INSTANCE_ROWS)
-            .fold(max_cached_instance_len, usize::max);
-    }
-
-    let table = InstanceFixedWindowTable::new(params, max_cached_instance_len);
-    let instances = items
-        .iter()
-        .flat_map(|item| item.instances.iter())
-        .flat_map(|instances| instances.iter())
-        .map(Vec::as_slice)
-        .collect::<Vec<_>>();
-    let projective = table.commit_batch(params, &instances);
-    let mut affine = vec![C::identity(); projective.len()];
-    C::Curve::batch_normalize_vartime(&projective, &mut affine);
-    let mut affine = affine.into_iter();
-    let commitments = items
-        .iter()
-        .map(|item| {
-            item.instances
-                .iter()
-                .map(|columns| affine.by_ref().take(columns.len()).collect())
-                .collect()
-        })
-        .collect();
-    assert!(affine.next().is_none());
-
-    Ok(commitments)
 }
 
 /// `iter.try_fold().try_reduce()` for a parallel iterator of results, or
@@ -338,10 +136,26 @@ where
             acc
         }
 
-        let instance_commitments = match compute_batch_instance_commitments(params, vk, &self.items)
-        {
-            Ok(instance_commitments) => instance_commitments,
-            Err(_) => return false,
+        let instance_commitments = {
+            let columns = self
+                .items
+                .iter()
+                .map(|item| {
+                    item.instances
+                        .iter()
+                        .map(|circuit| circuit.iter().map(Vec::as_slice).collect::<Vec<_>>())
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+            let circuits = columns
+                .iter()
+                .map(|proof| proof.iter().map(Vec::as_slice).collect::<Vec<_>>())
+                .collect::<Vec<_>>();
+            let proofs = circuits.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            match InstanceCommitments::for_proofs(params, vk, &proofs) {
+                Ok(instance_commitments) => instance_commitments,
+                Err(_) => return false,
+            }
         };
 
         let final_msm = self

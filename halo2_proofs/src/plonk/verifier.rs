@@ -1,5 +1,4 @@
 use ff::Field;
-use pasta_curves::arithmetic::CurveExt;
 use std::iter;
 
 use super::{
@@ -8,7 +7,7 @@ use super::{
 };
 use crate::arithmetic::CurveAffine;
 use crate::poly::{
-    commitment::{Guard, Params, MSM},
+    commitment::{commit_instance_columns, Guard, Params, MSM},
     multiopen::{self, VerifierQuery},
 };
 use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, TranscriptRead};
@@ -17,9 +16,6 @@ use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, Transcr
 mod batch;
 #[cfg(feature = "batch")]
 pub use batch::BatchVerifier;
-
-// Batch normalization costs more than individual normalization below this.
-const MIN_BATCH_NORMALIZE: usize = 4;
 
 /// Trait representing a strategy for verifying Halo 2 proofs.
 pub trait VerificationStrategy<'params, C: CurveAffine> {
@@ -66,26 +62,65 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for SingleVerifie
     }
 }
 
-/// One proof's instance commitments, indexed by circuit, then by column.
-type InstanceCommitments<C> = Vec<Vec<C>>;
+/// One proof's instance commitments, indexed by circuit, then by column: the
+/// order in which its transcript absorbs them. Only
+/// [`InstanceCommitments::for_proofs`] builds them, after checking the shapes
+/// of the instances they commit to.
+struct InstanceCommitments<C>(Vec<Vec<C>>);
+
+impl<C> InstanceCommitments<C>
+where
+    C: CurveAffine,
+{
+    /// Checks every proof's instances against `vk`, then commits to all their
+    /// columns at once, so that the columns of different proofs share the
+    /// cost of the commitment.
+    fn for_proofs(
+        params: &Params<C>,
+        vk: &VerifyingKey<C>,
+        proofs: &[&[&[&[C::Scalar]]]],
+    ) -> Result<Vec<Self>, Error> {
+        for instances in proofs {
+            validate_instances(params, vk, instances)?;
+        }
+
+        let columns = proofs
+            .iter()
+            .flat_map(|instances| instances.iter())
+            .flat_map(|circuit| circuit.iter().copied())
+            .collect::<Vec<_>>();
+        let mut commitments = commit_instance_columns(params, &columns).into_iter();
+        // Validation fixed every circuit's column count.
+        let columns_per_circuit = vk.cs.num_instance_columns;
+        let proofs = proofs
+            .iter()
+            .map(|instances| {
+                Self(
+                    instances
+                        .iter()
+                        .map(|_| commitments.by_ref().take(columns_per_circuit).collect())
+                        .collect(),
+                )
+            })
+            .collect();
+        debug_assert!(commitments.next().is_none());
+        Ok(proofs)
+    }
+}
 
 /// Checks the shape of one proof's instances: each circuit has exactly the
 /// verifying key's instance columns, and no column exceeds the usable rows.
-/// Only lengths are read, so the scalars may be borrowed (`&[&[F]]`) or owned
-/// (`Vec<Vec<F>>`).
-fn validate_instances<C, Circuit, Column>(
+fn validate_instances<C>(
     params: &Params<C>,
     vk: &VerifyingKey<C>,
-    instances: &[Circuit],
+    instances: &[&[&[C::Scalar]]],
 ) -> Result<(), Error>
 where
     C: CurveAffine,
-    Circuit: AsRef<[Column]>,
-    Column: AsRef<[C::Scalar]>,
 {
     // Check that instances matches the expected number of instance columns
     for instances in instances.iter() {
-        if instances.as_ref().len() != vk.cs.num_instance_columns {
+        if instances.len() != vk.cs.num_instance_columns {
             return Err(Error::InvalidInstances);
         }
     }
@@ -93,66 +128,13 @@ where
     let max_instance_len = params.n as usize - (vk.cs.blinding_factors() + 1);
     if instances
         .iter()
-        .flat_map(|instance| instance.as_ref().iter())
-        .any(|instance| instance.as_ref().len() > max_instance_len)
+        .flat_map(|instance| instance.iter())
+        .any(|instance| instance.len() > max_instance_len)
     {
         return Err(Error::InstanceTooLarge);
     }
 
     Ok(())
-}
-
-fn compute_instance_commitments<C>(
-    params: &Params<C>,
-    instances: &[&[&[C::Scalar]]],
-) -> InstanceCommitments<C>
-where
-    C: CurveAffine,
-{
-    let batch_normalize = instances
-        .iter()
-        .flat_map(|instance| instance.iter())
-        .take(MIN_BATCH_NORMALIZE)
-        .count()
-        == MIN_BATCH_NORMALIZE;
-    if !batch_normalize {
-        instances
-            .iter()
-            .map(|instance| {
-                instance
-                    .iter()
-                    .map(|instance| {
-                        params
-                            .commit_lagrange_instance(instance)
-                            .to_affine_vartime()
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>()
-    } else {
-        let instance_commitments_projective = instances
-            .iter()
-            .flat_map(|instance| instance.iter())
-            .map(|instance| params.commit_lagrange_instance(instance))
-            .collect::<Vec<_>>();
-        let mut normalized_commitments = vec![C::identity(); instance_commitments_projective.len()];
-        C::Curve::batch_normalize_vartime(
-            &instance_commitments_projective,
-            &mut normalized_commitments,
-        );
-        let mut normalized_commitments = normalized_commitments.into_iter();
-        let instance_commitments = instances
-            .iter()
-            .map(|instance| {
-                normalized_commitments
-                    .by_ref()
-                    .take(instance.len())
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-        assert!(normalized_commitments.next().is_none());
-        instance_commitments
-    }
 }
 
 /// Returns a boolean indicating whether or not the proof is valid
@@ -169,14 +151,13 @@ pub fn verify_proof<
     instances: &[&[&[C::Scalar]]],
     transcript: &mut T,
 ) -> Result<V::Output, Error> {
-    validate_instances(params, vk, instances)?;
-    let instance_commitments = compute_instance_commitments(params, instances);
+    let instance_commitments = InstanceCommitments::for_proofs(params, vk, &[instances])?
+        .pop()
+        .expect("one proof in, one set of commitments out");
     verify_proof_with_instance_commitments(params, vk, strategy, instance_commitments, transcript)
 }
 
-/// `verify_proof` after its instance commitments are computed. Callers must
-/// have validated the instance shapes, and must pass the commitments in the
-/// transcript's circuit, then column, order.
+/// `verify_proof` after its instance commitments are computed.
 fn verify_proof_with_instance_commitments<'params, C, E, T, V>(
     params: &'params Params<C>,
     vk: &VerifyingKey<C>,
@@ -190,6 +171,7 @@ where
     T: TranscriptRead<C, E>,
     V: VerificationStrategy<'params, C>,
 {
+    let instance_commitments = instance_commitments.0;
     let num_proofs = instance_commitments.len();
 
     // Hash verification key into transcript
@@ -432,7 +414,7 @@ fn pow_by_power_of_two<F: Field>(value: F, exponent: u32) -> F {
 mod tests {
     mod scalar;
 
-    use super::{verify_proof, SingleVerifier, MIN_BATCH_NORMALIZE};
+    use super::{verify_proof, SingleVerifier};
     use crate::{
         circuit::{Layouter, SimpleFloorPlanner, Value},
         pasta::{EqAffine, Fp},
@@ -441,7 +423,7 @@ mod tests {
             Instance,
         },
         poly::{
-            commitment::{Blind, Params},
+            commitment::{table_pays_off, Blind, Params, MIN_BATCH_NORMALIZE},
             EvaluationDomain,
         },
         transcript::{Blake2bRead, Blake2bWrite, Challenge255},
@@ -527,7 +509,10 @@ mod tests {
         };
         let vk = keygen_vk(&params, &empty_circuit).expect("keygen_vk should not fail");
         let pk = keygen_pk(&params, vk, &empty_circuit).expect("keygen_pk should not fail");
-        let public_inputs = (0..MIN_BATCH_NORMALIZE)
+        // Enough one-row circuits that their instance commitments take the
+        // table and are converted to affine form together.
+        let circuits = (1..).find(|&columns| table_pays_off(1, columns)).unwrap();
+        let public_inputs = (0..circuits.max(MIN_BATCH_NORMALIZE))
             .map(|i| vec![Fp::from(i as u64 + 1)])
             .collect::<Vec<_>>();
         let circuits = public_inputs

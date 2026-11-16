@@ -6,24 +6,20 @@
 use super::{Coeff, LagrangeCoeff, Polynomial};
 use crate::arithmetic::{best_fft, best_multiexp, parallelize, CurveAffine, CurveExt};
 use crate::helpers::CurveRead;
-#[cfg(feature = "batch")]
-use crate::{INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS};
-#[cfg(feature = "batch")]
-use std::{
-    fmt,
-    sync::{Arc, Mutex},
-};
 
 use ff::{Field, PrimeField};
 use group::Group;
+use std::fmt;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
+mod instance;
 mod msm;
 mod prover;
-#[cfg(all(feature = "batch", test))]
-mod tests;
 mod verifier;
 
+pub(crate) use instance::commit_instance_columns;
+#[cfg(test)]
+pub(crate) use instance::{table_pays_off, MIN_BATCH_NORMALIZE};
 pub use msm::MSM;
 pub use prover::create_proof;
 pub use verifier::{verify_proof, Accumulator, Guard};
@@ -32,10 +28,9 @@ use std::io;
 
 /// These are the public parameters for the polynomial commitment scheme.
 ///
-/// The fields are fixed after construction. With the `batch` feature, clones
-/// share a cache derived from `g_lagrange`; see `instance_window_table`.
+/// Clones share a cache derived from `g_lagrange`, which `Debug` and the
+/// serialized form leave out.
 #[derive(Clone)]
-#[cfg_attr(not(feature = "batch"), derive(Debug))]
 pub struct Params<C: CurveAffine> {
     pub(crate) k: u32,
     pub(crate) n: u64,
@@ -43,56 +38,9 @@ pub struct Params<C: CurveAffine> {
     pub(crate) g_lagrange: Vec<C>,
     pub(crate) w: C,
     pub(crate) u: C,
-    #[cfg(feature = "batch")]
-    instance_window_cache: InstanceWindowCache<C>,
+    instance_windows: instance::WindowCache<C>,
 }
 
-#[cfg(feature = "batch")]
-#[derive(Clone)]
-struct InstanceWindowCache<C>(Arc<Mutex<Option<Arc<Vec<C>>>>>);
-
-#[cfg(feature = "batch")]
-impl<C> Default for InstanceWindowCache<C> {
-    fn default() -> Self {
-        Self(Arc::new(Mutex::new(None)))
-    }
-}
-
-#[cfg(feature = "batch")]
-impl<C> InstanceWindowCache<C> {
-    /// Returns the cached table when it holds at least `required_len` entries
-    /// and `is_current` accepts it; otherwise builds, stores and returns a new
-    /// one. Holding the lock while building makes concurrent callers share a
-    /// single build.
-    fn get_or_build<Current, Build>(
-        &self,
-        required_len: usize,
-        is_current: Current,
-        build: Build,
-    ) -> Arc<Vec<C>>
-    where
-        Current: FnOnce(&[C]) -> bool,
-        Build: FnOnce() -> Vec<C>,
-    {
-        let mut table = self
-            .0
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if let Some(table) = table
-            .as_ref()
-            .filter(|table| table.len() >= required_len && is_current(table))
-        {
-            return Arc::clone(table);
-        }
-
-        let built = Arc::new(build());
-        assert_eq!(built.len(), required_len);
-        *table = Some(Arc::clone(&built));
-        built
-    }
-}
-
-#[cfg(feature = "batch")]
 impl<C: CurveAffine> fmt::Debug for Params<C> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
@@ -104,51 +52,6 @@ impl<C: CurveAffine> fmt::Debug for Params<C> {
             .field("w", &self.w)
             .field("u", &self.u)
             .finish()
-    }
-}
-
-#[cfg(feature = "batch")]
-impl<C> Params<C>
-where
-    C: CurveAffine,
-{
-    /// Returns `j * G_i` for `j` in `1..=256` and each of the first
-    /// `base_count` Lagrange bases `G_i`, base-major. The table may be longer;
-    /// only this prefix is meaningful.
-    ///
-    /// Clones of `Params` share the table. A cached table is reused only while
-    /// its first multiple of each requested base still equals that base, so a
-    /// table built before `g_lagrange` changed is rebuilt rather than used.
-    pub(crate) fn instance_window_table(&self, base_count: usize) -> Arc<Vec<C>> {
-        assert!(base_count <= MAX_CACHED_INSTANCE_ROWS);
-        assert!(base_count <= self.g_lagrange.len());
-        let bases = &self.g_lagrange[..base_count];
-        let required_len = base_count
-            .checked_mul(INSTANCE_WINDOW_ENTRIES_PER_BASE)
-            .expect("instance window table length fits in usize");
-
-        let is_current = |table: &[C]| {
-            table
-                .chunks(INSTANCE_WINDOW_ENTRIES_PER_BASE)
-                .zip(bases)
-                .all(|(multiples, base)| multiples[0] == *base)
-        };
-        self.instance_window_cache
-            .get_or_build(required_len, is_current, || {
-                let mut projective = Vec::with_capacity(required_len);
-                for base in bases {
-                    let mut multiple = C::Curve::from(*base);
-                    for _ in 1..INSTANCE_WINDOW_ENTRIES_PER_BASE {
-                        projective.push(multiple);
-                        multiple += *base;
-                    }
-                    projective.push(multiple);
-                }
-
-                let mut affine = vec![C::identity(); projective.len()];
-                C::Curve::batch_normalize_vartime(&projective, &mut affine);
-                affine
-            })
     }
 }
 
@@ -230,8 +133,7 @@ impl<C: CurveAffine> Params<C> {
             g_lagrange,
             w,
             u,
-            #[cfg(feature = "batch")]
-            instance_window_cache: InstanceWindowCache::default(),
+            instance_windows: Default::default(),
         }
     }
 
@@ -345,8 +247,7 @@ impl<C: CurveAffine> Params<C> {
             g_lagrange,
             w,
             u,
-            #[cfg(feature = "batch")]
-            instance_window_cache: InstanceWindowCache::default(),
+            instance_windows: Default::default(),
         })
     }
 }

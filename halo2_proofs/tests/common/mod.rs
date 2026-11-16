@@ -25,8 +25,8 @@ use proptest::{
 use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
 
-/// Domain size `2^K`. At this size an instance column can exceed the
-/// batch verifier's 64 cached rows.
+/// Domain size `2^K`. At this size an instance column can exceed the 64 rows
+/// that commitments to public instances handle with a window table.
 pub const K: u32 = 7;
 /// Rows the circuit copies into each instance column.
 pub const ROWS: usize = 80;
@@ -75,8 +75,8 @@ where
     ]
 }
 
-/// A length in `0..=max`, weighted towards the batch verifier's 64-row cache
-/// boundary and the ends of the range.
+/// A length in `0..=max`, weighted towards the 64-row limit of the instance
+/// window table and the ends of the range.
 pub fn arb_length(max: usize) -> impl Strategy<Value = usize> {
     let edges = [0, 1, 63, 64, 65, max.saturating_sub(1), max]
         .into_iter()
