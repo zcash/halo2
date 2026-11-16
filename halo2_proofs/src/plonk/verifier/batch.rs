@@ -12,15 +12,15 @@ use super::{
     VerificationStrategy,
 };
 use crate::{
-    multicore::{IntoParallelIterator, TryFoldAndReduce},
     plonk::{Error, VerifyingKey},
     poly::commitment::{Guard, Params, MSM},
     transcript::{Blake2bRead, EncodedChallenge},
     INSTANCE_WINDOW_BITS, INSTANCE_WINDOW_ENTRIES_PER_BASE, MAX_CACHED_INSTANCE_ROWS,
 };
 
+use maybe_rayon::iter::IntoParallelIterator;
 #[cfg(feature = "multicore")]
-use crate::multicore::{IndexedParallelIterator, ParallelIterator};
+use maybe_rayon::iter::{IndexedParallelIterator, ParallelIterator};
 
 #[cfg(test)]
 mod tests;
@@ -253,6 +253,49 @@ where
     assert!(affine.next().is_none());
 
     Ok(commitments)
+}
+
+/// `iter.try_fold().try_reduce()` for a parallel iterator of results, or
+/// `Iterator::try_fold` without the `multicore` feature. The item type must be
+/// `Result<T, E>`: `fold_op` must satisfy both rayon's `try_fold` and
+/// `try_reduce`.
+trait TryFoldAndReduce<T, E> {
+    fn try_fold_and_reduce(
+        self,
+        identity: impl Fn() -> T + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
+    ) -> Result<T, E>;
+}
+
+#[cfg(feature = "multicore")]
+impl<T, E, I> TryFoldAndReduce<T, E> for I
+where
+    T: Send + Sync,
+    E: Send + Sync,
+    I: maybe_rayon::iter::ParallelIterator<Item = Result<T, E>>,
+{
+    fn try_fold_and_reduce(
+        self,
+        identity: impl Fn() -> T + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
+    ) -> Result<T, E> {
+        self.try_fold(&identity, &fold_op)
+            .try_reduce(&identity, |a, b| fold_op(a, Ok(b)))
+    }
+}
+
+#[cfg(not(feature = "multicore"))]
+impl<T, E, I> TryFoldAndReduce<T, E> for I
+where
+    I: std::iter::Iterator<Item = Result<T, E>>,
+{
+    fn try_fold_and_reduce(
+        mut self,
+        identity: impl Fn() -> T + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
+    ) -> Result<T, E> {
+        self.try_fold(identity(), fold_op)
+    }
 }
 
 /// A verifier that checks multiple proofs in a batch. **This requires the

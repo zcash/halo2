@@ -13,73 +13,12 @@ compile_error!(
 
 pub use maybe_rayon::{join, scope};
 
-// `IntoParallelIterator`, `IndexedParallelIterator` and `TryFoldAndReduce` serve
-// only `plonk::verifier::batch`, so they exist only with the `batch` feature.
-#[cfg(feature = "batch")]
-pub use maybe_rayon::iter::IntoParallelIterator;
-
 #[cfg(feature = "multicore")]
-pub use maybe_rayon::{current_num_threads, iter::ParallelIterator};
-
-#[cfg(all(feature = "multicore", feature = "batch"))]
-pub use maybe_rayon::iter::IndexedParallelIterator;
+pub use maybe_rayon::current_num_threads;
 
 #[cfg(not(feature = "multicore"))]
 pub fn current_num_threads() -> usize {
     1
-}
-
-// Mirrors the `multicore` re-export above so both configurations expose the same
-// name. Its only consumer is `plonk::verifier::batch`, whose import of it is
-// itself gated on `multicore`, so nothing references it in this configuration.
-#[cfg(not(feature = "multicore"))]
-#[allow(dead_code)]
-pub trait IndexedParallelIterator: std::iter::Iterator {}
-
-#[cfg(feature = "batch")]
-pub trait TryFoldAndReduce<T, E> {
-    /// Implements `iter.try_fold().try_reduce()` for `rayon::iter::ParallelIterator`,
-    /// falling back on `Iterator::try_fold` when the `multicore` feature flag is
-    /// disabled.
-    /// The `try_fold_and_reduce` function can only be called by a iter with
-    /// `Result<T, E>` item type because the `fold_op` must meet the trait
-    /// bounds of both `try_fold` and `try_reduce` from rayon.   
-    fn try_fold_and_reduce(
-        self,
-        identity: impl Fn() -> T + Send + Sync,
-        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
-    ) -> Result<T, E>;
-}
-
-#[cfg(all(feature = "multicore", feature = "batch"))]
-impl<T, E, I> TryFoldAndReduce<T, E> for I
-where
-    T: Send + Sync,
-    E: Send + Sync,
-    I: maybe_rayon::iter::ParallelIterator<Item = Result<T, E>>,
-{
-    fn try_fold_and_reduce(
-        self,
-        identity: impl Fn() -> T + Send + Sync,
-        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
-    ) -> Result<T, E> {
-        self.try_fold(&identity, &fold_op)
-            .try_reduce(&identity, |a, b| fold_op(a, Ok(b)))
-    }
-}
-
-#[cfg(all(not(feature = "multicore"), feature = "batch"))]
-impl<T, E, I> TryFoldAndReduce<T, E> for I
-where
-    I: std::iter::Iterator<Item = Result<T, E>>,
-{
-    fn try_fold_and_reduce(
-        mut self,
-        identity: impl Fn() -> T + Send + Sync,
-        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
-    ) -> Result<T, E> {
-        self.try_fold(identity(), fold_op)
-    }
 }
 
 pub(crate) trait TheBestReduce {
