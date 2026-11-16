@@ -11,13 +11,18 @@ compile_error!(
     "The multicore feature flag is not supported on wasm32 architectures without atomics"
 );
 
-pub use maybe_rayon::{iter::IntoParallelIterator, join, scope};
+pub use maybe_rayon::{join, scope};
+
+// `IntoParallelIterator`, `IndexedParallelIterator` and `TryFoldAndReduce` serve
+// only `plonk::verifier::batch`, so they exist only with the `batch` feature.
+#[cfg(feature = "batch")]
+pub use maybe_rayon::iter::IntoParallelIterator;
 
 #[cfg(feature = "multicore")]
-pub use maybe_rayon::{
-    current_num_threads,
-    iter::{IndexedParallelIterator, ParallelIterator},
-};
+pub use maybe_rayon::{current_num_threads, iter::ParallelIterator};
+
+#[cfg(all(feature = "multicore", feature = "batch"))]
+pub use maybe_rayon::iter::IndexedParallelIterator;
 
 #[cfg(not(feature = "multicore"))]
 pub fn current_num_threads() -> usize {
@@ -31,6 +36,7 @@ pub fn current_num_threads() -> usize {
 #[allow(dead_code)]
 pub trait IndexedParallelIterator: std::iter::Iterator {}
 
+#[cfg(feature = "batch")]
 pub trait TryFoldAndReduce<T, E> {
     /// Implements `iter.try_fold().try_reduce()` for `rayon::iter::ParallelIterator`,
     /// falling back on `Iterator::try_fold` when the `multicore` feature flag is
@@ -45,7 +51,7 @@ pub trait TryFoldAndReduce<T, E> {
     ) -> Result<T, E>;
 }
 
-#[cfg(feature = "multicore")]
+#[cfg(all(feature = "multicore", feature = "batch"))]
 impl<T, E, I> TryFoldAndReduce<T, E> for I
 where
     T: Send + Sync,
@@ -62,7 +68,7 @@ where
     }
 }
 
-#[cfg(not(feature = "multicore"))]
+#[cfg(all(not(feature = "multicore"), feature = "batch"))]
 impl<T, E, I> TryFoldAndReduce<T, E> for I
 where
     I: std::iter::Iterator<Item = Result<T, E>>,
