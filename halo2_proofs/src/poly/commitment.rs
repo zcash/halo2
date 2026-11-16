@@ -9,12 +9,17 @@ use crate::helpers::CurveRead;
 
 use ff::{Field, PrimeField};
 use group::Group;
+use std::fmt;
 use std::ops::{Add, AddAssign, Mul, MulAssign};
 
+mod instance;
 mod msm;
 mod prover;
 mod verifier;
 
+pub(crate) use instance::commit_instance_columns;
+#[cfg(test)]
+pub(crate) use instance::{table_pays_off, MIN_BATCH_NORMALIZE};
 pub use msm::MSM;
 pub use prover::create_proof;
 pub use verifier::{verify_proof, Accumulator, Guard};
@@ -22,7 +27,10 @@ pub use verifier::{verify_proof, Accumulator, Guard};
 use std::io;
 
 /// These are the public parameters for the polynomial commitment scheme.
-#[derive(Clone, Debug)]
+///
+/// Clones share a cache derived from `g_lagrange`, which `Debug` and the
+/// serialized form leave out.
+#[derive(Clone)]
 pub struct Params<C: CurveAffine> {
     pub(crate) k: u32,
     pub(crate) n: u64,
@@ -30,6 +38,21 @@ pub struct Params<C: CurveAffine> {
     pub(crate) g_lagrange: Vec<C>,
     pub(crate) w: C,
     pub(crate) u: C,
+    instance_windows: instance::WindowCache<C>,
+}
+
+impl<C: CurveAffine> fmt::Debug for Params<C> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Params")
+            .field("k", &self.k)
+            .field("n", &self.n)
+            .field("g", &self.g)
+            .field("g_lagrange", &self.g_lagrange)
+            .field("w", &self.w)
+            .field("u", &self.u)
+            .finish()
+    }
 }
 
 impl<C: CurveAffine> Params<C> {
@@ -110,6 +133,7 @@ impl<C: CurveAffine> Params<C> {
             g_lagrange,
             w,
             u,
+            instance_windows: Default::default(),
         }
     }
 
@@ -223,6 +247,7 @@ impl<C: CurveAffine> Params<C> {
             g_lagrange,
             w,
             u,
+            instance_windows: Default::default(),
         })
     }
 }

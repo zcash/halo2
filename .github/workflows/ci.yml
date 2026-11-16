@@ -90,6 +90,76 @@ jobs:
           --target i686-unknown-linux-gnu
           $FEATURE_FLAGS
 
+  # The test jobs above build the workspace with `--no-default-features` plus a
+  # fixed set of features, unified across crates. These check each crate on its
+  # own, tests and benchmarks included, with the combinations those jobs never
+  # compile.
+  feature-combinations:
+    name: Check ${{ matrix.package }} with ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -D warnings
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # What downstream users build: `batch` and `multicore`.
+          - package: halo2_proofs
+            name: default features
+            flags: ""
+          - package: halo2_proofs
+            name: no default features
+            flags: --no-default-features
+          - package: halo2_proofs
+            name: batch without multicore
+            flags: --no-default-features --features batch
+          - package: halo2_proofs
+            name: multicore without batch
+            flags: --no-default-features --features multicore
+          # Runtime features no other job enables.
+          - package: halo2_proofs
+            name: legacy pdqsort floor planner
+            flags: --features floor-planner-v1-legacy-pdqsort
+          - package: halo2_proofs
+            name: sanity checks
+            flags: --features sanity-checks
+          # The fingerprint export touches `MSM`, part of which is `batch`-only;
+          # the nightly test jobs only build it with `batch`.
+          - package: halo2_proofs
+            name: verifier fingerprint without batch
+            flags: --no-default-features --features unstable-verifier-fingerprint
+          # The workspace depends on `halo2_proofs` without its default
+          # features, so on their own these crates build without `batch` and
+          # `multicore`; Orchard builds `halo2_gadgets` with both.
+          - package: halo2_gadgets
+            name: no features
+            flags: ""
+          - package: halo2_gadgets
+            name: halo2_proofs defaults
+            flags: --features halo2_proofs/batch,halo2_proofs/multicore
+          # The workspace test jobs always enable `test-dependencies`.
+          - package: halo2_poseidon
+            name: no features
+            flags: ""
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: ${{ matrix.package }}-${{ matrix.name }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: cargo check
+        env:
+          PACKAGE: ${{ matrix.package }}
+          FEATURE_FLAGS: ${{ matrix.flags }}
+        run: >
+          cargo check
+          --package "$PACKAGE"
+          --all-targets
+          $FEATURE_FLAGS
+
   build:
     name: Build target ${{ matrix.target }}
     runs-on: ubuntu-latest

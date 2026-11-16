@@ -12,6 +12,14 @@ and this project adheres to Rust's notion of
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms
   once before the final MSM.
+- Commitments to public instance columns use a table of multiples of the
+  Lagrange bases, evaluated in lockstep across columns: across all proofs in
+  batch verification, and across the circuits of one proof in `verify_proof`.
+  The table is built once enough short columns are committed together for it
+  to pay off, then cached in `Params`: at most 64 rows of 256 points (1 MiB on
+  the Pasta curves), kept as long as the parameters and shared by their clones.
+  Columns longer than 64 rows keep the generic MSM. The `Debug` output and the
+  serialized form of `Params`, and the transcript, are unchanged.
 
 ## [0.4.1] - 2026-10-26
 ### Changed

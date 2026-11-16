@@ -3,16 +3,19 @@ use pasta_curves::arithmetic::CurveAffine;
 use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
 
-use super::{verify_proof, VerificationStrategy};
+use super::{verify_proof_with_instance_commitments, InstanceCommitments, VerificationStrategy};
 use crate::{
-    multicore::{IntoParallelIterator, TryFoldAndReduce},
     plonk::{Error, VerifyingKey},
     poly::commitment::{Guard, Params, MSM},
     transcript::{Blake2bRead, EncodedChallenge},
 };
 
+use maybe_rayon::iter::IntoParallelIterator;
 #[cfg(feature = "multicore")]
-use crate::multicore::{IndexedParallelIterator, ParallelIterator};
+use maybe_rayon::iter::{IndexedParallelIterator, ParallelIterator};
+
+#[cfg(test)]
+mod tests;
 
 /// A proof verification strategy that returns the proof's MSM.
 ///
@@ -48,6 +51,49 @@ impl<'params, C: CurveAffine> VerificationStrategy<'params, C> for BatchStrategy
 struct BatchItem<C: CurveAffine> {
     instances: Vec<Vec<Vec<C::Scalar>>>,
     proof: Vec<u8>,
+}
+
+/// `iter.try_fold().try_reduce()` for a parallel iterator of results, or
+/// `Iterator::try_fold` without the `multicore` feature. The item type must be
+/// `Result<T, E>`: `fold_op` must satisfy both rayon's `try_fold` and
+/// `try_reduce`.
+trait TryFoldAndReduce<T, E> {
+    fn try_fold_and_reduce(
+        self,
+        identity: impl Fn() -> T + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
+    ) -> Result<T, E>;
+}
+
+#[cfg(feature = "multicore")]
+impl<T, E, I> TryFoldAndReduce<T, E> for I
+where
+    T: Send + Sync,
+    E: Send + Sync,
+    I: maybe_rayon::iter::ParallelIterator<Item = Result<T, E>>,
+{
+    fn try_fold_and_reduce(
+        self,
+        identity: impl Fn() -> T + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
+    ) -> Result<T, E> {
+        self.try_fold(&identity, &fold_op)
+            .try_reduce(&identity, |a, b| fold_op(a, Ok(b)))
+    }
+}
+
+#[cfg(not(feature = "multicore"))]
+impl<T, E, I> TryFoldAndReduce<T, E> for I
+where
+    I: std::iter::Iterator<Item = Result<T, E>>,
+{
+    fn try_fold_and_reduce(
+        mut self,
+        identity: impl Fn() -> T + Send + Sync,
+        fold_op: impl Fn(T, Result<T, E>) -> Result<T, E> + Send + Sync,
+    ) -> Result<T, E> {
+        self.try_fold(identity(), fold_op)
+    }
 }
 
 /// A verifier that checks multiple proofs in a batch. **This requires the
@@ -90,18 +136,25 @@ where
             acc
         }
 
+        let instances = self
+            .items
+            .iter()
+            .map(|item| &item.instances)
+            .collect::<Vec<_>>();
+        let instance_commitments = match InstanceCommitments::for_proofs(params, vk, &instances) {
+            Ok(instance_commitments) => instance_commitments,
+            Err(e) => {
+                tracing::debug!("Batch failed instance validation: {}", e);
+                return false;
+            }
+        };
+
         let final_msm = self
             .items
             .into_par_iter()
+            .zip(instance_commitments.into_par_iter())
             .enumerate()
-            .map(|(i, item)| {
-                let instances: Vec<Vec<_>> = item
-                    .instances
-                    .iter()
-                    .map(|i| i.iter().map(|c| &c[..]).collect())
-                    .collect();
-                let instances: Vec<_> = instances.iter().map(|i| &i[..]).collect();
-
+            .map(|(i, (item, instance_commitments))| {
                 // All proof equations are fixed before sampling these independent
                 // weights. Fix the first weight at one; randomize every later
                 // equation so invalid proofs cannot deliberately cancel.
@@ -112,7 +165,14 @@ where
                 };
                 let strategy = BatchStrategy::new(params, rho);
                 let mut transcript = Blake2bRead::init(&item.proof[..]);
-                verify_proof(params, vk, strategy, &instances, &mut transcript).map_err(|e| {
+                verify_proof_with_instance_commitments(
+                    params,
+                    vk,
+                    strategy,
+                    instance_commitments,
+                    &mut transcript,
+                )
+                .map_err(|e| {
                     tracing::debug!("Batch item {} failed verification: {}", i, e);
                     e
                 })
