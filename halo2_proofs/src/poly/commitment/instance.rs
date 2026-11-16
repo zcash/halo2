@@ -139,7 +139,9 @@ where
     /// The cached table if it covers `bases`. Otherwise, if `build`, a table
     /// for `bases`, which replaces the cached one; else `None`.
     ///
-    /// The lock is held while building, so concurrent callers share one build.
+    /// The lock is held while building, so concurrent callers share one build
+    /// and wait for it: callers on a thread pool block their thread for the
+    /// build, a few milliseconds once per `Params`.
     fn get(&self, bases: &[C], build: bool) -> Option<Arc<WindowTable<C>>> {
         let mut cached = self.0.lock().unwrap_or_else(PoisonError::into_inner);
         if let Some(table) = cached.as_ref().filter(|table| table.covers(bases)) {

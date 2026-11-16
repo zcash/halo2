@@ -17,8 +17,12 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(32))]
 
     /// Law: verify_batch(B) = AND over s in B of verify_single(s).is_ok().
+    ///
+    /// Up to 12 proofs, 24 columns: enough for the batch to commit through
+    /// the window table at any column length, while each single verification
+    /// commits two columns, through the generic path unless a table is cached.
     #[test]
-    fn batch_is_the_conjunction_of_single_verifications(entries in arb_entries(4)) {
+    fn batch_is_the_conjunction_of_single_verifications(entries in arb_entries(12)) {
         let fixture = fixture();
         let statements = fixture.select(&entries);
         let expected = statements

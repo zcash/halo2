@@ -77,9 +77,17 @@ where
                     column::<C::Scalar>(len, index)
                 })
                 .collect::<Vec<_>>();
+            // The path the commitment takes: a cached table that covers the
+            // short columns, or a new one if it pays off; else generic.
             let short = columns.iter().filter(|c| c.len() <= MAX_TABLE_ROWS);
             let short_rows = short.clone().map(Vec::len).max().unwrap_or(0);
-            took_table[usize::from(table_pays_off(short_rows, short.count()))] = true;
+            let short_count = short.count();
+            let cached = params
+                .instance_windows
+                .get(&params.g_lagrange[..short_rows], false)
+                .is_some();
+            let table = short_count > 0 && (cached || table_pays_off(short_rows, short_count));
+            took_table[usize::from(table)] = true;
             check_columns(&params, &domain, &columns);
         }
     }

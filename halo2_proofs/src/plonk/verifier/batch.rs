@@ -136,25 +136,16 @@ where
             acc
         }
 
-        let instance_commitments = {
-            let columns = self
-                .items
-                .iter()
-                .map(|item| {
-                    item.instances
-                        .iter()
-                        .map(|circuit| circuit.iter().map(Vec::as_slice).collect::<Vec<_>>())
-                        .collect::<Vec<_>>()
-                })
-                .collect::<Vec<_>>();
-            let circuits = columns
-                .iter()
-                .map(|proof| proof.iter().map(Vec::as_slice).collect::<Vec<_>>())
-                .collect::<Vec<_>>();
-            let proofs = circuits.iter().map(Vec::as_slice).collect::<Vec<_>>();
-            match InstanceCommitments::for_proofs(params, vk, &proofs) {
-                Ok(instance_commitments) => instance_commitments,
-                Err(_) => return false,
+        let instances = self
+            .items
+            .iter()
+            .map(|item| &item.instances)
+            .collect::<Vec<_>>();
+        let instance_commitments = match InstanceCommitments::for_proofs(params, vk, &instances) {
+            Ok(instance_commitments) => instance_commitments,
+            Err(e) => {
+                tracing::debug!("Batch failed instance validation: {}", e);
+                return false;
             }
         };
 

@@ -30,29 +30,6 @@ impl Circuit<Fp> for TwoInstanceColumns {
     }
 }
 
-/// Borrows owned instances the way `BatchVerifier::finalize` does.
-fn commit(
-    params: &Params<EqAffine>,
-    vk: &VerifyingKey<EqAffine>,
-    proofs: &[Vec<Vec<Vec<Fp>>>],
-) -> Result<Vec<InstanceCommitments<EqAffine>>, Error> {
-    let columns = proofs
-        .iter()
-        .map(|proof| {
-            proof
-                .iter()
-                .map(|circuit| circuit.iter().map(Vec::as_slice).collect::<Vec<_>>())
-                .collect::<Vec<_>>()
-        })
-        .collect::<Vec<_>>();
-    let circuits = columns
-        .iter()
-        .map(|proof| proof.iter().map(Vec::as_slice).collect::<Vec<_>>())
-        .collect::<Vec<_>>();
-    let proofs = circuits.iter().map(Vec::as_slice).collect::<Vec<_>>();
-    InstanceCommitments::for_proofs(params, vk, &proofs)
-}
-
 /// The challenge after absorbing `vk` and the commitments, as a proof's
 /// transcript does before reading anything from the proof.
 fn challenge(vk: &VerifyingKey<EqAffine>, commitments: &InstanceCommitments<EqAffine>) -> Fp {
@@ -88,10 +65,14 @@ fn shared_commitments_match_each_proof_alone() {
         vec![vec![vec![-seed; 9], vec![seed.square(); 3]]]
     }));
 
-    let shared = commit(&params, &vk, &proofs).unwrap();
+    let shared = InstanceCommitments::for_proofs(&params, &vk, &proofs).unwrap();
     assert_eq!(shared.len(), proofs.len());
+    // The shared commitment cached a table on `params`, and clones share it,
+    // so commit each proof alone on fresh parameters to take the generic path.
+    let fresh = Params::<EqAffine>::new(7);
     for (proof, shared) in proofs.iter().zip(&shared) {
-        let alone = commit(&params, &vk, core::slice::from_ref(proof)).unwrap();
+        let alone =
+            InstanceCommitments::for_proofs(&fresh, &vk, core::slice::from_ref(proof)).unwrap();
         assert_eq!(shared.0, alone[0].0);
         assert_eq!(
             shared.0.iter().map(Vec::len).collect::<Vec<_>>(),
@@ -100,7 +81,10 @@ fn shared_commitments_match_each_proof_alone() {
         assert_eq!(challenge(&vk, shared), challenge(&vk, &alone[0]));
     }
 
-    assert!(commit(&params, &vk, &[]).unwrap().is_empty());
+    let no_proofs: [Vec<Vec<Vec<Fp>>>; 0] = [];
+    assert!(InstanceCommitments::for_proofs(&params, &vk, &no_proofs)
+        .unwrap()
+        .is_empty());
 }
 
 #[test]
@@ -115,7 +99,7 @@ fn instance_shapes_are_checked_before_committing() {
     ] {
         // A valid proof first: one invalid proof rejects the whole batch.
         let proofs = [vec![vec![vec![], vec![]]], vec![circuit]];
-        let result = commit(&params, &vk, &proofs);
+        let result = InstanceCommitments::for_proofs(&params, &vk, &proofs);
         if expected_too_large {
             assert!(matches!(result, Err(Error::InstanceTooLarge)));
         } else {
@@ -123,5 +107,5 @@ fn instance_shapes_are_checked_before_committing() {
         }
     }
     let maximal = [vec![vec![vec![Fp::ZERO; max_len], vec![]]]];
-    assert!(commit(&params, &vk, &maximal).is_ok());
+    assert!(InstanceCommitments::for_proofs(&params, &vk, &maximal).is_ok());
 }

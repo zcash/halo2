@@ -75,19 +75,28 @@ where
     /// Checks every proof's instances against `vk`, then commits to all their
     /// columns at once, so that the columns of different proofs share the
     /// cost of the commitment.
-    fn for_proofs(
+    ///
+    /// Each proof's instances are indexed by circuit, then column, and may be
+    /// borrowed (`&[&[&[F]]]`, as `verify_proof` receives them) or owned
+    /// (`Vec<Vec<Vec<F>>>`, as `BatchVerifier` stores them).
+    fn for_proofs<Proof, Circuit, Column>(
         params: &Params<C>,
         vk: &VerifyingKey<C>,
-        proofs: &[&[&[&[C::Scalar]]]],
-    ) -> Result<Vec<Self>, Error> {
+        proofs: &[Proof],
+    ) -> Result<Vec<Self>, Error>
+    where
+        Proof: AsRef<[Circuit]>,
+        Circuit: AsRef<[Column]>,
+        Column: AsRef<[C::Scalar]>,
+    {
         for instances in proofs {
-            validate_instances(params, vk, instances)?;
+            validate_instances(params, vk, instances.as_ref())?;
         }
 
         let columns = proofs
             .iter()
-            .flat_map(|instances| instances.iter())
-            .flat_map(|circuit| circuit.iter().copied())
+            .flat_map(|instances| instances.as_ref())
+            .flat_map(|circuit| circuit.as_ref().iter().map(AsRef::as_ref))
             .collect::<Vec<_>>();
         let mut commitments = commit_instance_columns(params, &columns).into_iter();
         // Validation fixed every circuit's column count.
@@ -97,30 +106,33 @@ where
             .map(|instances| {
                 Self(
                     instances
+                        .as_ref()
                         .iter()
                         .map(|_| commitments.by_ref().take(columns_per_circuit).collect())
                         .collect(),
                 )
             })
             .collect();
-        debug_assert!(commitments.next().is_none());
+        assert!(commitments.next().is_none());
         Ok(proofs)
     }
 }
 
 /// Checks the shape of one proof's instances: each circuit has exactly the
 /// verifying key's instance columns, and no column exceeds the usable rows.
-fn validate_instances<C>(
+fn validate_instances<C, Circuit, Column>(
     params: &Params<C>,
     vk: &VerifyingKey<C>,
-    instances: &[&[&[C::Scalar]]],
+    instances: &[Circuit],
 ) -> Result<(), Error>
 where
     C: CurveAffine,
+    Circuit: AsRef<[Column]>,
+    Column: AsRef<[C::Scalar]>,
 {
     // Check that instances matches the expected number of instance columns
     for instances in instances.iter() {
-        if instances.len() != vk.cs.num_instance_columns {
+        if instances.as_ref().len() != vk.cs.num_instance_columns {
             return Err(Error::InvalidInstances);
         }
     }
@@ -128,8 +140,8 @@ where
     let max_instance_len = params.n as usize - (vk.cs.blinding_factors() + 1);
     if instances
         .iter()
-        .flat_map(|instance| instance.iter())
-        .any(|instance| instance.len() > max_instance_len)
+        .flat_map(|instance| instance.as_ref().iter())
+        .any(|instance| instance.as_ref().len() > max_instance_len)
     {
         return Err(Error::InstanceTooLarge);
     }
