@@ -24,7 +24,9 @@ bitvec = { version = "1", default-features = false }
 blake2b_simd = "1"
 ff = { version = "0.14", default-features = false, features = ["alloc"] }
 group = "0.14"
-pasta_curves = "0.6"
+# Draft: requires the pending Pasta MSM hook and multicore feature.
+# Raise the minimum to their first containing release before merging.
+pasta_curves = { version = "0.6", features = ["glv"] }
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = { version = "0.10", default-features = false }
 sinsemilla = "0.2"
