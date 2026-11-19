@@ -54,13 +54,18 @@ impl<C: CurveAffine> Bucket<C> {
     }
 }
 
+/// A signed digit of a Booth recoding: `-magnitude` if `negative`, else
+/// `magnitude`, with `magnitude <= 2^(window_bits - 1)`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct BoothDigit {
-    magnitude: usize,
-    negative: bool,
+pub(crate) struct BoothDigit {
+    pub(crate) magnitude: usize,
+    pub(crate) negative: bool,
 }
 
-fn booth_digit(bytes: &[u8], window_bits: usize, window: usize) -> BoothDigit {
+/// The signed digit of window `window` of the little-endian integer `bytes`,
+/// such that the digits of all [`booth_window_count`] windows, weighted by
+/// `2^(window * window_bits)`, sum to the integer.
+pub(crate) fn booth_digit(bytes: &[u8], window_bits: usize, window: usize) -> BoothDigit {
     debug_assert!(window_bits > 0);
     debug_assert!(window_bits < u64::BITS as usize);
 
@@ -102,7 +107,9 @@ fn booth_digit(bytes: &[u8], window_bits: usize, window: usize) -> BoothDigit {
     }
 }
 
-fn booth_window_count<R: AsRef<[u8]>>(reprs: &[R], window_bits: usize) -> usize {
+/// The number of windows of `window_bits` bits whose Booth digits represent
+/// every integer encoded in `reprs`, carries included.
+pub(crate) fn booth_window_count<R: AsRef<[u8]>>(reprs: &[R], window_bits: usize) -> usize {
     debug_assert!(window_bits > 0);
 
     let repr_bytes = reprs
