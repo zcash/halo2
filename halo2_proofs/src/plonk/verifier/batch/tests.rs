@@ -109,3 +109,64 @@ fn instance_shapes_are_checked_before_committing() {
     let maximal = [vec![vec![vec![Fp::ZERO; max_len], vec![]]]];
     assert!(InstanceCommitments::for_proofs(&params, &vk, &maximal).is_ok());
 }
+
+#[test]
+fn repeated_anchor_batches_bind_each_instances_anchor() {
+    use crate::plonk::{create_proof, keygen_pk};
+    use rand::rngs::SysRng;
+    use rand_core::UnwrapErr;
+
+    let params = Params::<EqAffine>::new(5);
+    let vk = keygen_vk(&params, &TwoInstanceColumns).unwrap();
+    let pk = keygen_pk(&params, vk, &TwoInstanceColumns).unwrap();
+    let proofs = (0u64..8)
+        .map(|index| {
+            let columns = (0..2)
+                .map(|column| {
+                    let mut values = vec![Fp::from(index + column + 2); 7];
+                    values[0] = Fp::from(index / 2);
+                    values.extend([Fp::ONE, Fp::ZERO, Fp::ONE]);
+                    values
+                })
+                .collect::<Vec<_>>();
+            let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            let mut transcript = Blake2bWrite::<_, _, Challenge255<_>>::init(vec![]);
+            create_proof(
+                &params,
+                &pk,
+                &[TwoInstanceColumns],
+                &[&slices],
+                UnwrapErr(SysRng),
+                &mut transcript,
+            )
+            .unwrap();
+            (vec![columns], transcript.finalize())
+        })
+        .collect::<Vec<_>>();
+    for alteration in 0..5 {
+        let mut batch = super::BatchVerifier::new();
+        for (index, (instances, proof)) in proofs.iter().enumerate() {
+            let mut instances = instances.clone();
+            let mut proof = proof.clone();
+            if index == 3 {
+                match alteration {
+                    0 => {}
+                    // Change only one column of a repeated anchor group.
+                    1 => instances[0][1][0] += Fp::ONE,
+                    // Move both columns to another existing anchor group.
+                    2 => {
+                        instances[0][0][0] = Fp::ZERO;
+                        instances[0][1][0] = Fp::ZERO;
+                    }
+                    // Exercise the generic fallback after sharing would apply.
+                    3 => instances[0][1][7] = Fp::from(2),
+                    _ => {
+                        proof.pop();
+                    }
+                }
+            }
+            batch.add_proof(instances, proof);
+        }
+        assert_eq!(batch.finalize(&params, pk.get_vk()), alteration == 0);
+    }
+}

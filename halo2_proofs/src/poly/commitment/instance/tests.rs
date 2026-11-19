@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use ff::Field;
+use ff::{Field, PrimeField};
 use group::{Curve, Group};
 use pasta_curves::{EpAffine, Eq, EqAffine, Fp};
 use rand::rngs::SysRng;
@@ -400,52 +400,84 @@ fn prepared_columns_handle_exceptional_bases_and_blinds() {
 #[test]
 fn repeated_anchors_match_independent_prepared_sums() {
     fn check<C: CurveAffine>() {
-        let params = Params::<C>::new(4);
-        let table = glv_instance_table(&params).unwrap();
-        let columns = (0..32)
-            .map(|index| {
-                let mut values = column::<C::Scalar>(PREPARED_INSTANCE_DENSE_ROWS, index);
-                values[0] = C::Scalar::from(
-                    u64::try_from(index % 3).expect("a remainder modulo three fits in u64"),
-                );
-                for flag in 0..3 {
-                    values.push(if index & (1 << flag) == 0 {
-                        C::Scalar::ZERO
-                    } else {
-                        C::Scalar::ONE
-                    });
-                }
-                values
-            })
-            .collect::<Vec<_>>();
-        let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        let compare = || {
-            for count in [1, 2, 3, 8, 17, columns.len()] {
-                let slices = &slices[..count];
+        let mut rng = UnwrapErr(SysRng);
+        for exceptional in [false, true] {
+            let mut params = Params::<C>::new(4);
+            if exceptional {
+                let p = params.g_lagrange[0];
+                params.g_lagrange[..7].copy_from_slice(&[
+                    C::identity(),
+                    p,
+                    -p,
+                    p,
+                    p,
+                    -p,
+                    C::identity(),
+                ]);
+                params.w = -p;
+            }
+            let table = glv_instance_table(&params).unwrap();
+            for pattern in 0..5 {
+                let columns = (0u64..207)
+                    .map(|index| {
+                        let mut values = (0..PREPARED_INSTANCE_DENSE_ROWS)
+                            .map(|_| C::Scalar::random(&mut rng))
+                            .collect::<Vec<_>>();
+                        values[0] = match pattern {
+                            0 => C::Scalar::from(index + 1),
+                            1 => -C::Scalar::ONE,
+                            2 => match index % 3 {
+                                0 => C::Scalar::ZERO,
+                                1 => C::Scalar::ONE,
+                                _ => C::Scalar::from(index + 100),
+                            },
+                            3 => C::Scalar::from(index / 2),
+                            // Different anchors with matching low bits must stay distinct.
+                            _ => C::Scalar::from_u128((u128::from(index % 7) << 64) | 1),
+                        };
+                        values.extend((0..3).map(|flag| {
+                            if index & (1 << flag) == 0 {
+                                C::Scalar::ZERO
+                            } else {
+                                C::Scalar::ONE
+                            }
+                        }));
+                        values
+                    })
+                    .collect::<Vec<_>>();
+                let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
                 let dense = slices
                     .iter()
                     .map(|column| &column[..PREPARED_INSTANCE_DENSE_ROWS])
                     .collect::<Vec<_>>();
                 let mut expected = vec![C::Curve::identity(); dense.len()];
                 table.dense.sum_batch_vartime(&dense, &mut expected);
-                for (sum, column) in expected.iter_mut().zip(slices) {
+                for (sum, column) in expected.iter_mut().zip(&slices) {
                     *sum += table.offsets[super::instance_flag_mask(column).unwrap()];
+                    assert_eq!(*sum, params.commit_lagrange_instance(column));
                 }
-                assert_eq!(commit_glv_instances(&params, slices).unwrap(), expected);
-                assert_eq!(
-                    commit_instance_columns(&params, slices),
-                    generic(&params, slices)
-                );
+                let compare = || {
+                    for count in [1, 2, 3, 8, 17, 33, 207] {
+                        let actual = commit_glv_instances(&params, &slices[..count]).unwrap();
+                        assert_eq!(actual, expected[..count]);
+                        let reversed = slices[..count].iter().rev().copied().collect::<Vec<_>>();
+                        let actual = commit_glv_instances(&params, &reversed).unwrap();
+                        assert_eq!(
+                            actual,
+                            expected[..count].iter().rev().copied().collect::<Vec<_>>()
+                        );
+                    }
+                };
+                compare();
+                #[cfg(feature = "multicore")]
+                for threads in [1, 3, 8] {
+                    maybe_rayon::ThreadPoolBuilder::new()
+                        .num_threads(threads)
+                        .build()
+                        .expect("the test pool must build")
+                        .install(compare);
+                }
             }
-        };
-        compare();
-        #[cfg(feature = "multicore")]
-        for threads in [1, 2, 4] {
-            maybe_rayon::ThreadPoolBuilder::new()
-                .num_threads(threads)
-                .build()
-                .expect("the test pool must build")
-                .install(compare);
         }
     }
     check::<EqAffine>();
