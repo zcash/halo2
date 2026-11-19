@@ -254,62 +254,58 @@ pub fn verify_proof<
             .fold(C::Scalar::ZERO, |acc, eval| acc + eval);
         let l_0 = l_evals[1 + blinding_factors];
 
-        // Compute the expected value of h(x)
+        let common = vk.verifier_expressions.common_values(&fixed_evals);
+        let gate_roots = vk.verifier_expressions.evaluate_all(
+            &common,
+            &fixed_evals,
+            &advice_evals,
+            &instance_evals,
+        );
+
+        // Compute the expected value of h(x), preserving every gate's position.
         let expressions = advice_evals
             .iter()
             .zip(instance_evals.iter())
             .zip(permutations_evaluated.iter())
             .zip(lookups_evaluated.iter())
-            .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
-                let fixed_evals = &fixed_evals;
-                std::iter::empty()
-                    // Evaluate the circuit using the custom gates provided
-                    .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                        gate.polynomials().iter().map(move |poly| {
-                            poly.evaluate(
-                                &|scalar| scalar,
-                                &|_| panic!("virtual selectors are removed during optimization"),
-                                &|query| fixed_evals[query.index],
-                                &|query| advice_evals[query.index],
-                                &|query| instance_evals[query.index],
-                                &|a| -a,
-                                &|a, b| a + &b,
-                                &|a, b| a * &b,
-                                &|a, scalar| a * &scalar,
-                            )
-                        })
-                    }))
-                    .chain(permutation.expressions(
-                        vk,
-                        &vk.cs.permutation,
-                        &permutations_common,
-                        advice_evals,
-                        fixed_evals,
-                        instance_evals,
-                        l_0,
-                        l_last,
-                        l_blind,
-                        beta,
-                        gamma,
-                        x,
-                    ))
-                    .chain(lookups.iter().zip(vk.cs.lookups.iter()).flat_map(
-                        move |(p, argument)| {
-                            p.expressions(
-                                l_0,
-                                l_last,
-                                l_blind,
-                                argument,
-                                theta,
-                                beta,
-                                gamma,
-                                advice_evals,
-                                fixed_evals,
-                                instance_evals,
-                            )
-                        },
-                    ))
-            });
+            .zip(gate_roots)
+            .flat_map(
+                |((((advice_evals, instance_evals), permutation), lookups), gates)| {
+                    let fixed_evals = &fixed_evals;
+                    std::iter::empty()
+                        .chain(gates)
+                        .chain(permutation.expressions(
+                            vk,
+                            &vk.cs.permutation,
+                            &permutations_common,
+                            advice_evals,
+                            fixed_evals,
+                            instance_evals,
+                            l_0,
+                            l_last,
+                            l_blind,
+                            beta,
+                            gamma,
+                            x,
+                        ))
+                        .chain(lookups.iter().zip(vk.cs.lookups.iter()).flat_map(
+                            move |(p, argument)| {
+                                p.expressions(
+                                    l_0,
+                                    l_last,
+                                    l_blind,
+                                    argument,
+                                    theta,
+                                    beta,
+                                    gamma,
+                                    advice_evals,
+                                    fixed_evals,
+                                    instance_evals,
+                                )
+                            },
+                        ))
+                },
+            );
 
         vanishing.verify(params, expressions, y, xn)
     };
@@ -442,6 +438,74 @@ mod tests {
                 },
             )?;
             layouter.constrain_instance(cell.cell(), config.instance, 0)
+        }
+    }
+
+    #[test]
+    fn compiled_gates_match_recursive_evaluation_for_random_instances() {
+        use crate::{
+            plonk::{AdviceQuery, Expression, FixedQuery, InstanceQuery, VerifierExpressions},
+            poly::Rotation,
+        };
+        use ff::Field;
+
+        let fixed = Expression::Fixed(FixedQuery {
+            index: 0,
+            column_index: 0,
+            rotation: Rotation::cur(),
+        });
+        let advice = Expression::Advice(AdviceQuery {
+            index: 0,
+            column_index: 0,
+            rotation: Rotation::next(),
+        });
+        let instance = Expression::Instance(InstanceQuery {
+            index: 0,
+            column_index: 0,
+            rotation: Rotation::prev(),
+        });
+        let shared = fixed.clone() * (Expression::Constant(Fp::ONE) - fixed);
+        let expressions = [
+            shared.clone() * (advice.clone() + instance.clone()),
+            shared.clone() * (advice - instance),
+            shared,
+        ];
+        let plan = VerifierExpressions::compile(&expressions);
+        let mut rng = UnwrapErr(SysRng);
+        for count in 0..=7 {
+            let fixed = [Fp::random(&mut rng)];
+            let advice = (0..count)
+                .map(|_| vec![Fp::random(&mut rng)])
+                .collect::<Vec<_>>();
+            let instance = (0..count)
+                .map(|_| vec![Fp::random(&mut rng)])
+                .collect::<Vec<_>>();
+            let expected = advice
+                .iter()
+                .zip(&instance)
+                .map(|(advice, instance)| {
+                    expressions
+                        .iter()
+                        .map(|expression| {
+                            expression.evaluate(
+                                &|scalar| scalar,
+                                &|_| panic!("test circuit has no virtual selectors"),
+                                &|query| fixed[query.index],
+                                &|query| advice[query.index],
+                                &|query| instance[query.index],
+                                &|a| -a,
+                                &|a, b| a + b,
+                                &|a, b| a * b,
+                                &|a, scalar| a * scalar,
+                            )
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                plan.evaluate_all(&plan.common_values(&fixed), &fixed, &advice, &instance),
+                expected
+            );
         }
     }
 
