@@ -37,7 +37,202 @@ pub use keygen::*;
 pub use prover::*;
 pub use verifier::*;
 
-use std::io;
+use std::{collections::HashMap, io, sync::Arc};
+
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+enum VerifierExpressionOp {
+    Constant(usize),
+    Fixed(usize),
+    Advice(usize),
+    Instance(usize),
+    Negated(usize),
+    Sum(usize, usize),
+    Product(usize, usize),
+    Scaled(usize, usize),
+    Selector,
+}
+
+// Pure-field work shared across proof instances; excluded from the pinned VK.
+struct VerifierExpressions<F> {
+    operations: Vec<VerifierExpressionOp>,
+    constants: Vec<F>,
+    common: Vec<usize>,
+    per_proof: Vec<usize>,
+    roots: Vec<usize>,
+}
+
+impl<F> std::fmt::Debug for VerifierExpressions<F> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VerifierExpressions")
+            .field("operations", &self.operations.len())
+            .field("roots", &self.roots.len())
+            .finish()
+    }
+}
+
+impl<F: PrimeField> VerifierExpressions<F> {
+    fn compile<'a>(expressions: impl IntoIterator<Item = &'a Expression<F>>) -> Self {
+        struct Compiler<F: PrimeField> {
+            plan: VerifierExpressions<F>,
+            constants: HashMap<Vec<u8>, usize>,
+            operations: HashMap<VerifierExpressionOp, usize>,
+            common: Vec<bool>,
+        }
+        impl<F: PrimeField> Compiler<F> {
+            fn constant(&mut self, scalar: F) -> usize {
+                let key = scalar.to_repr().as_ref().to_vec();
+                *self.constants.entry(key).or_insert_with(|| {
+                    let index = self.plan.constants.len();
+                    self.plan.constants.push(scalar);
+                    index
+                })
+            }
+            fn expression(&mut self, expression: &Expression<F>) -> usize {
+                let (operation, common) = match expression {
+                    Expression::Constant(scalar) => {
+                        (VerifierExpressionOp::Constant(self.constant(*scalar)), true)
+                    }
+                    Expression::Fixed(query) => (VerifierExpressionOp::Fixed(query.index), true),
+                    Expression::Advice(query) => (VerifierExpressionOp::Advice(query.index), false),
+                    Expression::Instance(query) => {
+                        (VerifierExpressionOp::Instance(query.index), false)
+                    }
+                    Expression::Negated(a) => {
+                        let a = self.expression(a);
+                        (VerifierExpressionOp::Negated(a), self.common[a])
+                    }
+                    Expression::Sum(a, b) | Expression::Product(a, b) => {
+                        let a = self.expression(a);
+                        let b = self.expression(b);
+                        let operation = if matches!(expression, Expression::Sum(_, _)) {
+                            VerifierExpressionOp::Sum(a, b)
+                        } else {
+                            VerifierExpressionOp::Product(a, b)
+                        };
+                        (operation, self.common[a] && self.common[b])
+                    }
+                    Expression::Scaled(a, scalar) => {
+                        let a = self.expression(a);
+                        let scalar = self.constant(*scalar);
+                        (VerifierExpressionOp::Scaled(a, scalar), self.common[a])
+                    }
+                    Expression::Selector(_) => (VerifierExpressionOp::Selector, true),
+                };
+                *self.operations.entry(operation).or_insert_with(|| {
+                    let index = self.plan.operations.len();
+                    self.plan.operations.push(operation);
+                    self.common.push(common);
+                    index
+                })
+            }
+        }
+        let mut compiler = Compiler {
+            plan: Self {
+                operations: Vec::new(),
+                constants: Vec::new(),
+                common: Vec::new(),
+                per_proof: Vec::new(),
+                roots: Vec::new(),
+            },
+            constants: HashMap::new(),
+            operations: HashMap::new(),
+            common: Vec::new(),
+        };
+        for expression in expressions {
+            let root = compiler.expression(expression);
+            compiler.plan.roots.push(root);
+        }
+        for (index, common) in compiler.common.into_iter().enumerate() {
+            if common {
+                compiler.plan.common.push(index);
+            } else {
+                compiler.plan.per_proof.push(index);
+            }
+        }
+        compiler.plan
+    }
+
+    fn common_values(&self, fixed: &[F]) -> Vec<F> {
+        let mut values = vec![F::ZERO; self.operations.len()];
+        for &index in &self.common {
+            values[index] = self.operation(index, &values, fixed, &[], &[]);
+        }
+        values
+    }
+
+    fn operation(
+        &self,
+        index: usize,
+        values: &[F],
+        fixed: &[F],
+        advice: &[F],
+        instance: &[F],
+    ) -> F {
+        match self.operations[index] {
+            VerifierExpressionOp::Constant(index) => self.constants[index],
+            VerifierExpressionOp::Fixed(index) => fixed[index],
+            VerifierExpressionOp::Advice(index) => advice[index],
+            VerifierExpressionOp::Instance(index) => instance[index],
+            VerifierExpressionOp::Negated(a) => -values[a],
+            VerifierExpressionOp::Sum(a, b) => values[a] + values[b],
+            VerifierExpressionOp::Product(a, b) => values[a] * values[b],
+            VerifierExpressionOp::Scaled(a, c) => values[a] * self.constants[c],
+            VerifierExpressionOp::Selector => {
+                panic!("virtual selectors are removed during optimization")
+            }
+        }
+    }
+
+    fn evaluate_all(
+        &self,
+        common: &[F],
+        fixed: &[F],
+        advice: &[Vec<F>],
+        instance: &[Vec<F>],
+    ) -> Vec<Vec<F>> {
+        let mut out = Vec::with_capacity(advice.len());
+        let mut pair = vec![[F::ZERO; 2]; self.operations.len()];
+        for (dst, value) in pair.iter_mut().zip(common) {
+            *dst = [*value; 2];
+        }
+        let mut i = 0;
+        while i + 1 < advice.len() {
+            for &index in &self.per_proof {
+                pair[index] = match self.operations[index] {
+                    VerifierExpressionOp::Constant(c) => [self.constants[c]; 2],
+                    VerifierExpressionOp::Fixed(f) => [fixed[f]; 2],
+                    VerifierExpressionOp::Advice(a) => [advice[i][a], advice[i + 1][a]],
+                    VerifierExpressionOp::Instance(q) => [instance[i][q], instance[i + 1][q]],
+                    VerifierExpressionOp::Negated(a) => [-pair[a][0], -pair[a][1]],
+                    VerifierExpressionOp::Sum(a, b) => {
+                        [pair[a][0] + pair[b][0], pair[a][1] + pair[b][1]]
+                    }
+                    VerifierExpressionOp::Product(a, b) => {
+                        [pair[a][0] * pair[b][0], pair[a][1] * pair[b][1]]
+                    }
+                    VerifierExpressionOp::Scaled(a, c) => [
+                        pair[a][0] * self.constants[c],
+                        pair[a][1] * self.constants[c],
+                    ],
+                    VerifierExpressionOp::Selector => {
+                        panic!("virtual selectors are removed during optimization")
+                    }
+                };
+            }
+            out.push(self.roots.iter().map(|&root| pair[root][0]).collect());
+            out.push(self.roots.iter().map(|&root| pair[root][1]).collect());
+            i += 2;
+        }
+        if i < advice.len() {
+            let mut values = common.to_vec();
+            for &index in &self.per_proof {
+                values[index] = self.operation(index, &values, fixed, &advice[i], &instance[i]);
+            }
+            out.push(self.roots.iter().map(|&root| values[root]).collect());
+        }
+        out
+    }
+}
 
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
@@ -49,6 +244,7 @@ pub struct VerifyingKey<C: CurveAffine> {
     cs: ConstraintSystem<C::Scalar>,
     /// Cached maximum degree of `cs` (which doesn't change after construction).
     cs_degree: usize,
+    verifier_expressions: Arc<VerifierExpressions<C::Scalar>>,
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
 }
@@ -64,6 +260,9 @@ where
         cs: ConstraintSystem<C::Scalar>,
     ) -> Self {
         // Compute cached values.
+        let verifier_expressions = Arc::new(VerifierExpressions::compile(
+            cs.gates.iter().flat_map(|gate| gate.polynomials()),
+        ));
         let cs_degree = cs.degree();
 
         let mut vk = Self {
@@ -72,6 +271,7 @@ where
             permutation,
             cs,
             cs_degree,
+            verifier_expressions,
             // Temporary, this is not pinned.
             transcript_repr: C::Scalar::ZERO,
         };

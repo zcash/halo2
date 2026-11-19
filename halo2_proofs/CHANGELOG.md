@@ -12,6 +12,9 @@ and this project adheres to Rust's notion of
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms
   once before the final MSM.
+- The verifier caches compiled gate-expression schedules in verifying keys,
+  evaluates shared fixed subexpressions once per batch, and constructs
+  multi-opening query sets in one pass without changing their order.
 
 ## [0.4.1] - 2026-10-26
 ### Changed
