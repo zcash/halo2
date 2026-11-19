@@ -138,11 +138,49 @@ where
     let table = glv_instance_table(params)?;
     let mut commitments = vec![C::Curve::identity(); columns.len()];
     for_each_chunk(&mut commitments, 1, |commitments, first_column| {
-        let dense = columns[first_column..first_column + commitments.len()]
+        let mut dense = columns[first_column..first_column + commitments.len()]
             .iter()
             .map(|column| &column[..PREPARED_INSTANCE_DENSE_ROWS])
             .collect::<Vec<_>>();
-        table.dense.sum_batch_vartime(&dense, commitments);
+        // Row zero is a public anchor. Group by canonical encoding so
+        // only repeated anchors need copied columns and an add-back.
+        let mut anchors = dense
+            .iter()
+            .enumerate()
+            .map(|(index, column)| (column[0].to_repr(), index))
+            .collect::<Vec<_>>();
+        anchors.sort_unstable_by(|a, b| a.0.as_ref().cmp(b.0.as_ref()));
+        let mut shared = Vec::new();
+        let mut repeated = Vec::new();
+        for group in anchors.chunk_by(|a, b| a.0.as_ref() == b.0.as_ref()) {
+            if group.len() > 1 {
+                let shared_index = shared.len();
+                shared.push([dense[group[0].1][0]]);
+                for &(_, index) in group {
+                    let mut column: [C::Scalar; PREPARED_INSTANCE_DENSE_ROWS] = dense[index]
+                        .try_into()
+                        .expect("prepared columns have exactly seven dense rows");
+                    column[0] = C::Scalar::ZERO;
+                    repeated.push((index, shared_index, column));
+                }
+            }
+        }
+        for (index, _, column) in &repeated {
+            dense[*index] = column.as_slice();
+        }
+        if shared.is_empty() {
+            table.dense.sum_batch_vartime(&dense, commitments);
+        } else {
+            // Omitted trailing scalars are zero; reduce shared terms with the other sums.
+            dense.extend(shared.iter().map(|anchor| anchor.as_slice()));
+            let mut sums = vec![C::Curve::identity(); dense.len()];
+            table.dense.sum_batch_vartime(&dense, &mut sums);
+            let column_count = commitments.len();
+            commitments.copy_from_slice(&sums[..column_count]);
+            for (index, shared_index, _) in &repeated {
+                commitments[*index] += sums[column_count + *shared_index];
+            }
+        }
         for (commitment, &mask) in commitments.iter_mut().zip(&masks[first_column..]) {
             *commitment += table.offsets[mask];
         }

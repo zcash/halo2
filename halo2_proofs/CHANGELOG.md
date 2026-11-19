@@ -22,6 +22,8 @@ and this project adheres to Rust's notion of
   serialized form of `Params`, and the transcript, are unchanged.
 - Orchard-shaped public instance columns can use cached prepared fixed-base
   sums and Boolean-flag offsets. Other layouts retain the existing path.
+- Prepared instance commitments evaluate repeated public anchor terms once
+  per worker chunk while preserving each column's commitment order.
 
 ## [0.4.1] - 2026-10-26
 ### Changed

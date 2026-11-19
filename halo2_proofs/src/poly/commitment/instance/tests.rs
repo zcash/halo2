@@ -398,6 +398,61 @@ fn prepared_columns_handle_exceptional_bases_and_blinds() {
 }
 
 #[test]
+fn repeated_anchors_match_independent_prepared_sums() {
+    fn check<C: CurveAffine>() {
+        let params = Params::<C>::new(4);
+        let table = glv_instance_table(&params).unwrap();
+        let columns = (0..32)
+            .map(|index| {
+                let mut values = column::<C::Scalar>(PREPARED_INSTANCE_DENSE_ROWS, index);
+                values[0] = C::Scalar::from(
+                    u64::try_from(index % 3).expect("a remainder modulo three fits in u64"),
+                );
+                for flag in 0..3 {
+                    values.push(if index & (1 << flag) == 0 {
+                        C::Scalar::ZERO
+                    } else {
+                        C::Scalar::ONE
+                    });
+                }
+                values
+            })
+            .collect::<Vec<_>>();
+        let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        let compare = || {
+            for count in [1, 2, 3, 8, 17, columns.len()] {
+                let slices = &slices[..count];
+                let dense = slices
+                    .iter()
+                    .map(|column| &column[..PREPARED_INSTANCE_DENSE_ROWS])
+                    .collect::<Vec<_>>();
+                let mut expected = vec![C::Curve::identity(); dense.len()];
+                table.dense.sum_batch_vartime(&dense, &mut expected);
+                for (sum, column) in expected.iter_mut().zip(slices) {
+                    *sum += table.offsets[super::instance_flag_mask(column).unwrap()];
+                }
+                assert_eq!(commit_glv_instances(&params, slices).unwrap(), expected);
+                assert_eq!(
+                    commit_instance_columns(&params, slices),
+                    generic(&params, slices)
+                );
+            }
+        };
+        compare();
+        #[cfg(feature = "multicore")]
+        for threads in [1, 2, 4] {
+            maybe_rayon::ThreadPoolBuilder::new()
+                .num_threads(threads)
+                .build()
+                .expect("the test pool must build")
+                .install(compare);
+        }
+    }
+    check::<EqAffine>();
+    check::<EpAffine>();
+}
+
+#[test]
 fn prepared_instances_decline_undersized_parameters() {
     let params = Params::<EqAffine>::new(3);
     assert!(glv_instance_table(&params).is_none());
