@@ -15,6 +15,8 @@ use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, Transcr
 
 #[cfg(feature = "batch")]
 mod batch;
+#[cfg(test)]
+mod differential_tests;
 #[cfg(feature = "batch")]
 pub use batch::BatchVerifier;
 
@@ -438,74 +440,6 @@ mod tests {
                 },
             )?;
             layouter.constrain_instance(cell.cell(), config.instance, 0)
-        }
-    }
-
-    #[test]
-    fn compiled_gates_match_recursive_evaluation_for_random_instances() {
-        use crate::{
-            plonk::{AdviceQuery, Expression, FixedQuery, InstanceQuery, VerifierExpressions},
-            poly::Rotation,
-        };
-        use ff::Field;
-
-        let fixed = Expression::Fixed(FixedQuery {
-            index: 0,
-            column_index: 0,
-            rotation: Rotation::cur(),
-        });
-        let advice = Expression::Advice(AdviceQuery {
-            index: 0,
-            column_index: 0,
-            rotation: Rotation::next(),
-        });
-        let instance = Expression::Instance(InstanceQuery {
-            index: 0,
-            column_index: 0,
-            rotation: Rotation::prev(),
-        });
-        let shared = fixed.clone() * (Expression::Constant(Fp::ONE) - fixed);
-        let expressions = [
-            shared.clone() * (advice.clone() + instance.clone()),
-            shared.clone() * (advice - instance),
-            shared,
-        ];
-        let plan = VerifierExpressions::compile(&expressions);
-        let mut rng = UnwrapErr(SysRng);
-        for count in 0..=7 {
-            let fixed = [Fp::random(&mut rng)];
-            let advice = (0..count)
-                .map(|_| vec![Fp::random(&mut rng)])
-                .collect::<Vec<_>>();
-            let instance = (0..count)
-                .map(|_| vec![Fp::random(&mut rng)])
-                .collect::<Vec<_>>();
-            let expected = advice
-                .iter()
-                .zip(&instance)
-                .map(|(advice, instance)| {
-                    expressions
-                        .iter()
-                        .map(|expression| {
-                            expression.evaluate(
-                                &|scalar| scalar,
-                                &|_| panic!("test circuit has no virtual selectors"),
-                                &|query| fixed[query.index],
-                                &|query| advice[query.index],
-                                &|query| instance[query.index],
-                                &|a| -a,
-                                &|a, b| a + b,
-                                &|a, b| a * b,
-                                &|a, scalar| a * scalar,
-                            )
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .collect::<Vec<_>>();
-            assert_eq!(
-                plan.evaluate_all(&plan.common_values(&fixed), &fixed, &advice, &instance),
-                expected
-            );
         }
     }
 
