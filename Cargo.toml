@@ -24,7 +24,7 @@ bitvec = { version = "1", default-features = false }
 blake2b_simd = "1"
 ff = { version = "0.14", default-features = false, features = ["alloc"] }
 group = "0.14"
-pasta_curves = "0.6"
+pasta_curves = "0.6.3"
 rand = { version = "0.10", default-features = false, features = ["sys_rng"] }
 rand_core = { version = "0.10", default-features = false }
 sinsemilla = "0.2"

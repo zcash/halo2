@@ -38,6 +38,8 @@ pub use prover::*;
 pub use verifier::*;
 
 use std::io;
+#[cfg(feature = "batch")]
+use std::sync::Arc;
 
 /// This is a verifying key which allows for the verification of proofs for a
 /// particular circuit.
@@ -51,6 +53,9 @@ pub struct VerifyingKey<C: CurveAffine> {
     cs_degree: usize,
     /// The representative of this `VerifyingKey` in transcripts.
     transcript_repr: C::Scalar,
+    /// Bounded public proof layouts, shared by clones and excluded from the pinned key.
+    #[cfg(feature = "batch")]
+    proof_point_layouts: Arc<ProofPointLayouts>,
 }
 
 impl<C: CurveAffine> VerifyingKey<C>
@@ -74,6 +79,8 @@ where
             cs_degree,
             // Temporary, this is not pinned.
             transcript_repr: C::Scalar::ZERO,
+            #[cfg(feature = "batch")]
+            proof_point_layouts: Arc::default(),
         };
 
         let mut hasher = Blake2bParams::new()
@@ -177,3 +184,102 @@ type ChallengeY<F> = ChallengeScalar<F, Y>;
 #[derive(Clone, Copy, Debug)]
 struct X;
 type ChallengeX<F> = ChallengeScalar<F, X>;
+
+/// Point runs indexed by circuit-instance count for this verifying key.
+///
+/// The verifier's sequence of point and scalar reads depends only on the key
+/// and the circuit-instance count. Only a successfully verified batch installs
+/// its recorded layouts. A missing or mismatched layout falls back to ordinary
+/// decoding at every offset that was not prefetched.
+#[cfg(feature = "batch")]
+#[derive(Debug, Default)]
+pub(crate) struct ProofPointLayouts(std::sync::Mutex<ProofPointLayoutCache>);
+
+/// Fixed slots replaced in insertion order, so early shapes cannot pin the cache.
+#[cfg(feature = "batch")]
+#[derive(Debug)]
+struct ProofPointLayoutCache {
+    layouts: [Option<ProofPointLayout>; ProofPointLayouts::MAX_SHAPES],
+    next: usize,
+}
+
+#[cfg(feature = "batch")]
+#[derive(Debug)]
+struct ProofPointLayout {
+    circuits: usize,
+    ranges: Arc<[std::ops::Range<usize>]>,
+}
+
+#[cfg(feature = "batch")]
+impl Default for ProofPointLayoutCache {
+    fn default() -> Self {
+        Self {
+            layouts: [const { None }; ProofPointLayouts::MAX_SHAPES],
+            next: 0,
+        }
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<C: CurveAffine> VerifyingKey<C> {
+    pub(crate) fn proof_point_layouts(&self) -> &ProofPointLayouts {
+        &self.proof_point_layouts
+    }
+}
+
+#[cfg(feature = "batch")]
+impl ProofPointLayouts {
+    /// Each retained shape has at most [`crate::MAX_CACHED_PROOF_POINT_RUNS`] runs.
+    const MAX_SHAPES: usize = 256;
+
+    pub(crate) fn get(&self, circuits: usize) -> Option<Arc<[std::ops::Range<usize>]>> {
+        let layouts = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        layouts
+            .layouts
+            .iter()
+            .flatten()
+            .find(|layout| layout.circuits == circuits)
+            .map(|layout| Arc::clone(&layout.ranges))
+    }
+
+    pub(crate) fn insert(&self, circuits: usize, ranges: Vec<std::ops::Range<usize>>) {
+        if ranges.len() <= crate::MAX_CACHED_PROOF_POINT_RUNS {
+            self.insert_layout(ProofPointLayout {
+                circuits,
+                ranges: ranges.into(),
+            });
+        }
+    }
+
+    fn insert_layout(&self, layout: ProofPointLayout) {
+        let mut layouts = self
+            .0
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if layouts
+            .layouts
+            .iter()
+            .flatten()
+            .any(|existing| existing.circuits == layout.circuits)
+        {
+            return;
+        }
+        let next = layouts.next;
+        layouts.layouts[next] = Some(layout);
+        layouts.next = (next + 1) % Self::MAX_SHAPES;
+    }
+
+    /// Publishes bounded candidate layouts only after the batch's final MSM check.
+    pub(crate) fn install(self, destination: &Self) {
+        let layouts = self
+            .0
+            .into_inner()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        for layout in layouts.layouts.into_iter().flatten() {
+            destination.insert_layout(layout);
+        }
+    }
+}

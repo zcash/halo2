@@ -18,3 +18,7 @@ pub mod transcript;
 
 pub mod dev;
 mod helpers;
+
+// Bound learned proof layouts independently of attacker-chosen circuit counts.
+#[cfg(feature = "batch")]
+const MAX_CACHED_PROOF_POINT_RUNS: usize = 32;

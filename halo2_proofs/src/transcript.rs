@@ -290,6 +290,127 @@ where
     }
 }
 
+/// An in-memory [`Blake2bRead`] with optional exact-offset point decodings.
+///
+/// Every byte is still read and absorbed in the original order. Prefetched
+/// decodings must equal [`group::GroupEncoding::from_bytes`] on those bytes
+/// (see [`CurveAffine::batch_decode_vartime`]); other offsets decode normally.
+#[cfg(feature = "batch")]
+pub(crate) struct PrefetchedBlake2bRead<'a, C: CurveAffine>
+where
+    C::Scalar: FromUniformBytes<64>,
+{
+    inner: Blake2bRead<&'a [u8], C, Challenge255<C>>,
+    position: usize,
+    /// `(offset, decoding)` pairs in increasing offset order.
+    prefetched: Vec<(usize, Option<C>)>,
+    next_prefetched: usize,
+    recorded: Option<Vec<std::ops::Range<usize>>>,
+}
+
+#[cfg(feature = "batch")]
+impl<'a, C: CurveAffine> PrefetchedBlake2bRead<'a, C>
+where
+    C::Scalar: FromUniformBytes<64>,
+{
+    pub(crate) fn with_prefetched(proof: &'a [u8], prefetched: Vec<(usize, Option<C>)>) -> Self {
+        debug_assert!(prefetched.windows(2).all(|w| w[0].0 < w[1].0));
+        Self {
+            inner: Blake2bRead::init(proof),
+            position: 0,
+            prefetched,
+            next_prefetched: 0,
+            recorded: None,
+        }
+    }
+
+    /// Records at most [`crate::MAX_CACHED_PROOF_POINT_RUNS`] contiguous point
+    /// runs, discarding larger layouts without changing how the proof is read.
+    pub(crate) fn recording(proof: &'a [u8]) -> Self {
+        Self {
+            inner: Blake2bRead::init(proof),
+            position: 0,
+            prefetched: Vec::new(),
+            next_prefetched: 0,
+            recorded: Some(Vec::new()),
+        }
+    }
+
+    pub(crate) fn into_recorded(self) -> Option<Vec<std::ops::Range<usize>>> {
+        self.recorded
+    }
+
+    fn take_prefetched(&mut self, offset: usize) -> Option<Option<C>> {
+        while let Some(&(at, decoded)) = self.prefetched.get(self.next_prefetched) {
+            if at > offset {
+                break;
+            }
+            self.next_prefetched += 1;
+            if at == offset {
+                return Some(decoded);
+            }
+        }
+        None
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<C: CurveAffine> Transcript<C, Challenge255<C>> for PrefetchedBlake2bRead<'_, C>
+where
+    C::Scalar: FromUniformBytes<64>,
+{
+    fn squeeze_challenge(&mut self) -> Challenge255<C> {
+        self.inner.squeeze_challenge()
+    }
+
+    fn common_point(&mut self, point: C) -> io::Result<()> {
+        self.inner.common_point(point)
+    }
+
+    fn common_scalar(&mut self, scalar: C::Scalar) -> io::Result<()> {
+        self.inner.common_scalar(scalar)
+    }
+}
+
+#[cfg(feature = "batch")]
+impl<C: CurveAffine> TranscriptRead<C, Challenge255<C>> for PrefetchedBlake2bRead<'_, C>
+where
+    C::Scalar: FromUniformBytes<64>,
+{
+    fn read_point(&mut self) -> io::Result<C> {
+        let offset = self.position;
+        let mut compressed = C::Repr::default();
+        self.inner.reader.read_exact(compressed.as_mut())?;
+        self.position += compressed.as_ref().len();
+        let decoded = self
+            .take_prefetched(offset)
+            .unwrap_or_else(|| Option::from(C::from_bytes(&compressed)));
+        let point: C =
+            decoded.ok_or_else(|| io::Error::other("invalid point encoding in proof"))?;
+        if let Some(recorded) = &mut self.recorded {
+            if let Some(last) = recorded.last_mut().filter(|last| last.end == offset) {
+                last.end = self.position;
+            } else if recorded.len() == crate::MAX_CACHED_PROOF_POINT_RUNS {
+                self.recorded = None;
+            } else {
+                recorded.push(offset..self.position);
+            }
+        }
+        self.inner.common_point(point)?;
+        Ok(point)
+    }
+
+    fn read_scalar(&mut self) -> io::Result<C::Scalar> {
+        let mut data = <C::Scalar as PrimeField>::Repr::default();
+        self.inner.reader.read_exact(data.as_mut())?;
+        self.position += data.as_ref().len();
+        let scalar: C::Scalar = Option::from(C::Scalar::from_repr(data))
+            .ok_or_else(|| io::Error::other("invalid field element encoding in proof"))?;
+        self.inner.common_scalar(scalar)?;
+        Ok(scalar)
+    }
+}
+
 pub(crate) fn read_n_points<C: CurveAffine, E: EncodedChallenge<C>, T: TranscriptRead<C, E>>(
     transcript: &mut T,
     n: usize,
@@ -303,3 +424,6 @@ pub(crate) fn read_n_scalars<C: CurveAffine, E: EncodedChallenge<C>, T: Transcri
 ) -> io::Result<Vec<C::Scalar>> {
     (0..n).map(|_| transcript.read_scalar()).collect()
 }
+
+#[cfg(all(test, feature = "batch"))]
+mod tests;
