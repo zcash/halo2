@@ -338,14 +338,24 @@ fn prepared_columns_match_generic_and_reject_other_shapes() {
                 generic(&params, slices)
             );
         }
-        let mut invalid = columns[0].clone();
-        invalid[7] = C::Scalar::from(2);
-        assert!(commit_glv_instances(&params, &[&invalid]).is_none());
-        assert_eq!(
-            commit_instance_columns(&params, &[&invalid]),
-            generic(&params, &[&invalid])
-        );
-        assert!(commit_glv_instances(&params, &[&columns[0][..7]]).is_none());
+        assert!(commit_glv_instances(&params, &[]).is_none());
+        assert!(commit_instance_columns(&params, &[]).is_empty());
+        for len in [0, 7, 9, 11] {
+            let invalid_shape = vec![C::Scalar::ZERO; len];
+            assert!(commit_glv_instances(&params, &[&invalid_shape]).is_none());
+        }
+        for flag in 7..10 {
+            for invalid_value in [C::Scalar::from(2), -C::Scalar::ONE] {
+                let mut invalid = columns[0].clone();
+                invalid[flag] = invalid_value;
+                let mixed = [&columns[0][..], &invalid[..]];
+                assert!(commit_glv_instances(&params, &mixed).is_none());
+                assert_eq!(
+                    commit_instance_columns(&params, &mixed),
+                    generic(&params, &mixed)
+                );
+            }
+        }
 
         let first = glv_instance_table(&params).unwrap();
         assert!(Arc::ptr_eq(&first, &glv_instance_table(&params).unwrap()));
@@ -358,4 +368,37 @@ fn prepared_columns_match_generic_and_reject_other_shapes() {
     }
     check::<EqAffine>();
     check::<EpAffine>();
+}
+
+#[test]
+fn prepared_columns_handle_exceptional_bases_and_blinds() {
+    fn check<C: CurveAffine>() {
+        let mut params = Params::<C>::new(4);
+        let p = params.g_lagrange[0];
+        params.g_lagrange[..7].copy_from_slice(&[C::identity(), p, -p, p, p, -p, C::identity()]);
+        let columns = (0..8)
+            .map(|index| {
+                let mut values = column::<C::Scalar>(PREPARED_INSTANCE_DENSE_ROWS, index);
+                values.extend([C::Scalar::ONE, C::Scalar::ZERO, C::Scalar::ONE]);
+                values
+            })
+            .collect::<Vec<_>>();
+        let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        for blind in [C::identity(), p, -p] {
+            params.w = blind;
+            assert!(commit_glv_instances(&params, &slices).is_some());
+            assert_eq!(
+                commit_instance_columns(&params, &slices),
+                generic(&params, &slices)
+            );
+        }
+    }
+    check::<EqAffine>();
+    check::<EpAffine>();
+}
+
+#[test]
+fn prepared_instances_decline_undersized_parameters() {
+    let params = Params::<EqAffine>::new(3);
+    assert!(glv_instance_table(&params).is_none());
 }
