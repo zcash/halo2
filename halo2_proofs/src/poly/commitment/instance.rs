@@ -11,14 +11,26 @@
 //! built once, when enough short columns are committed together for it to pay
 //! off, and cached in [`Params`] for every later commitment. All scalars and
 //! points here are public.
+//!
+//! Columns of Orchard's shape, seven full-width rows then three Boolean flags,
+//! instead use doubling-free sums prepared once for the seven dense bases, plus
+//! one of eight precomputed offsets for the blind and the flags.
 
-use std::sync::{Arc, Mutex, PoisonError};
+use std::{
+    panic::AssertUnwindSafe,
+    sync::{Arc, Mutex, PoisonError},
+};
 
-use group::{ff::PrimeField, Group};
+use group::{
+    ff::{Field, PrimeField},
+    Group,
+};
 
 use super::Params;
 use crate::{
-    arithmetic::{booth_digit, booth_window_count, BoothDigit, CurveAffine, CurveExt},
+    arithmetic::{
+        booth_digit, booth_window_count, BoothDigit, CurveAffine, CurveExt, PreparedFixedBaseSum,
+    },
     multicore,
 };
 
@@ -36,6 +48,12 @@ const MULTIPLES_PER_BASE: usize = 1 << (WINDOW_BITS - 1);
 /// columns, which only callers with unusual circuits supply, keep the generic
 /// multi-scalar multiplication. This covers Orchard's ten-row columns.
 const MAX_TABLE_ROWS: usize = 64;
+
+// Orchard's public instance column has seven full-width rows and three flags.
+const PREPARED_INSTANCE_DENSE_ROWS: usize = 7;
+const PREPARED_INSTANCE_BOOLEAN_ROWS: usize = 3;
+const PREPARED_INSTANCE_ROWS: usize = PREPARED_INSTANCE_DENSE_ROWS + PREPARED_INSTANCE_BOOLEAN_ROWS;
+const PREPARED_INSTANCE_OFFSETS: usize = 1 << PREPARED_INSTANCE_BOOLEAN_ROWS;
 
 /// Whether `columns` columns of at most `rows` rows are cheaper to commit
 /// through a table built for them than one multi-scalar multiplication each.
@@ -58,6 +76,10 @@ pub(crate) fn commit_instance_columns<C>(params: &Params<C>, columns: &[&[C::Sca
 where
     C: CurveAffine,
 {
+    if let Some(commitments) = commit_glv_instances(params, columns) {
+        return to_affine(&commitments);
+    }
+
     let short = columns
         .iter()
         .enumerate()
@@ -99,6 +121,109 @@ where
     }
 
     to_affine(&commitments)
+}
+/// Uses prepared sums for Orchard-shaped columns with Boolean trailing flags.
+/// Other shapes and unsupported curves retain the generic commitment path.
+fn commit_glv_instances<C>(params: &Params<C>, columns: &[&[C::Scalar]]) -> Option<Vec<C::Curve>>
+where
+    C: CurveAffine,
+{
+    if columns.is_empty() {
+        return None;
+    }
+    let masks = columns
+        .iter()
+        .map(|column| instance_flag_mask(column))
+        .collect::<Option<Vec<_>>>()?;
+    let table = glv_instance_table(params)?;
+    let mut commitments = vec![C::Curve::identity(); columns.len()];
+    for_each_chunk(&mut commitments, 1, |commitments, first_column| {
+        let dense = columns[first_column..first_column + commitments.len()]
+            .iter()
+            .map(|column| &column[..PREPARED_INSTANCE_DENSE_ROWS])
+            .collect::<Vec<_>>();
+        table.dense.sum_batch_vartime(&dense, commitments);
+        for (commitment, &mask) in commitments.iter_mut().zip(&masks[first_column..]) {
+            *commitment += table.offsets[mask];
+        }
+    });
+    Some(commitments)
+}
+
+/// Returns the Boolean-row mask, declining all unrecognized shapes or flags.
+fn instance_flag_mask<F: Field>(instance: &[F]) -> Option<usize> {
+    if instance.len() != PREPARED_INSTANCE_ROWS {
+        return None;
+    }
+    let mut mask = 0;
+    for (flag, scalar) in instance[PREPARED_INSTANCE_DENSE_ROWS..].iter().enumerate() {
+        if bool::from(scalar.is_zero()) {
+            continue;
+        }
+        if *scalar == F::ONE {
+            mask |= 1 << flag;
+        } else {
+            return None;
+        }
+    }
+    Some(mask)
+}
+
+/// Doubling-free dense sums and default-blind/Boolean offsets, shared by Params clones.
+struct GlvInstanceTable<C: CurveAffine> {
+    // Immutable prepared tables cannot be left partially modified by a panic.
+    dense: AssertUnwindSafe<Box<dyn PreparedFixedBaseSum<C::CurveExt>>>,
+    offsets: [C::Curve; PREPARED_INSTANCE_OFFSETS],
+    bases: Vec<C>,
+    w: C,
+}
+
+/// The prepared table of a set of [`Params`], once built. Clones share it.
+pub(crate) struct GlvInstanceCache<C: CurveAffine>(Arc<Mutex<Option<Arc<GlvInstanceTable<C>>>>>);
+
+impl<C: CurveAffine> Default for GlvInstanceCache<C> {
+    fn default() -> Self {
+        Self(Arc::new(Mutex::new(None)))
+    }
+}
+
+impl<C: CurveAffine> Clone for GlvInstanceCache<C> {
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0))
+    }
+}
+
+/// Returns the prepared table, rebuilding it if the parameters' bases changed.
+fn glv_instance_table<C: CurveAffine>(params: &Params<C>) -> Option<Arc<GlvInstanceTable<C>>> {
+    let bases = params.g_lagrange.get(..PREPARED_INSTANCE_ROWS)?;
+    let mut cached = params
+        .glv_instance_cache
+        .0
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner);
+    if let Some(table) = cached
+        .as_ref()
+        .filter(|table| table.bases == bases && table.w == params.w)
+    {
+        return Some(Arc::clone(table));
+    }
+    let dense = C::CurveExt::try_prepare_fixed_base_sum(&bases[..PREPARED_INSTANCE_DENSE_ROWS])?;
+    // Instance commitments use Blind::default(), whose scalar is one.
+    let offsets = std::array::from_fn::<_, PREPARED_INSTANCE_OFFSETS, _>(|mask| {
+        bases[PREPARED_INSTANCE_DENSE_ROWS..]
+            .iter()
+            .enumerate()
+            .filter(|(flag, _)| mask & (1 << flag) != 0)
+            .fold(C::Curve::from(params.w), |sum, (_, base)| sum + *base)
+    });
+    let table = Arc::new(GlvInstanceTable {
+        dense: AssertUnwindSafe(dense),
+        offsets,
+        bases: bases.to_vec(),
+        w: params.w,
+    });
+    *cached = Some(Arc::clone(&table));
+    Some(table)
 }
 
 fn to_affine<C>(points: &[C::Curve]) -> Vec<C>

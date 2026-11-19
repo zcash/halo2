@@ -39,6 +39,7 @@ pub struct Params<C: CurveAffine> {
     pub(crate) w: C,
     pub(crate) u: C,
     instance_windows: instance::WindowCache<C>,
+    glv_instance_cache: instance::GlvInstanceCache<C>,
 }
 
 impl<C: CurveAffine> fmt::Debug for Params<C> {
@@ -134,6 +135,7 @@ impl<C: CurveAffine> Params<C> {
             w,
             u,
             instance_windows: Default::default(),
+            glv_instance_cache: Default::default(),
         }
     }
 
@@ -248,6 +250,7 @@ impl<C: CurveAffine> Params<C> {
             w,
             u,
             instance_windows: Default::default(),
+            glv_instance_cache: Default::default(),
         })
     }
 }

@@ -7,7 +7,8 @@ use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
 
 use super::{
-    commit_instance_columns, table_pays_off, WindowTable, MAX_TABLE_ROWS, MIN_BATCH_NORMALIZE,
+    commit_glv_instances, commit_instance_columns, glv_instance_table, table_pays_off, WindowTable,
+    MAX_TABLE_ROWS, MIN_BATCH_NORMALIZE, PREPARED_INSTANCE_DENSE_ROWS,
 };
 use crate::{
     arithmetic::{BoothDigit, CurveAffine},
@@ -309,4 +310,52 @@ fn a_table_for_other_bases_is_not_used() {
         .is_none());
     commit_all(&params, &enough_columns(ROWS));
     commit_all(&params, &[column(ROWS, 3)]);
+}
+
+#[test]
+fn prepared_columns_match_generic_and_reject_other_shapes() {
+    fn check<C: CurveAffine>() {
+        let mut params = Params::<C>::new(4);
+        let columns = (0..17)
+            .map(|index| {
+                let mut values = column::<C::Scalar>(PREPARED_INSTANCE_DENSE_ROWS, index);
+                for flag in 0..3 {
+                    values.push(if index & (1 << flag) == 0 {
+                        C::Scalar::ZERO
+                    } else {
+                        C::Scalar::ONE
+                    });
+                }
+                values
+            })
+            .collect::<Vec<_>>();
+        let slices = columns.iter().map(Vec::as_slice).collect::<Vec<_>>();
+        for count in [1, 2, 8, columns.len()] {
+            let slices = &slices[..count];
+            assert!(commit_glv_instances(&params, slices).is_some());
+            assert_eq!(
+                commit_instance_columns(&params, slices),
+                generic(&params, slices)
+            );
+        }
+        let mut invalid = columns[0].clone();
+        invalid[7] = C::Scalar::from(2);
+        assert!(commit_glv_instances(&params, &[&invalid]).is_none());
+        assert_eq!(
+            commit_instance_columns(&params, &[&invalid]),
+            generic(&params, &[&invalid])
+        );
+        assert!(commit_glv_instances(&params, &[&columns[0][..7]]).is_none());
+
+        let first = glv_instance_table(&params).unwrap();
+        assert!(Arc::ptr_eq(&first, &glv_instance_table(&params).unwrap()));
+        params.g_lagrange.swap(0, 1);
+        assert!(!Arc::ptr_eq(&first, &glv_instance_table(&params).unwrap()));
+        assert_eq!(
+            commit_instance_columns(&params, &slices),
+            generic(&params, &slices)
+        );
+    }
+    check::<EqAffine>();
+    check::<EpAffine>();
 }

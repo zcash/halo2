@@ -20,6 +20,8 @@ and this project adheres to Rust's notion of
   the Pasta curves), kept as long as the parameters and shared by their clones.
   Columns longer than 64 rows keep the generic MSM. The `Debug` output and the
   serialized form of `Params`, and the transcript, are unchanged.
+- Orchard-shaped public instance columns can use cached prepared fixed-base
+  sums and Boolean-flag offsets. Other layouts retain the existing path.
 
 ## [0.4.1] - 2026-10-26
 ### Changed
