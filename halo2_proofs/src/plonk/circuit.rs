@@ -266,8 +266,19 @@ impl Selector {
         region.enable_selector(|| "", self, offset)
     }
 
-    /// Is this selector "simple"? Simple selectors can only be multiplied
-    /// by expressions that contain no other simple selectors.
+    /// Is this selector "simple"?
+    ///
+    /// Simple selectors are eligible for the selector-combining optimization.
+    /// The construction rules guarantee that every gate expression involving
+    /// a simple selector has the factored form `s_i * t` where `t` contains
+    /// no simple selectors.  This is enforced by the `Expression` arithmetic
+    /// operators:
+    ///   - `Add`/`Sub`: panic if either operand contains a simple selector.
+    ///   - `Mul`: panic if *both* operands contain a simple selector.
+    ///
+    /// Complex selectors (created via [`ConstraintSystem::complex_selector`])
+    /// have no such restriction and can appear freely in sums, but are not
+    /// eligible for combining.
     pub fn is_simple(&self) -> bool {
         self.1
     }
@@ -636,6 +647,15 @@ impl<F: Field> Expression<F> {
     }
 
     /// Returns whether or not this expression contains a simple `Selector`.
+    ///
+    /// An expression is "simple" if it contains at least one simple selector
+    /// as a subterm.  The invariant maintained by the `Add`, `Sub`, and `Mul`
+    /// implementations on `Expression` ensures that a simple expression has
+    /// *exactly one* simple selector factor: addition and subtraction reject
+    /// any operand containing a simple selector, while multiplication rejects
+    /// the case where *both* operands contain one.  Therefore every simple
+    /// expression has the form `s_i * t` where `s_i` is a simple selector
+    /// and `t` contains no simple selectors.
     fn contains_simple_selector(&self) -> bool {
         self.evaluate(
             &|_| false,
@@ -650,7 +670,18 @@ impl<F: Field> Expression<F> {
         )
     }
 
-    /// Extracts a simple selector from this gate, if present
+    /// Extracts the unique simple selector from this expression, if present.
+    ///
+    /// Returns `Some(selector)` for simple expressions (which, by the
+    /// invariant documented on [`contains_simple_selector`], contain exactly
+    /// one simple selector factor) and `None` for non-simple expressions.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the expression somehow contains two simple selectors,
+    /// which would indicate a violation of the construction invariant.
+    ///
+    /// [`contains_simple_selector`]: Expression::contains_simple_selector
     fn extract_simple_selector(&self) -> Option<Selector> {
         let op = |a, b| match (a, b) {
             (Some(a), None) | (None, Some(a)) => Some(a),
@@ -1241,8 +1272,21 @@ impl<F: Field> ConstraintSystem<F> {
 
         // Compute the maximal degree of every selector. We only consider the
         // expressions in gates, as lookup arguments cannot support simple
-        // selectors. Selectors that are complex or do not appear in any gates
-        // will have degree zero.
+        // selectors (this is enforced by `ConstraintSystem::lookup`, which
+        // panics if any input expression contains a simple selector).
+        //
+        // A selector's max_degree is defined as:
+        //   - 0, if the selector is non-simple (complex) or does not appear
+        //     in any gate expression;
+        //   - the maximum degree of any gate expression containing that
+        //     selector, otherwise.
+        //
+        // Selectors with max_degree 0 are not eligible for combining (they
+        // are assigned their own dedicated fixed column in `process()`).
+        // This is correct because either:
+        //   (a) the selector is complex, so it may appear in sums and cannot
+        //       be factored into the `s_i * product_of_roots` form, or
+        //   (b) the selector is unused, so there is nothing to combine.
         let mut degrees = vec![0; selectors.len()];
         for expr in self.gates.iter().flat_map(|gate| gate.polys.iter()) {
             if let Some(selector) = expr.extract_simple_selector() {
