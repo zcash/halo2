@@ -7,7 +7,6 @@ extern crate alloc;
 
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::convert::TryInto;
 use core::fmt;
 use core::iter;
 use core::marker::PhantomData;
@@ -58,6 +57,18 @@ pub trait Spec<F: Field, const T: usize, const RATE: usize>: fmt::Debug {
 
     /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
     fn constants() -> (Vec<[F; T]>, Mds<F, T>, Mds<F, T>);
+
+    /// Applies this specification's permutation using precomputed constants, if available.
+    ///
+    /// Specifications with compile-time constants can override this to avoid allocating
+    /// round constants when hashing with [`Hash`](struct@Hash) and to evaluate an
+    /// equivalent sparse partial-round representation. Returns `None` by default, in
+    /// which case [`Hash`](struct@Hash) lazily initializes and caches [`Spec::constants`]
+    /// on the first permutation.
+    fn try_permute(state: State<F, T>) -> Option<State<F, T>> {
+        let _ = state;
+        None
+    }
 }
 
 /// Generates `(round_constants, mds, mds^-1)` corresponding to this specification.
@@ -139,31 +150,21 @@ pub(crate) fn permute<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE:
         apply_mds(state);
     };
 
-    iter::empty()
-        .chain(iter::repeat_n(
-            &full_round as &dyn Fn(&mut State<F, T>, &[F; T]),
-            r_f,
-        ))
-        .chain(iter::repeat_n(
-            &part_round as &dyn Fn(&mut State<F, T>, &[F; T]),
-            r_p,
-        ))
-        .chain(iter::repeat_n(
-            &full_round as &dyn Fn(&mut State<F, T>, &[F; T]),
-            r_f,
-        ))
-        .zip(round_constants.iter())
-        .fold(state, |state, (round, rcs)| {
-            round(state, rcs);
-            state
-        });
+    for rcs in &round_constants[..r_f] {
+        full_round(state, rcs);
+    }
+    for rcs in &round_constants[r_f..r_f + r_p] {
+        part_round(state, rcs);
+    }
+    for rcs in &round_constants[r_f + r_p..2 * r_f + r_p] {
+        full_round(state, rcs);
+    }
 }
 
 fn poseidon_sponge<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>(
     state: &mut State<F, T>,
     input: Option<&Absorbing<F, RATE>>,
-    mds_matrix: &Mds<F, T>,
-    round_constants: &[[F; T]],
+    constants: &mut Option<(Vec<[F; T]>, Mds<F, T>)>,
 ) -> Squeezing<F, RATE> {
     if let Some(Absorbing(input)) = input {
         // `Iterator::zip` short-circuits when one iterator completes, so this will only
@@ -173,7 +174,15 @@ fn poseidon_sponge<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: us
         }
     }
 
-    permute::<F, S, T, RATE>(state, mds_matrix, round_constants);
+    if let Some(permuted) = S::try_permute(*state) {
+        *state = permuted;
+    } else {
+        let (round_constants, mds_matrix) = constants.get_or_insert_with(|| {
+            let (round_constants, mds_matrix, _) = S::constants();
+            (round_constants, mds_matrix)
+        });
+        permute::<F, S, T, RATE>(state, mds_matrix, round_constants);
+    }
 
     let mut output = [None; RATE];
     for (word, value) in output.iter_mut().zip(state.iter()) {
@@ -211,13 +220,7 @@ impl<F: fmt::Debug, const RATE: usize> Absorbing<F, RATE> {
 
     /// Initializes an empty sponge in the absorbing state.
     pub fn init_empty() -> Self {
-        Self(
-            (0..RATE)
-                .map(|_| None)
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
-        )
+        Self(core::array::from_fn(|_| None))
     }
 }
 
@@ -255,13 +258,7 @@ impl<F: fmt::Debug, const RATE: usize> Squeezing<F, RATE> {
     /// the circuit implementation in `halo2_gadgets`, and may be removed from the public
     /// API if refactoring enables the circuit implementation to move into this crate.
     pub fn init_full(vals: [F; RATE]) -> Self {
-        Self(
-            vals.into_iter()
-                .map(Some)
-                .collect::<Vec<_>>()
-                .try_into()
-                .unwrap(),
-        )
+        Self(vals.map(Some))
     }
 }
 
@@ -290,8 +287,7 @@ pub(crate) struct Sponge<
 > {
     mode: M,
     state: State<F, T>,
-    mds_matrix: Mds<F, T>,
-    round_constants: Vec<[F; T]>,
+    constants: Option<(Vec<[F; T]>, Mds<F, T>)>,
     _marker: PhantomData<S>,
 }
 
@@ -300,8 +296,6 @@ impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
 {
     /// Constructs a new sponge for the given Poseidon specification.
     pub(crate) fn new(initial_capacity_element: F) -> Self {
-        let (round_constants, mds_matrix, _) = S::constants();
-
         let mode = Absorbing([None; RATE]);
         let mut state = [F::ZERO; T];
         state[RATE] = initial_capacity_element;
@@ -309,8 +303,7 @@ impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
         Sponge {
             mode,
             state,
-            mds_matrix,
-            round_constants,
+            constants: None,
             _marker: PhantomData,
         }
     }
@@ -328,8 +321,7 @@ impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
         let _ = poseidon_sponge::<F, S, T, RATE>(
             &mut self.state,
             Some(&self.mode),
-            &self.mds_matrix,
-            &self.round_constants,
+            &mut self.constants,
         );
         self.mode = Absorbing::init_with(value);
     }
@@ -339,15 +331,13 @@ impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
         let mode = poseidon_sponge::<F, S, T, RATE>(
             &mut self.state,
             Some(&self.mode),
-            &self.mds_matrix,
-            &self.round_constants,
+            &mut self.constants,
         );
 
         Sponge {
             mode,
             state: self.state,
-            mds_matrix: self.mds_matrix,
-            round_constants: self.round_constants,
+            constants: self.constants,
             _marker: PhantomData,
         }
     }
@@ -366,12 +356,8 @@ impl<F: Field, S: Spec<F, T, RATE>, const T: usize, const RATE: usize>
             }
 
             // We've already squeezed out all available elements
-            self.mode = poseidon_sponge::<F, S, T, RATE>(
-                &mut self.state,
-                None,
-                &self.mds_matrix,
-                &self.round_constants,
-            );
+            self.mode =
+                poseidon_sponge::<F, S, T, RATE>(&mut self.state, None, &mut self.constants);
         }
     }
 }
@@ -479,10 +465,15 @@ impl<F: PrimeField, S: Spec<F, T, RATE>, const T: usize, const RATE: usize, cons
 
 #[cfg(test)]
 mod tests {
+    use alloc::vec::Vec;
+    use core::sync::atomic::{AtomicUsize, Ordering};
     use group::ff::PrimeField;
     use pasta_curves::pallas;
 
-    use super::{permute, ConstantLength, Hash, P128Pow5T3 as OrchardNullifier, Spec};
+    use super::{
+        permute, Absorbing, ConstantLength, Domain, Hash, Mds, P128Pow5T3 as OrchardNullifier,
+        Spec, Sponge, Squeezing,
+    };
 
     #[test]
     fn orchard_spec_equivalence() {
@@ -498,5 +489,114 @@ mod tests {
         let mut state = [message[0], message[1], pallas::Base::from_u128(2 << 64)];
         permute::<_, OrchardNullifier, 3, 2>(&mut state, &mds, &round_constants);
         assert_eq!(state[0], result);
+    }
+
+    #[test]
+    fn absorbing_and_squeezing_modes_preserve_all_elements() {
+        #[derive(Debug, PartialEq, Eq)]
+        struct NonCopyWord(u64);
+
+        let mut absorbing = Absorbing::<NonCopyWord, 3>::init_empty();
+        assert_eq!(absorbing.expose_inner(), &[None, None, None]);
+        assert_eq!(absorbing.absorb(NonCopyWord(10)), Ok(()));
+        assert_eq!(absorbing.absorb(NonCopyWord(20)), Ok(()));
+        assert_eq!(absorbing.absorb(NonCopyWord(30)), Ok(()));
+        assert_eq!(absorbing.absorb(NonCopyWord(40)), Err(NonCopyWord(40)));
+        assert_eq!(
+            absorbing.expose_inner(),
+            &[
+                Some(NonCopyWord(10)),
+                Some(NonCopyWord(20)),
+                Some(NonCopyWord(30)),
+            ]
+        );
+
+        let mut squeezing = Squeezing::<NonCopyWord, 3>::init_full([
+            NonCopyWord(1),
+            NonCopyWord(2),
+            NonCopyWord(3),
+        ]);
+        assert_eq!(squeezing.squeeze(), Some(NonCopyWord(1)));
+        assert_eq!(squeezing.squeeze(), Some(NonCopyWord(2)));
+        assert_eq!(squeezing.squeeze(), Some(NonCopyWord(3)));
+        assert_eq!(squeezing.squeeze(), None);
+    }
+
+    #[test]
+    fn fallback_spec_caches_constants_across_absorb_and_multisqueeze() {
+        static CONSTANTS_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+        #[derive(Debug)]
+        struct CountingFallbackSpec;
+
+        impl Spec<pallas::Base, 3, 2> for CountingFallbackSpec {
+            fn full_rounds() -> usize {
+                <OrchardNullifier as Spec<pallas::Base, 3, 2>>::full_rounds()
+            }
+
+            fn partial_rounds() -> usize {
+                <OrchardNullifier as Spec<pallas::Base, 3, 2>>::partial_rounds()
+            }
+
+            fn sbox(val: pallas::Base) -> pallas::Base {
+                OrchardNullifier::sbox(val)
+            }
+
+            fn secure_mds() -> usize {
+                unimplemented!()
+            }
+
+            fn constants() -> (
+                Vec<[pallas::Base; 3]>,
+                Mds<pallas::Base, 3>,
+                Mds<pallas::Base, 3>,
+            ) {
+                CONSTANTS_CALLS.fetch_add(1, Ordering::SeqCst);
+                OrchardNullifier::constants()
+            }
+        }
+
+        CONSTANTS_CALLS.store(0, Ordering::SeqCst);
+        let cap = <ConstantLength<3> as Domain<pallas::Base, 2>>::initial_capacity_element();
+        let msg = [
+            pallas::Base::from(3),
+            pallas::Base::from(14),
+            pallas::Base::from(15),
+        ];
+
+        let mut sponge = Sponge::<pallas::Base, CountingFallbackSpec, _, 3, 2>::new(cap);
+        assert_eq!(CONSTANTS_CALLS.load(Ordering::SeqCst), 0);
+
+        for word in msg
+            .into_iter()
+            .chain(<ConstantLength<3> as Domain<pallas::Base, 2>>::padding(3))
+        {
+            sponge.absorb(word);
+        }
+        let mut squeezing = sponge.finish_absorbing();
+        let actual: [pallas::Base; 5] = core::array::from_fn(|_| squeezing.squeeze());
+        assert_eq!(CONSTANTS_CALLS.load(Ordering::SeqCst), 1);
+
+        let (round_constants, mds, _) = OrchardNullifier::constants();
+        let mut raw_state = [msg[0], msg[1], cap];
+        permute::<_, OrchardNullifier, 3, 2>(&mut raw_state, &mds, &round_constants);
+        raw_state[0] += msg[2];
+        permute::<_, OrchardNullifier, 3, 2>(&mut raw_state, &mds, &round_constants);
+        let s_absorb = raw_state;
+        permute::<_, OrchardNullifier, 3, 2>(&mut raw_state, &mds, &round_constants);
+        let s_reperm1 = raw_state;
+        permute::<_, OrchardNullifier, 3, 2>(&mut raw_state, &mds, &round_constants);
+        let s_reperm2 = raw_state;
+
+        assert_eq!(
+            actual,
+            [
+                s_absorb[0],
+                s_absorb[1],
+                s_reperm1[0],
+                s_reperm1[1],
+                s_reperm2[0]
+            ]
+        );
     }
 }
