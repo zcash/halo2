@@ -15,6 +15,8 @@ use crate::transcript::{read_n_points, read_n_scalars, EncodedChallenge, Transcr
 
 #[cfg(feature = "batch")]
 mod batch;
+#[cfg(test)]
+mod differential_tests;
 #[cfg(feature = "batch")]
 pub use batch::BatchVerifier;
 
@@ -254,62 +256,58 @@ pub fn verify_proof<
             .fold(C::Scalar::ZERO, |acc, eval| acc + eval);
         let l_0 = l_evals[1 + blinding_factors];
 
-        // Compute the expected value of h(x)
+        let common = vk.verifier_expressions.common_values(&fixed_evals);
+        let gate_roots = vk.verifier_expressions.evaluate_all(
+            &common,
+            &fixed_evals,
+            &advice_evals,
+            &instance_evals,
+        );
+
+        // Compute the expected value of h(x), preserving every gate's position.
         let expressions = advice_evals
             .iter()
             .zip(instance_evals.iter())
             .zip(permutations_evaluated.iter())
             .zip(lookups_evaluated.iter())
-            .flat_map(|(((advice_evals, instance_evals), permutation), lookups)| {
-                let fixed_evals = &fixed_evals;
-                std::iter::empty()
-                    // Evaluate the circuit using the custom gates provided
-                    .chain(vk.cs.gates.iter().flat_map(move |gate| {
-                        gate.polynomials().iter().map(move |poly| {
-                            poly.evaluate(
-                                &|scalar| scalar,
-                                &|_| panic!("virtual selectors are removed during optimization"),
-                                &|query| fixed_evals[query.index],
-                                &|query| advice_evals[query.index],
-                                &|query| instance_evals[query.index],
-                                &|a| -a,
-                                &|a, b| a + &b,
-                                &|a, b| a * &b,
-                                &|a, scalar| a * &scalar,
-                            )
-                        })
-                    }))
-                    .chain(permutation.expressions(
-                        vk,
-                        &vk.cs.permutation,
-                        &permutations_common,
-                        advice_evals,
-                        fixed_evals,
-                        instance_evals,
-                        l_0,
-                        l_last,
-                        l_blind,
-                        beta,
-                        gamma,
-                        x,
-                    ))
-                    .chain(lookups.iter().zip(vk.cs.lookups.iter()).flat_map(
-                        move |(p, argument)| {
-                            p.expressions(
-                                l_0,
-                                l_last,
-                                l_blind,
-                                argument,
-                                theta,
-                                beta,
-                                gamma,
-                                advice_evals,
-                                fixed_evals,
-                                instance_evals,
-                            )
-                        },
-                    ))
-            });
+            .zip(gate_roots)
+            .flat_map(
+                |((((advice_evals, instance_evals), permutation), lookups), gates)| {
+                    let fixed_evals = &fixed_evals;
+                    std::iter::empty()
+                        .chain(gates)
+                        .chain(permutation.expressions(
+                            vk,
+                            &vk.cs.permutation,
+                            &permutations_common,
+                            advice_evals,
+                            fixed_evals,
+                            instance_evals,
+                            l_0,
+                            l_last,
+                            l_blind,
+                            beta,
+                            gamma,
+                            x,
+                        ))
+                        .chain(lookups.iter().zip(vk.cs.lookups.iter()).flat_map(
+                            move |(p, argument)| {
+                                p.expressions(
+                                    l_0,
+                                    l_last,
+                                    l_blind,
+                                    argument,
+                                    theta,
+                                    beta,
+                                    gamma,
+                                    advice_evals,
+                                    fixed_evals,
+                                    instance_evals,
+                                )
+                            },
+                        ))
+                },
+            );
 
         vanishing.verify(params, expressions, y, xn)
     };

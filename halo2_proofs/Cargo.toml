@@ -55,7 +55,6 @@ harness = false
 backtrace = { workspace = true, optional = true }
 ff.workspace = true
 group.workspace = true
-indexmap.workspace = true
 pasta_curves.workspace = true
 rand = { workspace = true, optional = true }
 rand_core.workspace = true
@@ -74,6 +73,7 @@ halo2_legacy_pdqsort = { workspace = true, optional = true }
 assert_matches.workspace = true
 criterion.workspace = true
 gumdrop.workspace = true
+indexmap.workspace = true
 proptest.workspace = true
 rand.workspace = true
 

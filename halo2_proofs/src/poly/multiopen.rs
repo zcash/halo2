@@ -3,14 +3,14 @@
 //!
 //! [halo]: https://eprint.iacr.org/2019/1021
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, HashMap};
 use std::hash::Hash;
-
-use indexmap::IndexMap;
 
 use super::*;
 use crate::{arithmetic::CurveAffine, transcript::ChallengeScalar};
 
+#[cfg(test)]
+mod differential_tests;
 mod prover;
 mod verifier;
 
@@ -147,132 +147,71 @@ type IntermediateSets<F, Q> = (
     Vec<Vec<F>>,
 );
 
-/// Returns `None` if `queries` contains two queries with the same point and commitment,
-/// but different evaluations.
+/// Returns `None` if `queries` contains two queries with the same point and commitment.
 fn construct_intermediate_sets<F: Field + Ord, I, Q: Query<F>>(
     queries: I,
 ) -> Option<IntermediateSets<F, Q>>
 where
-    I: IntoIterator<Item = Q> + Clone,
+    I: IntoIterator<Item = Q>,
 {
-    // Construct sets of unique commitments and corresponding information about
-    // their queries.
-    let mut commitment_map: IndexMap<Q::Commitment, CommitmentData<Option<Q::Eval>, ()>> =
-        IndexMap::new();
+    // Preserve first-seen commitment and point order: set indices feed the transcript.
+    let mut commitments = Vec::new();
+    let mut commitment_indices = HashMap::new();
+    let mut points = Vec::new();
 
-    // Also construct mapping from a unique point to a point_index. This defines
-    // an ordering on the points.
-    let mut point_index_map = BTreeMap::new();
-
-    // Iterate over all of the queries, computing the ordering of the points
-    // while also creating new commitment data.
-    for query in queries.clone() {
-        let num_points = point_index_map.len();
-        let point_idx = point_index_map
-            .entry(query.get_point())
-            .or_insert(num_points);
-
-        commitment_map
-            .entry(query.get_commitment())
-            .or_insert_with(|| CommitmentData::new(()))
-            .point_indices
-            .push(*point_idx);
-    }
-
-    // Also construct inverse mapping from point_index to the point
-    let mut inverse_point_index_map = BTreeMap::new();
-    for (&point, &point_index) in point_index_map.iter() {
-        inverse_point_index_map.insert(point_index, point);
-    }
-
-    // Construct map of unique ordered point_idx_sets to their set_idx
-    let mut point_idx_sets = BTreeMap::new();
-    // Also construct mapping from commitment to point_idx_set
-    let mut commitment_set_map = IndexMap::new();
-
-    for (commitment, commitment_data) in commitment_map.iter_mut() {
-        let mut point_index_set = BTreeSet::new();
-        // Note that point_index_set is ordered, unlike point_indices
-        for &point_index in commitment_data.point_indices.iter() {
-            point_index_set.insert(point_index);
-        }
-        let len = point_index_set.len();
-
-        // Push point_index_set to CommitmentData for the relevant commitment
-        commitment_set_map.insert(*commitment, point_index_set.clone());
-
-        let num_sets = point_idx_sets.len();
-        point_idx_sets.entry(point_index_set).or_insert(num_sets);
-
-        // Initialise empty evals vec for each unique commitment
-        commitment_data.evals = vec![None; len];
-    }
-
-    // Populate set_index, evals and points for each commitment using point_idx_sets
     for query in queries {
-        // An entry for every query's commitment was added to `commitment_map` the first
-        // time we iterated through `queries`.
-        let commitment_data = commitment_map
-            .get_mut(&query.get_commitment())
-            .expect("present by construction");
-
-        // The index of the point at which the commitment is queried
-        let point_index = point_index_map.get(&query.get_point()).unwrap();
-
-        // The point_index_set at which the commitment was queried
-        let point_index_set = commitment_set_map
-            .get(&query.get_commitment())
-            .expect("present by construction");
-
-        // The set_index of the point_index_set
-        let set_index = point_idx_sets.get(point_index_set).unwrap();
-        commitment_data.set_index = *set_index;
-        let point_index_set: Vec<usize> = point_index_set.iter().cloned().collect();
-
-        // The offset of the point_index in the point_index_set
-        let point_index_in_set = point_index_set
-            .iter()
-            .position(|i| i == point_index)
-            .unwrap();
-
-        // Insert the eval using the ordering of the point_index_set
-        let eval = commitment_data
-            .evals
-            .get_mut(point_index_in_set)
-            .expect("valid index");
-        if eval.is_none() {
-            *eval = Some(query.get_eval());
-        } else {
-            // Caller tried to provide two different evaluations for the same
-            // commitment. Permitting this would be unsound.
+        let point = query.get_point();
+        let point_index = match points.iter().position(|p| *p == point) {
+            Some(index) => index,
+            None => {
+                points.push(point);
+                points.len() - 1
+            }
+        };
+        let commitment = query.get_commitment();
+        let index = *commitment_indices.entry(commitment).or_insert_with(|| {
+            commitments.push((commitment, CommitmentData::new(())));
+            commitments.len() - 1
+        });
+        let data = &mut commitments[index].1;
+        if data.point_indices.contains(&point_index) {
             return None;
         }
+        data.point_indices.push(point_index);
+        data.evals.push(query.get_eval());
     }
 
-    let commitment_map = commitment_map
+    let mut point_sets = BTreeMap::new();
+    let commitments = commitments
         .into_iter()
-        .map(|(commitment, commitment_data)| CommitmentData {
-            commitment,
-            set_index: commitment_data.set_index,
-            point_indices: commitment_data.point_indices,
-            evals: commitment_data
-                .evals
-                .into_iter()
-                .map(|eval| eval.expect("logic ensures all evals are set"))
-                .collect(),
+        .map(|(commitment, data)| {
+            let mut indexed_evals = data
+                .point_indices
+                .iter()
+                .copied()
+                .zip(data.evals)
+                .collect::<Vec<_>>();
+            indexed_evals.sort_unstable_by_key(|(index, _)| *index);
+            let set = indexed_evals
+                .iter()
+                .map(|(index, _)| *index)
+                .collect::<Vec<_>>();
+            let next_index = point_sets.len();
+            let set_index = *point_sets.entry(set).or_insert(next_index);
+            CommitmentData {
+                commitment,
+                set_index,
+                point_indices: data.point_indices,
+                evals: indexed_evals.into_iter().map(|(_, eval)| eval).collect(),
+            }
         })
         .collect();
 
-    // Get actual points in each point set
-    let mut point_sets: Vec<Vec<F>> = vec![Vec::new(); point_idx_sets.len()];
-    for (point_idx_set, &set_idx) in point_idx_sets.iter() {
-        for &point_idx in point_idx_set.iter() {
-            let point = inverse_point_index_map.get(&point_idx).unwrap();
-            point_sets[set_idx].push(*point);
-        }
+    let mut ordered_sets = vec![Vec::new(); point_sets.len()];
+    for (indices, set_index) in point_sets {
+        ordered_sets[set_index] = indices.into_iter().map(|index| points[index]).collect();
     }
-
-    Some((commitment_map, point_sets))
+    Some((commitments, ordered_sets))
 }
 
 #[test]
