@@ -14,6 +14,7 @@ minor version bump.
 `halo2_proofs` currently uses [rayon](https://github.com/rayon-rs/rayon) for parallel
 computation. The `RAYON_NUM_THREADS` environment variable can be used to set the number of
 threads.
+The `"multicore"` feature also enables parallel Pasta curve multi-scalar multiplication.
 
 You can disable `rayon` by disabling the `"multicore"` feature.
 Warning! Halo2 will lose access to parallelism if you disable the `"multicore"` feature.
