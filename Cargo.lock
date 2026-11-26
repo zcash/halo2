@@ -868,7 +868,7 @@ checksum = "47716fe1ae67969c5e0b2ef826f32db8c3be72be325e1aa3c1951d06b5575ec5"
 
 [[package]]
 name = "halo2_poseidon"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "bitvec",
  "ff",
@@ -878,7 +878,7 @@ dependencies = [
 
 [[package]]
 name = "halo2_proofs"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "assert_matches",
  "backtrace",

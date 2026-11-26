@@ -7,6 +7,7 @@ and this project adheres to Rust's notion of
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-11-26
 ### Added
 - Default-enabled `glv` feature flag that enables `pasta_curves/glv` for MSM
   optimisations.
@@ -19,6 +20,20 @@ and this project adheres to Rust's notion of
   redundant IPA coefficient and MSM allocations. Batch verification applies
   random weights during coefficient generation and coalesces commitment terms
   once before the final MSM.
+  - **Breaking change:** The `Unpin`, `UnwindSafe`, and `RefUnwindSafe` auto
+    trait impls for `poly::commitment::{MSM, Guard}` and `plonk::SingleVerifier`
+    now have stricter bounds on the curve's base field and its `PrimeField::Repr`,
+    due to cached field representations and buffered terms. `Guard`'s `Unpin`
+    and `UnwindSafe` impls additionally require the corresponding trait on the
+    affine curve type `C`. The `UnwindSafe` and `RefUnwindSafe` impls for
+    `poly::multiopen::VerifierQuery` also now require `RefUnwindSafe` on
+    `<C::Base as PrimeField>::Repr`.
+    Generic downstream code relying on the previous bounds may need updating.
+    The impact is considered negligible: these verification objects are normally
+    constructed and consumed without pinning or crossing a `catch_unwind`
+    boundary, and neither initialization nor ordinary verification requires
+    these traits. The concrete `pasta_curves` implementations retain all of
+    these traits, and `Send` and `Sync` are unchanged.
 
 ## [0.4.1] - 2026-10-26
 ### Changed
