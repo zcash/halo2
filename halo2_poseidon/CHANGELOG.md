@@ -6,6 +6,16 @@ and this project adheres to Rust's notion of
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Added
+- `halo2_poseidon::Spec::try_permute` defaulted hook allowing specifications
+  with compile-time constants to evaluate permutations without allocating round
+  constants on the heap during sponge hashing.
+
+### Changed
+- `halo2_poseidon::P128Pow5T3` now uses faster equivalent MDS constants,
+  and avoids per-hash heap allocations during sponge hashing.
+- `Absorbing::init_empty` and `Squeezing::init_full` no longer allocate
+  temporary `Vec`s on the heap.
 
 ## [0.2.0] - 2026-09-29
 ### Changed
