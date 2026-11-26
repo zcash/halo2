@@ -27,6 +27,10 @@ IPA generator coefficients directly into their owned MSM allocation. Batch
 verification applies each proof's random weight during coefficient generation
 and coalesces buffered commitment terms once before the final MSM.
 
+Repeated public anchor values in Orchard-shaped instance columns share one
+prepared first-row sum per worker chunk. Unique anchors and unsupported instance
+layouts retain their existing commitment paths.
+
 The `plonk_verifier` Criterion benchmark measures single and batch verification
 with an Orchard-shaped instance layout (not the full Orchard circuit):
 
