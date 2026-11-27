@@ -1,10 +1,10 @@
 use super::super::{
-    circuit::Expression, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX, Error,
-    ProvingKey,
+    circuit::Expression, prover::Draws, ChallengeBeta, ChallengeGamma, ChallengeTheta, ChallengeX,
+    Error, ProvingKey,
 };
 use super::Argument;
 use crate::{
-    arithmetic::{eval_polynomial, parallelize, CurveAffine},
+    arithmetic::{evaluate_batch, grand_product, parallel_batch_invert, parallelize, CurveAffine},
     poly::{
         self,
         commitment::{Blind, Params},
@@ -14,11 +14,11 @@ use crate::{
     transcript::{EncodedChallenge, TranscriptWrite},
 };
 use ff::WithSmallOrderMulGroup;
-use group::ff::Field;
-use pasta_curves::arithmetic::{CurveExt, VartimeBatchInvert};
-use rand_core::Rng;
+use group::ff::{Field, PrimeField};
+use maybe_rayon::prelude::*;
+use pasta_curves::arithmetic::CurveExt;
 use std::{
-    collections::BTreeMap,
+    cmp::Ordering,
     iter,
     ops::{Mul, MulAssign},
 };
@@ -37,6 +37,37 @@ pub(in crate::plonk) struct Permuted<C: CurveAffine, Ev> {
     permuted_table_poly: Polynomial<C::Scalar, Coeff>,
     permuted_table_coset: poly::AstLeaf<Ev, ExtendedLagrangeCoeff>,
     permuted_table_blind: Blind<C::Scalar>,
+}
+
+/// A lookup's permuted columns, committed but not yet hashed into the
+/// transcript, with their extended-domain polynomials not yet registered.
+/// Computing this needs no shared state, so lookups are permuted in
+/// parallel; [`PermutedPending::finish`] then runs in transcript order.
+pub(in crate::plonk) struct PermutedPending<C: CurveAffine, Ev> {
+    compressed_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    permuted_input_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    compressed_input_coset: poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>,
+    permuted_input_poly: Polynomial<C::Scalar, Coeff>,
+    permuted_input_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    permuted_input_blind: Blind<C::Scalar>,
+    permuted_input_commitment: C,
+    compressed_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    compressed_table_coset: poly::Ast<Ev, C::Scalar, ExtendedLagrangeCoeff>,
+    permuted_table_expression: Polynomial<C::Scalar, LagrangeCoeff>,
+    permuted_table_poly: Polynomial<C::Scalar, Coeff>,
+    permuted_table_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    permuted_table_blind: Blind<C::Scalar>,
+    permuted_table_commitment: C,
+}
+
+/// A lookup's grand product, committed but not yet hashed or registered;
+/// see [`PermutedPending`].
+pub(in crate::plonk) struct CommittedPending<C: CurveAffine, Ev> {
+    permuted: Permuted<C, Ev>,
+    product_poly: Polynomial<C::Scalar, Coeff>,
+    product_coset: Polynomial<C::Scalar, ExtendedLagrangeCoeff>,
+    product_blind: Blind<C::Scalar>,
+    product_commitment: C,
 }
 
 #[derive(Debug)]
@@ -72,21 +103,12 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
     ///
     /// The Permuted<C> struct is used to update the Lookup, and is then returned.
     #[allow(clippy::too_many_arguments)]
-    pub(in crate::plonk) fn commit_permuted<
-        'a,
-        C,
-        E: EncodedChallenge<C>,
-        Ev: Copy + Send + Sync,
-        Ec: Copy + Send + Sync,
-        R: Rng,
-        T: TranscriptWrite<C, E>,
-    >(
+    pub(in crate::plonk) fn commit_permuted<'a, C, Ev: Copy + Send + Sync, Ec: Copy + Send + Sync>(
         &self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
         domain: &EvaluationDomain<C::Scalar>,
         value_evaluator: &poly::Evaluator<Ev, C::Scalar, LagrangeCoeff>,
-        coset_evaluator: &mut poly::Evaluator<Ec, C::Scalar, ExtendedLagrangeCoeff>,
         theta: ChallengeTheta<C>,
         advice_values: &'a [poly::AstLeaf<Ev, LagrangeCoeff>],
         fixed_values: &'a [poly::AstLeaf<Ev, LagrangeCoeff>],
@@ -94,9 +116,8 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
         advice_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
         fixed_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
         instance_cosets: &'a [poly::AstLeaf<Ec, ExtendedLagrangeCoeff>],
-        mut rng: R,
-        transcript: &mut T,
-    ) -> Result<Permuted<C, Ec>, Error>
+        mut draws: Draws<C::Scalar>,
+    ) -> Result<PermutedPending<C, Ec>, Error>
     where
         C: CurveAffine<ScalarExt = F>,
         C::Curve: Mul<F, Output = C::Curve> + MulAssign<F>,
@@ -189,11 +210,11 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
             compress_expressions(&self.table_expressions);
 
         // Permute compressed (InputExpression, TableExpression) pair
-        let (permuted_input_expression, permuted_table_expression) = permute_expression_pair::<C, _>(
+        let (permuted_input_expression, permuted_table_expression) = permute_expression_pair::<C>(
             pk,
             params,
             domain,
-            &mut rng,
+            &mut draws,
             &compressed_input_expression,
             &compressed_table_expression,
         )?;
@@ -201,43 +222,104 @@ impl<F: WithSmallOrderMulGroup<3>> Argument<F> {
         // Closure to construct commitment to vector of values
         let mut commit_values = |values: &Polynomial<C::Scalar, LagrangeCoeff>| {
             let poly = pk.vk.domain.lagrange_to_coeff(values.clone());
-            let blind = Blind(C::Scalar::random(&mut rng));
+            let blind = Blind(draws.next());
             let commitment = params.commit_lagrange(values, blind).to_affine_vartime();
-            (poly, blind, commitment)
+            let coset = pk.vk.domain.coeff_to_extended(poly.clone());
+            (poly, coset, blind, commitment)
         };
 
         // Commit to permuted input expression
-        let (permuted_input_poly, permuted_input_blind, permuted_input_commitment) =
-            commit_values(&permuted_input_expression);
+        let (
+            permuted_input_poly,
+            permuted_input_coset,
+            permuted_input_blind,
+            permuted_input_commitment,
+        ) = commit_values(&permuted_input_expression);
 
         // Commit to permuted table expression
-        let (permuted_table_poly, permuted_table_blind, permuted_table_commitment) =
-            commit_values(&permuted_table_expression);
+        let (
+            permuted_table_poly,
+            permuted_table_coset,
+            permuted_table_blind,
+            permuted_table_commitment,
+        ) = commit_values(&permuted_table_expression);
 
-        // Hash permuted input commitment
-        transcript.write_point(permuted_input_commitment)?;
-
-        // Hash permuted table commitment
-        transcript.write_point(permuted_table_commitment)?;
-
-        let permuted_input_coset = coset_evaluator
-            .register_poly(pk.vk.domain.coeff_to_extended(permuted_input_poly.clone()));
-        let permuted_table_coset = coset_evaluator
-            .register_poly(pk.vk.domain.coeff_to_extended(permuted_table_poly.clone()));
-
-        Ok(Permuted {
+        Ok(PermutedPending {
             compressed_input_expression,
             compressed_input_coset,
             permuted_input_expression,
             permuted_input_poly,
             permuted_input_coset,
             permuted_input_blind,
+            permuted_input_commitment,
             compressed_table_expression,
             compressed_table_coset,
             permuted_table_expression,
             permuted_table_poly,
             permuted_table_coset,
             permuted_table_blind,
+            permuted_table_commitment,
+        })
+    }
+}
+
+/// The number of field elements [`Argument::commit_permuted`] draws: the
+/// blinding rows of both permuted columns, then one blind for each.
+pub(in crate::plonk) fn permuted_draws<C: CurveAffine>(pk: &ProvingKey<C>) -> usize {
+    2 * (pk.vk.cs.blinding_factors() + 1) + 2
+}
+
+/// The number of field elements [`Permuted::commit_product`] draws: the
+/// blinding rows of the grand product, then its blind.
+pub(in crate::plonk) fn product_draws<C: CurveAffine>(pk: &ProvingKey<C>) -> usize {
+    pk.vk.cs.blinding_factors() + 1
+}
+
+impl<C: CurveAffine, Ev> PermutedPending<C, Ev> {
+    /// Hashes the permuted commitments and registers their cosets.
+    pub(in crate::plonk) fn finish<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+        self,
+        coset_evaluator: &mut poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
+        transcript: &mut T,
+    ) -> Result<Permuted<C, Ev>, Error> {
+        // Hash permuted input commitment
+        transcript.write_point(self.permuted_input_commitment)?;
+
+        // Hash permuted table commitment
+        transcript.write_point(self.permuted_table_commitment)?;
+
+        Ok(Permuted {
+            compressed_input_expression: self.compressed_input_expression,
+            compressed_input_coset: self.compressed_input_coset,
+            permuted_input_expression: self.permuted_input_expression,
+            permuted_input_poly: self.permuted_input_poly,
+            permuted_input_coset: coset_evaluator.register_poly(self.permuted_input_coset),
+            permuted_input_blind: self.permuted_input_blind,
+            compressed_table_expression: self.compressed_table_expression,
+            compressed_table_coset: self.compressed_table_coset,
+            permuted_table_expression: self.permuted_table_expression,
+            permuted_table_poly: self.permuted_table_poly,
+            permuted_table_coset: coset_evaluator.register_poly(self.permuted_table_coset),
+            permuted_table_blind: self.permuted_table_blind,
+        })
+    }
+}
+
+impl<C: CurveAffine, Ev> CommittedPending<C, Ev> {
+    /// Hashes the product commitment and registers its coset.
+    pub(in crate::plonk) fn finish<E: EncodedChallenge<C>, T: TranscriptWrite<C, E>>(
+        self,
+        evaluator: &mut poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
+        transcript: &mut T,
+    ) -> Result<Committed<C, Ev>, Error> {
+        // Hash product commitment
+        transcript.write_point(self.product_commitment)?;
+
+        Ok(Committed {
+            permuted: self.permuted,
+            product_poly: self.product_poly,
+            product_coset: evaluator.register_poly(self.product_coset),
+            product_blind: self.product_blind,
         })
     }
 }
@@ -249,20 +331,14 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
     /// is used to populate the Product<C> struct. The Product<C> struct is
     /// added to the Lookup and finally returned by the method.
     #[allow(clippy::too_many_arguments)]
-    pub(in crate::plonk) fn commit_product<
-        E: EncodedChallenge<C>,
-        R: Rng,
-        T: TranscriptWrite<C, E>,
-    >(
+    pub(in crate::plonk) fn commit_product(
         self,
         pk: &ProvingKey<C>,
         params: &Params<C>,
         beta: ChallengeBeta<C>,
         gamma: ChallengeGamma<C>,
-        evaluator: &mut poly::Evaluator<Ev, C::Scalar, ExtendedLagrangeCoeff>,
-        mut rng: R,
-        transcript: &mut T,
-    ) -> Result<Committed<C, Ev>, Error> {
+        mut draws: Draws<C::Scalar>,
+    ) -> CommittedPending<C, Ev> {
         let blinding_factors = pk.vk.cs.blinding_factors();
         // Goal is to compute the products of fractions
         //
@@ -289,7 +365,7 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
 
         // Batch invert to obtain the denominators for the lookup product
         // polynomials
-        lookup_product.iter_mut().batch_invert_vartime();
+        parallel_batch_invert(&mut lookup_product);
 
         // Finish the computation of the entire fraction by computing the numerators
         // (\theta^{m-1} a_0(\omega^i) + \theta^{m-2} a_1(\omega^i) + ... + \theta a_{m-2}(\omega^i) + a_{m-1}(\omega^i) + \beta)
@@ -320,18 +396,11 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
 
         // Compute the evaluations of the lookup product polynomial
         // over our domain, starting with z[0] = 1
-        let z = iter::once(C::Scalar::ONE)
-            .chain(lookup_product)
-            .scan(C::Scalar::ONE, |state, cur| {
-                *state *= &cur;
-                Some(*state)
-            })
-            // Take all rows including the "last" row which should
-            // be a boolean (and ideally 1, else soundness is broken)
-            .take(params.n as usize - blinding_factors)
-            // Chain random blinding factors.
-            .chain((0..blinding_factors).map(|_| C::Scalar::random(&mut rng)))
-            .collect::<Vec<_>>();
+        // Take all rows including the "last" row which should be a boolean
+        // (and ideally 1, else soundness is broken), then the random
+        // blinding factors.
+        let mut z = grand_product(&lookup_product, params.n as usize - blinding_factors);
+        z.extend((0..blinding_factors).map(|_| draws.next()));
         assert_eq!(z.len(), params.n as usize);
         let z = pk.vk.domain.lagrange_from_vec(z);
 
@@ -374,22 +443,20 @@ impl<C: CurveAffine, Ev: Copy + Send + Sync> Permuted<C, Ev> {
             assert_eq!(z[u], C::Scalar::ONE);
         }
 
-        let product_blind = Blind(C::Scalar::random(&mut rng));
+        let product_blind = Blind(draws.next());
         let product_commitment = params
             .commit_lagrange(&z, product_blind)
             .to_affine_vartime();
         let z = pk.vk.domain.lagrange_to_coeff(z);
-        let product_coset = evaluator.register_poly(pk.vk.domain.coeff_to_extended(z.clone()));
+        let product_coset = pk.vk.domain.coeff_to_extended(z.clone());
 
-        // Hash product commitment
-        transcript.write_point(product_commitment)?;
-
-        Ok(Committed::<C, _> {
+        CommittedPending {
             permuted: self,
             product_poly: z,
             product_coset,
             product_blind,
-        })
+            product_commitment,
+        }
     }
 }
 
@@ -489,20 +556,16 @@ impl<C: CurveAffine> Constructed<C> {
         let x_inv = domain.rotate_omega(*x, Rotation::prev());
         let x_next = domain.rotate_omega(*x, Rotation::next());
 
-        let product_eval = eval_polynomial(&self.product_poly, *x);
-        let product_next_eval = eval_polynomial(&self.product_poly, x_next);
-        let permuted_input_eval = eval_polynomial(&self.permuted_input_poly, *x);
-        let permuted_input_inv_eval = eval_polynomial(&self.permuted_input_poly, x_inv);
-        let permuted_table_eval = eval_polynomial(&self.permuted_table_poly, *x);
+        let queries: [(&[C::Scalar], C::Scalar); 5] = [
+            (&self.product_poly, *x),
+            (&self.product_poly, x_next),
+            (&self.permuted_input_poly, *x),
+            (&self.permuted_input_poly, x_inv),
+            (&self.permuted_table_poly, *x),
+        ];
 
-        // Hash each advice evaluation
-        for eval in iter::empty()
-            .chain(Some(product_eval))
-            .chain(Some(product_next_eval))
-            .chain(Some(permuted_input_eval))
-            .chain(Some(permuted_input_inv_eval))
-            .chain(Some(permuted_table_eval))
-        {
+        // Hash each lookup evaluation
+        for eval in evaluate_batch(&queries) {
             transcript.write_scalar(eval)?;
         }
 
@@ -562,68 +625,24 @@ type ExpressionPair<F> = (Polynomial<F, LagrangeCoeff>, Polynomial<F, LagrangeCo
 ///   that has the corresponding value in S'.
 ///
 /// This method returns (A', S') if no errors are encountered.
-fn permute_expression_pair<C: CurveAffine, R: Rng>(
+fn permute_expression_pair<C: CurveAffine>(
     pk: &ProvingKey<C>,
     params: &Params<C>,
     domain: &EvaluationDomain<C::Scalar>,
-    mut rng: R,
+    draws: &mut Draws<C::Scalar>,
     input_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
     table_expression: &Polynomial<C::Scalar, LagrangeCoeff>,
 ) -> Result<ExpressionPair<C::Scalar>, Error> {
     let blinding_factors = pk.vk.cs.blinding_factors();
     let usable_rows = params.n as usize - (blinding_factors + 1);
 
-    let mut permuted_input_expression: Vec<C::Scalar> = input_expression.to_vec();
-    permuted_input_expression.truncate(usable_rows);
+    let (mut permuted_input_expression, mut permuted_table_coeffs) = permute_lookup_values(
+        &input_expression[..][..usable_rows],
+        &table_expression[..][..usable_rows],
+    )?;
 
-    // Sort input lookup expression values
-    permuted_input_expression.sort();
-
-    // A BTreeMap of each unique element in the table expression and its count
-    let mut leftover_table_map: BTreeMap<C::Scalar, u32> = table_expression
-        .iter()
-        .take(usable_rows)
-        .fold(BTreeMap::new(), |mut acc, coeff| {
-            *acc.entry(*coeff).or_insert(0) += 1;
-            acc
-        });
-    let mut permuted_table_coeffs = vec![C::Scalar::ZERO; usable_rows];
-
-    let mut repeated_input_rows = permuted_input_expression
-        .iter()
-        .zip(permuted_table_coeffs.iter_mut())
-        .enumerate()
-        .filter_map(|(row, (input_value, table_value))| {
-            // If this is the first occurrence of `input_value` in the input expression
-            if row == 0 || *input_value != permuted_input_expression[row - 1] {
-                *table_value = *input_value;
-                // Remove one instance of input_value from leftover_table_map
-                if let Some(count) = leftover_table_map.get_mut(input_value) {
-                    assert!(*count > 0);
-                    *count -= 1;
-                    None
-                } else {
-                    // Return error if input_value not found
-                    Some(Err(Error::ConstraintSystemFailure))
-                }
-            // If input value is repeated
-            } else {
-                Some(Ok(row))
-            }
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-
-    // Populate permuted table at unfilled rows with leftover table elements
-    for (coeff, count) in leftover_table_map.iter() {
-        for _ in 0..*count {
-            permuted_table_coeffs[repeated_input_rows.pop().unwrap()] = *coeff;
-        }
-    }
-    assert!(repeated_input_rows.is_empty());
-
-    permuted_input_expression
-        .extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
-    permuted_table_coeffs.extend((0..(blinding_factors + 1)).map(|_| C::Scalar::random(&mut rng)));
+    permuted_input_expression.extend((0..(blinding_factors + 1)).map(|_| draws.next()));
+    permuted_table_coeffs.extend((0..(blinding_factors + 1)).map(|_| draws.next()));
     assert_eq!(permuted_input_expression.len(), params.n as usize);
     assert_eq!(permuted_table_coeffs.len(), params.n as usize);
 
@@ -646,4 +665,214 @@ fn permute_expression_pair<C: CurveAffine, R: Rng>(
         domain.lagrange_from_vec(permuted_input_expression),
         domain.lagrange_from_vec(permuted_table_coeffs),
     ))
+}
+
+/// Below this many rows, the lookup values are sorted on one thread.
+#[cfg_attr(not(feature = "multicore"), allow(dead_code))]
+const LOOKUP_SORT_PARALLEL_THRESHOLD: usize = 1 << 14;
+
+/// Orders field elements by their canonical byte representation read as a
+/// little-endian integer, which is the order of the integers in `[0, p)` and
+/// therefore the order pasta's `Ord` implementation defines.
+///
+/// Any total order in which equal keys mean equal values would do for the
+/// lookup argument; this one keeps proofs identical to those of earlier
+/// versions, which sorted with `Ord` directly.
+fn cmp_repr<F: PrimeField>(a: &F::Repr, b: &F::Repr) -> Ordering {
+    a.as_ref().iter().rev().cmp(b.as_ref().iter().rev())
+}
+
+/// Returns `values` sorted, together with their sort keys.
+///
+/// Comparing field elements with `Ord` converts both operands out of
+/// Montgomery form on every comparison, so a sort performs `2 n log n`
+/// conversions. Computing each key once costs `n`.
+fn sort_by_repr<F: PrimeField>(values: &[F]) -> Vec<(F::Repr, F)> {
+    let mut keyed: Vec<(F::Repr, F)> = values
+        .into_par_iter()
+        .map(|value| (value.to_repr(), *value))
+        .collect();
+    let by_key = |a: &(F::Repr, F), b: &(F::Repr, F)| cmp_repr::<F>(&a.0, &b.0);
+    // Elements with equal keys are equal, so an unstable sort is
+    // indistinguishable from a stable one.
+    #[cfg(feature = "multicore")]
+    if keyed.len() >= LOOKUP_SORT_PARALLEL_THRESHOLD {
+        keyed.par_sort_unstable_by(by_key);
+        return keyed;
+    }
+    keyed.sort_unstable_by(by_key);
+    keyed
+}
+
+/// Given the usable rows of a compressed input expression A and table
+/// expression S, returns (A', S') such that:
+/// - A' is A sorted, so like values in A' are vertically adjacent; and
+/// - S' is a permutation of S in which the first row of each run of like
+///   values in A' holds that value.
+///
+/// Both columns are sorted by key and then merged, so every input value is
+/// matched against the table in a single linear pass. Returns
+/// `Error::ConstraintSystemFailure` if an input value is not in the table.
+pub(crate) fn permute_lookup_values<F: PrimeField>(
+    input: &[F],
+    table: &[F],
+) -> Result<(Vec<F>, Vec<F>), Error> {
+    assert_eq!(input.len(), table.len());
+    let input = sort_by_repr(input);
+    let table = sort_by_repr(table);
+
+    // The table as runs of equal values, each with how many of its copies
+    // are not yet placed in S'.
+    let mut leftover: Vec<(F::Repr, F, u32)> = Vec::new();
+    for (key, value) in table {
+        match leftover.last_mut() {
+            Some((last, _, count)) if cmp_repr::<F>(last, &key) == Ordering::Equal => *count += 1,
+            _ => leftover.push((key, value, 1)),
+        }
+    }
+
+    let mut permuted_table = vec![F::ZERO; input.len()];
+    let mut repeated_input_rows = Vec::new();
+    let mut run = 0;
+    for (row, (key, value)) in input.iter().enumerate() {
+        // If this is the first occurrence of `value` in the input expression
+        if row == 0 || cmp_repr::<F>(key, &input[row - 1].0) != Ordering::Equal {
+            permuted_table[row] = *value;
+            // Remove one copy of `value` from the leftover table runs. Both
+            // lists are sorted, so the matching run is at or after `run`.
+            while run < leftover.len() && cmp_repr::<F>(&leftover[run].0, key) == Ordering::Less {
+                run += 1;
+            }
+            match leftover.get_mut(run) {
+                Some((table_key, _, count)) if cmp_repr::<F>(table_key, key) == Ordering::Equal => {
+                    assert!(*count > 0);
+                    *count -= 1;
+                }
+                // Return error if `value` is not in the table
+                _ => return Err(Error::ConstraintSystemFailure),
+            }
+        } else {
+            repeated_input_rows.push(row);
+        }
+    }
+
+    // Populate permuted table at unfilled rows with leftover table elements
+    for (_, value, count) in leftover {
+        for _ in 0..count {
+            permuted_table[repeated_input_rows.pop().unwrap()] = value;
+        }
+    }
+    assert!(repeated_input_rows.is_empty());
+
+    Ok((
+        input.into_iter().map(|(_, value)| value).collect(),
+        permuted_table,
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use group::ff::Field;
+    use proptest::prelude::*;
+
+    use super::{permute_lookup_values, LOOKUP_SORT_PARALLEL_THRESHOLD};
+    use crate::{pasta::Fp, plonk::Error};
+
+    /// The algorithm `permute_lookup_values` replaced: a stable sort with
+    /// `Ord` and a `BTreeMap` of leftover table values.
+    fn reference(input: &[Fp], table: &[Fp]) -> Result<(Vec<Fp>, Vec<Fp>), Error> {
+        let mut permuted_input = input.to_vec();
+        permuted_input.sort();
+        let mut leftover = BTreeMap::<Fp, u32>::new();
+        for value in table {
+            *leftover.entry(*value).or_insert(0) += 1;
+        }
+        let mut permuted_table = vec![Fp::ZERO; input.len()];
+        let mut repeated = vec![];
+        for row in 0..permuted_input.len() {
+            let value = permuted_input[row];
+            if row == 0 || value != permuted_input[row - 1] {
+                permuted_table[row] = value;
+                match leftover.get_mut(&value) {
+                    Some(count) => *count -= 1,
+                    None => return Err(Error::ConstraintSystemFailure),
+                }
+            } else {
+                repeated.push(row);
+            }
+        }
+        for (value, count) in leftover {
+            for _ in 0..count {
+                permuted_table[repeated.pop().unwrap()] = value;
+            }
+        }
+        Ok((permuted_input, permuted_table))
+    }
+
+    /// An input column drawn from a small range, so values repeat, and a
+    /// table column of the same length that contains every input value.
+    fn arb_lookup(max_len: usize) -> impl Strategy<Value = (Vec<Fp>, Vec<Fp>)> {
+        (1..max_len).prop_flat_map(|len| {
+            (
+                prop::collection::vec(0u64..8, len),
+                prop::collection::vec(0u64..16, len),
+            )
+                .prop_map(|(input, mut extra)| {
+                    // Place each distinct input value in the table once, then
+                    // pad with arbitrary values, some outside the input range.
+                    let mut distinct = input.clone();
+                    distinct.sort_unstable();
+                    distinct.dedup();
+                    extra[..distinct.len()].copy_from_slice(&distinct);
+                    // Large values exercise the most significant bytes.
+                    let field = |v: &u64| -Fp::from(*v);
+                    (
+                        input.iter().map(field).collect(),
+                        extra.iter().map(field).collect(),
+                    )
+                })
+        })
+    }
+
+    fn is_err<T>(r: &Result<T, Error>) -> bool {
+        matches!(r, Err(Error::ConstraintSystemFailure))
+    }
+
+    proptest! {
+        #[test]
+        fn matches_the_btreemap_algorithm((input, table) in arb_lookup(64)) {
+            prop_assert_eq!(
+                permute_lookup_values(&input, &table).unwrap(),
+                reference(&input, &table).unwrap()
+            );
+        }
+
+        #[test]
+        fn rejects_an_input_missing_from_the_table(
+            (input, mut table) in arb_lookup(64),
+        ) {
+            // Remove every copy of one input value from the table.
+            let missing = input[0];
+            for value in table.iter_mut().filter(|v| **v == missing) {
+                *value = Fp::from(1000);
+            }
+            prop_assert!(is_err(&permute_lookup_values(&input, &table)));
+            prop_assert!(is_err(&reference(&input, &table)));
+        }
+    }
+
+    #[test]
+    fn matches_the_btreemap_algorithm_above_the_parallel_threshold() {
+        let len = LOOKUP_SORT_PARALLEL_THRESHOLD + 7;
+        let input: Vec<Fp> = (0..len as u64)
+            .map(|i| -Fp::from((i * 7919) % 1000))
+            .collect();
+        let table: Vec<Fp> = (0..len as u64).map(|i| -Fp::from(i % 1500)).collect();
+        assert_eq!(
+            permute_lookup_values(&input, &table).unwrap(),
+            reference(&input, &table).unwrap()
+        );
+    }
 }
